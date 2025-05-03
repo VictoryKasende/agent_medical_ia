@@ -137,7 +137,7 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             - Claude 3 : {results['claude']}
             - Gemini Pro : {results['gemini']}
 
-            En te basant sur ces trois avis, donne une conclusion claire, rigoureuse et prudente.
+            En te basant sur ces trois avis, donne une conclusion claire, rigoureuse et prudente avec des emojis.
             """
         )
         final_response = synthese_llm([synthese_message])
