@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche de Consultation - Soins avec Patient Partenaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-section {
+            transition: all 0.3s ease;
+        }
+
+        .form-section.collapsed {
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+
+        .animated-checkbox {
+            transform: scale(1.2);
+            transition: transform 0.2s;
+        }
+
+        .animated-checkbox:active {
+            transform: scale(0.9);
+        }
+
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+<div class="container mx-auto p-4 max-w-5xl">
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-6 rounded-t-lg shadow-md">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">FICHE DE CONSULTATION</h1>
+                <h2 class="text-xl mt-2">Soins avec Patient Partenaire</h2>
+            </div>
+
+        </div>
+    </header>
+
+    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% url 'consultation' %}">
+        {% csrf_token %}
+
+        <!-- Exemple pour les informations patient -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    <span class="required-field">Renseignements Patient</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    {{ form.nom.label_tag }} {{ form.nom }}
+                </div>
+                <div>
+                    {{ form.postnom.label_tag }} {{ form.postnom }}
+                </div>
+                <div>
+                    {{ form.prenom.label_tag }} {{ form.prenom }}
+                </div>
+                <div>
+                    {{ form.date_naissance.label_tag }} {{ form.date_naissance }}
+                </div>
+                <div>
+                    {{ form.age.label_tag }} {{ form.age }}
+                </div>
+                <div>
+                    {{ form.telephone.label_tag }} {{ form.telephone }}
+                </div>
+                <div>
+                    {{ form.etat_civil.label_tag }} {{ form.etat_civil }}
+                </div>
+                <div>
+                    {{ form.occupation.label_tag }} {{ form.occupation }}
+                </div>
+
+                <div class="md:col-span-3">
+                    <label class="block text-gray-700 font-medium mb-2">Adresse</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {{ form.avenue }}
+                        {{ form.quartier }}
+                        {{ form.commune }}
+                    </div>
+                </div>
+
+                <div class="md:col-span-3">
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Personne à contacter</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {{ form.contact_nom }}
+                        {{ form.contact_telephone }}
+                        {{ form.contact_adresse }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Section 2: Signes Vitaux -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-heartbeat mr-2"></i>
+                    <span>Signes Vitaux</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_temperature">Température (°C)</label>
+                    {{ form.temperature }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_spo2">SPO2 (%)</label>
+                    {{ form.spo2 }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_poids">Poids (kg)</label>
+                    {{ form.poids }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_tension_arterielle">Tension Artérielle
+                        (mmHg)</label>
+                    {{form.tension_arterielle}}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_pouls">Pouls (/min)</label>
+                    {{ form.pouls }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" for="id_frequence_respiratoire">FR
+                        (/min)</label>
+                    {{ form.frequence_respiratoire }}
+                </div>
+            </div>
+
+            <!-- Présence à la consultation -->
+            <div class="mt-6">
+                <label class="block text-gray-700 font-medium mb-2">Présent à la consultation</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="present-options">
+                    {% for radio in form.present %}
+                        <label class="inline-flex items-center">
+                            {{ radio.tag }}
+                            <span class="ml-2">{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+
+                    <!-- Champs cachés au départ -->
+                    <label class="inline-flex items-center hidden" id="champ-proche">
+                        {{ form.proche_lien }}
+                    </label>
+                    <label class="inline-flex items-center hidden" id="champ-soignant">
+                        {{ form.soignant_role }}
+                    </label>
+                    <label class="inline-flex items-center hidden" id="champ-autre">
+                        {{ form.autre_precisions }}
+                    </label>
+                </div>
+            </div>
+
+
+        </div>
+
+
+        <!-- Section 3: Anamnèse -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-book-medical mr-2"></i>
+                    <span>Anamnèse</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+
+            <!-- Motif de consultation -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Motif de consultation (question ouverte)</label>
+                {{ form.motif_consultation }}
+            </div>
+
+            <!-- Histoire de la maladie -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Histoire de la maladie (question
+                    semi-directive)</label>
+                {{ form.histoire_maladie }}
+            </div>
+
+            <!-- Médicaments pris avant consultation -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Médicaments pris avant consultation</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" id="present-options">
+                    {% for radio in form.lieu_medicaments %}
+                        <label class=" inline-flex items-center">
+                            {{ radio.tag }} <span class="inline-flex items-center ml-3">{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-2">
+                    <label class="block text-gray-700 mb-2">Détails des médicaments pris</label>
+                    {{ form.details_medicaments }}
+                </div>
+            </div>
+
+            <!-- Plaintes principales -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Description des plaintes principales</label>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-600">Céphalées</label>
+                        {{ form.cephalees }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Vertiges</label>
+                        {{ form.vertiges }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Palpitations</label>
+                        {{ form.palpitations }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Troubles visuels</label>
+                        {{ form.troubles_visuels }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Nycturie</label>
+                        {{ form.nycturie }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Section 4: Antécédents -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-history mr-2"></i>
+                    <span>Antécédents</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+
+            <!-- Pathologies connues -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Pathologies connues</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label class="inline-flex items-center">
+                        {{ form.hypertendu }} <span class="ml-2">Hypertendu</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.diabetique }} <span class="ml-2">Diabétique</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.epileptique }} <span class="ml-2">Épileptique</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.trouble_comportement }} <span class="ml-2">Trouble du comportement</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.gastritique }} <span class="ml-2">Gastritique</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Habitudes de vie -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Habitudes de vie</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-600 mb-2">Tabac</label>
+                        {{ form.tabac }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Alcool</label>
+                        {{ form.alcool }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Activité physique</label>
+                        {{ form.activite_physique }}
+                        {{ form.activite_physique_detail }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alimentation habituelle -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Alimentation habituelle</label>
+                {{ form.alimentation_habituelle }}
+            </div>
+
+            <!-- Allergies médicamenteuses -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Allergies médicamenteuses</label>
+                <div class="flex items-center space-x-4">
+                    {{ form.allergie_medicamenteuse }}
+                    <span class="ml-2">Oui / Non</span>
+                    {{ form.medicament_allergique }}
+                </div>
+            </div>
+
+            <!-- Antécédents familiaux -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Antécédents familiaux</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label class="inline-flex items-center">
+                        {{ form.familial_drepanocytaire }} <span class="ml-2">Drépanocytaire</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.familial_diabetique }} <span class="ml-2">Diabétique</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.familial_obese }} <span class="ml-2">Obèse</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.familial_hypertendu }} <span class="ml-2">Hypertendu</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.familial_trouble_comportement }} <span class="ml-2">Trouble du comportement</span>
+                    </label>
+                </div>
+                <div class="mt-2">
+                    <label class="block text-gray-600 mb-1">Lien familial</label>
+                    <div class="flex space-x-4">
+                        <label class="inline-flex items-center">
+                            {{ form.lien_pere }} <span class="ml-2">Père</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.lien_mere }} <span class="ml-2">Mère</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.lien_frere }} <span class="ml-2">Frère</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.lien_soeur }} <span class="ml-2">Sœur</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Événement traumatique -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Événement traumatique</label>
+                {% for radio in form.evenement_traumatique %}
+                    <label class="inline-flex items-center">
+                        {{ radio.tag }} <span class="ml-2">{{ radio.choice_label }}</span>
+                    </label>
+                {% endfor %}
+                <div class="mt-2">
+                    <label class="block text-gray-600 mb-1">Nature de l'événement</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <label class="inline-flex items-center">
+                            {{ form.trauma_divorce }} <span class="ml-2">Divorce</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.trauma_perte_parent }} <span class="ml-2">Perte de parent</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.trauma_deces_epoux }} <span class="ml-2">Décès d'un époux</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.trauma_deces_enfant }} <span class="ml-2">Décès d'un enfant</span>
+                        </label>
+
+                    </div>
+                    {{ form.etat_general }}
+                </div>
+            </div>
+
+            <!-- Autres antécédents -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Autres antécédents</label>
+                {{ form.autres_antecedents }}
+            </div>
+        </div>
+
+
+        <!-- Section 5: Examen Physique -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-stethoscope mr-2"></i>
+                    <span>Examen Physique</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+
+            <!-- État général -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">État général</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-600 mb-2">État</label>
+                        {{ form.etat }}
+                        {{ form.par_quoi }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Capacité physique</label>
+                        {{ form.capacite_physique }}
+                        {{ form.capacite_physique_score }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Capacité psychologique</label>
+                        {{ form.capacite_psychologique }}
+                        {{ form.capacite_psychologique_score }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Examen général -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Examen général</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-600 mb-2">Fébrile</label>
+                        {{ form.febrile }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Coloration bulbaire</label>
+                        {{ form.coloration_bulbaire }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Coloration palpébrale</label>
+                        {{ form.coloration_palpebrale }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-2">Tégument</label>
+                        {{ form.tegument }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Examen par région -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Examen par région</label>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-600">Tête</label>
+                        {{ form.tete }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Cou</label>
+                        {{ form.cou }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Paroi thoracique</label>
+                        {{ form.paroi_thoracique }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Poumons</label>
+                        {{ form.poumons }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Cœur</label>
+                        {{ form.coeur }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Épigastre et hypochondres</label>
+                        {{ form.epigastre_hypochondres }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Péri ombilical et flancs</label>
+                        {{ form.peri_ombilical_flancs }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Hypogastre et fosses iliaques</label>
+                        {{ form.hypogastre_fosses_iliaques }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Membres</label>
+                        {{ form.membres }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Colonne et bassin</label>
+                        {{ form.colonne_bassin }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Examen Gynécologique</label>
+                        {{ form.examen_gynecologique }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expériences et perceptions -->
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Expériences et perceptions du patient</label>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-600">Préoccupations</label>
+                        {{ form.preoccupations }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Compréhension</label>
+                        {{ form.comprehension }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Attentes</label>
+                        {{ form.attentes }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-600">Engagement</label>
+                        {{ form.engagement }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-center">
+            <a href="{% url 'home' %}"
+               class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                <i class="fas fa-arrow-left mr-2"></i> Retour
+            </a>
+            <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg">
+                <i class="fas fa-paper-plane mr-2"></i> Envoyer
+            </button>
+        </div>
+
+    </form>
+</div>
+<script>
+    // Generate dossier number based on date
+    document.getElementById('dossier-number').textContent = '20230615';
+
+    // Toggle section collapse/expand
+    function toggleSection(section) {
+        section.classList.toggle('collapsed');
+        const icon = section.querySelector('.fa-chevron-down');
+        icon.classList.toggle('rotate-180');
+    }
+
+    // Initialize all sections as expanded
+    document.addEventListener('DOMContentLoaded', function () {
+        const sections = document.querySelectorAll('.form-section');
+        sections.forEach(section => {
+            section.classList.remove('collapsed');
+        });
+
+        const radios = document.querySelectorAll("input[name='present']");
+        const champProche = document.getElementById("champ-proche");
+        const champSoignant = document.getElementById("champ-soignant");
+        const champAutre = document.getElementById("champ-autre");
+
+        function toggleFields() {
+            const selected = document.querySelector("input[name='present']:checked");
+            champProche.classList.add("hidden");
+            champSoignant.classList.add("hidden");
+            champAutre.classList.add("hidden");
+
+            if (!selected) return;
+
+            if (selected.value === "proche") {
+                champProche.classList.remove("hidden");
+            } else if (selected.value === "soignant") {
+                champSoignant.classList.remove("hidden");
+            } else if (selected.value === "autre") {
+                champAutre.classList.remove("hidden");
+            }
+        }
+
+        // Init on load
+        toggleFields();
+
+        radios.forEach(radio => {
+            radio.addEventListener("change", toggleFields);
+        });
+    });
+</script>
+
+</body>
+
+</html>
