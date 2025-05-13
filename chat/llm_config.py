@@ -51,11 +51,11 @@ from langchain.schema import BaseMessage, HumanMessage, AIMessage
 # Charger les variables d'environnement
 load_dotenv()
 
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "9c5204b0e9msh9a06614e6b0791bp14bfe6jsn8d20e58d69f2")  # valeur par défaut
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "25bf45b4famsha577558dcd485e6p1e53f5jsne9f69d176218")  # valeur par défaut
 
 def call_rapidapi_llm(message: BaseMessage, nom_model: str) -> AIMessage:
     """ Appelle l'API RapidAPI pour simuler un modèle LLM. """
-    url = "https://chatgpt-42.p.rapidapi.com/chatgpt"
+    url = "https://chatgpt-42.p.rapidapi.com/gpt4o"
 
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,

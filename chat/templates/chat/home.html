@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -76,39 +77,39 @@
     <!-- Header -->
     <header class="flex items-center justify-between mb-8">
         <div class="flex items-center space-x-4">
-            <div class="bg-blue-600 text-white p-3 rounded-full">
-                <i class="fas fa-robot text-2xl"></i>
-            </div>
             <div>
-                <h1 class="text-3xl font-bold text-gray-800">MediBot</h1>
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-25 h-20" alt="Logo">
+            </div>
+
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">MediAi</h1>
                 <p class="text-gray-600">Votre assistant médical intelligent</p>
             </div>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
             <a href="{% url 'consultation' %}">
-                <button class="border border-green-500 text-green-500 px-4 py-2 rounded-lg hover:bg-green-100 transition flex items-center space-x-2">
+                <button class="w-full sm:w-auto border border-green-500 text-green-500 px-4 py-2 rounded-lg hover:bg-green-100 transition flex items-center justify-center space-x-2">
                     <i class="fas fa-plus"></i>
                     <span>Nouvelle Consultation</span>
                 </button>
             </a>
 
             <a href="{% url 'home' %}" class="inline-block">
-                <button class="border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition flex items-center space-x-2">
+                <button class="w-full sm:w-auto border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition flex items-center justify-center space-x-2">
                     <i class="fas fa-user"></i>
                     <span>Profil</span>
                 </button>
             </a>
 
-            <form action="{% url 'logout' %}" method="post" class="inline-block">
+            <form action="{% url 'logout' %}" method="post" class="inline-block w-full sm:w-auto">
                 {% csrf_token %}
-                <button class="border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition flex items-center space-x-2">
+                <button class="w-full sm:w-auto border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition flex items-center justify-center space-x-2">
                     <i class="fas fa-cog"></i>
                     <span>Se déconnecter</span>
                 </button>
             </form>
-
-
         </div>
+
     </header>
 
     <!-- Main Chat Area -->
@@ -123,7 +124,7 @@
                     <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-600"></span>
                 </div>
                 <div>
-                    <h3 class="font-semibold">Dr. MediBot</h3>
+                    <h3 class="font-semibold">Dr. MediAi</h3>
                     <p class="text-xs text-blue-100">En ligne</p>
                 </div>
             </div>
@@ -146,7 +147,7 @@
             <div class="flex items-start space-x-3 message">
                 <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-xs lg:max-w-md">
                     <p class="font-medium">Bonjour 👋</p>
-                    <p class="mt-1">Je suis MediBot, votre assistant médical virtuel. Je peux vous aider à:</p>
+                    <p class="mt-1">Je suis MediAi, votre assistant médical virtuel. Je peux vous aider à:</p>
                     <ul class="list-disc pl-5 mt-2 space-y-1">
                         <li>Comprendre vos symptômes</li>
                         <li>Vous orienter vers les bons professionnels</li>

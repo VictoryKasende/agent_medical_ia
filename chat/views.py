@@ -94,7 +94,19 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
     def post(self, request):
         data = json.loads(request.body)
         symptomes = data.get("message")
-        message = HumanMessage(content=f"Voici les symptômes du patient : {symptomes}")
+
+        message = HumanMessage(content=f"""
+        Voici les symptômes du patient : {symptomes}
+
+        Sur base de cette description et des symptômes significatifs présentés par le patient, je vous prie de me préciser les éléments suivants :
+
+        1. Les analyses paracliniques contributives  
+        2. Le syndrome et/ou le(s) diagnostic(s) correspondant(s)  
+        3. Les traitements proposés avec leur posologie  
+        4. Les recommandations en matière d’éducation thérapeutique  
+        5. Les références bibliographiques issues de bibliothèques scientifiques reconnues (PubMed, Google Scholar, Cinahl, etc.)  
+        6. Si le patient poursuit la conversation en posant des questions sur la réponse fournie, merci de lui répondre comme un assistant médical qualifié, avec rigueur, clarté et bienveillance.
+        """)
 
         conversation = Conversation.objects.create(user=request.user)
 
@@ -131,15 +143,19 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
         MessageIA.objects.create(conversation=conversation, role='gemini', content=results['gemini'])
 
         synthese_message = HumanMessage(
-            content=f"""Trois experts ont donné leurs avis :
+            content=f"""
+        Trois experts ont donné leur avis sur la situation du patient :
 
-            - GPT-4 : {results['gpt4']}
-            - Claude 3 : {results['claude']}
-            - Gemini Pro : {results['gemini']}
+        - 🤖 GPT-4 : {results['gpt4']}
+        - 🧠 Claude 3 : {results['claude']}
+        - 🔬 Gemini Pro : {results['gemini']}
 
-            En te basant sur ces trois avis, donne une conclusion claire, rigoureuse et prudente avec des emojis.
-            """
+        En te basant sur ces trois analyses, formule une **conclusion claire, rigoureuse et prudente**, en intégrant des **emojis** pour rendre la réponse plus lisible et engageante.
+
+        🩺 Par ailleurs, si le patient poursuit la conversation en posant des questions sur la réponse fournie, merci de lui répondre **comme un assistant médical qualifié**, avec **rigueur**, **clarté** et **bienveillance**.
+        """
         )
+
         final_response = synthese_llm([synthese_message])
 
         MessageIA.objects.create(conversation=conversation, role='synthese', content=final_response.content)
