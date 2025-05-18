@@ -74,42 +74,48 @@
 </head>
 <body class="bg-gray-100 font-sans">
 <div class="container mx-auto max-w-6xl px-4 py-8">
-    <!-- Header -->
-    <header class="flex items-center justify-between mb-8">
-        <div class="flex items-center space-x-4">
-            <div>
-                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-25 h-20" alt="Logo">
+    <!-- Header avec Navbar Responsive -->
+    <header class="bg-white shadow-md rounded-lg mb-8">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo et Titre -->
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MediAi</h1>
+                    <p class="text-gray-500 text-sm">Votre assistant médical intelligent</p>
+                </div>
             </div>
 
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">MediAi</h1>
-                <p class="text-gray-600">Votre assistant médical intelligent</p>
+            <!-- Bouton du menu hamburger -->
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-blue-700 focus:outline-none text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
+
+            <!-- Liens de navigation -->
+            <nav id="menu"
+                 class="hidden flex-col space-y-4 mt-4 md:flex md:flex-row md:items-center md:space-y-0 md:space-x-4 md:mt-0">
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+
+                <a href="{% url 'home' %}"
+                   class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
+                    <i class="fas fa-user mr-2"></i> Profil
+                </a>
+
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
+                    </button>
+                </form>
+            </nav>
+
         </div>
-        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-            <a href="{% url 'consultation' %}">
-                <button class="w-full sm:w-auto border border-green-500 text-green-500 px-4 py-2 rounded-lg hover:bg-green-100 transition flex items-center justify-center space-x-2">
-                    <i class="fas fa-plus"></i>
-                    <span>Nouvelle Consultation</span>
-                </button>
-            </a>
-
-            <a href="{% url 'home' %}" class="inline-block">
-                <button class="w-full sm:w-auto border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition flex items-center justify-center space-x-2">
-                    <i class="fas fa-user"></i>
-                    <span>Profil</span>
-                </button>
-            </a>
-
-            <form action="{% url 'logout' %}" method="post" class="inline-block w-full sm:w-auto">
-                {% csrf_token %}
-                <button class="w-full sm:w-auto border border-red-700 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition flex items-center justify-center space-x-2">
-                    <i class="fas fa-cog"></i>
-                    <span>Se déconnecter</span>
-                </button>
-            </form>
-        </div>
-
     </header>
 
     <!-- Main Chat Area -->
@@ -366,6 +372,15 @@
         }
         return cookieValue;
     }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuBtn = document.getElementById("menu-btn");
+        const menu = document.getElementById("menu");
+
+        menuBtn.addEventListener("click", function () {
+            menu.classList.toggle("hidden");
+        });
+    });
 </script>
 
 </body>
