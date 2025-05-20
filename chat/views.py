@@ -58,28 +58,38 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
 
 ### chat
+
+
+
+import hashlib
+import json
 from django.views import View
-from django.shortcuts import render
-from django.http import JsonResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic.edit import CreateView
-from django.urls import reverse_lazy
-
-import threading
-from langchain.schema import HumanMessage
-
-from .llm_config import gpt4, claude, gemini, synthese_llm
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.core.cache import cache
+from concurrent.futures import ThreadPoolExecutor
 from .models import Conversation, MessageIA, FicheConsultation
 
+from django.views.generic.edit import CreateView
+from django.urls import reverse_lazy
+from django.http import StreamingHttpResponse
 
+from langchain.schema import HumanMessage
+from .llm_config import gpt4, claude, gemini, synthese_llm
+
+def stream_synthese(synthese_llm, synthese_message):
+    """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
+    for chunk in synthese_llm.stream([synthese_message]):
+        # chaque chunk est un ChatMessage dans Langchain
+        if hasattr(chunk, 'content'):
+            yield chunk.content
 class AnalyseSymptomesView(LoginRequiredMixin, View):
     template_name = "chat/home.html"
 
     def get(self, request):
         texte = ""
-        # Récupération des symptômes depuis la session
-        symptomes_json = request.session.pop("symptomes_diagnostic", None)  # pop supprime et retourne
-
+        symptomes_json = request.session.pop("symptomes_diagnostic", None)
         if symptomes_json:
             try:
                 symptomes_dict = json.loads(symptomes_json)
@@ -88,81 +98,68 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             except (json.JSONDecodeError, TypeError) as e:
                 print("Erreur lors du décodage des symptômes :", e)
 
-        # Passage du texte au template pour affichage ou traitement JS
         return render(request, self.template_name, {"symptomes_texte": texte})
 
     def post(self, request):
         data = json.loads(request.body)
         symptomes = data.get("message")
+        hash_key = hashlib.md5(symptomes.encode("utf-8")).hexdigest()
+        cache_key = f"diagnostic_{hash_key}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            return JsonResponse({"response": cached_result})
 
         message = HumanMessage(content=f"""
-        Voici les symptômes du patient : {symptomes}
+            Symptômes du patient : {symptomes}
+            Veuillez préciser :
+            1. Analyses nécessaires
+            2. Diagnostic(s)
+            3. Traitement(s) avec posologie
+            4. Éducation thérapeutique
+            5. Références scientifiques fiables
+            6. Répondre ensuite comme assistant médical rigoureux et bienveillant.
+        """)
+        conversation = Conversation.objects.create(user=request.user)
+        MessageIA.objects.create(conversation=conversation, role='user', content=symptomes)
+        results = {}
+        # Appels parallèles aux IA (inchangé)
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                "gpt4": executor.submit(lambda: gpt4([message]).content),
+                "claude": executor.submit(lambda: claude([message]).content),
+                "gemini": executor.submit(lambda: gemini([message]).content),
+            }
+            for key, future in futures.items():
+                try:
+                    results[key] = future.result(timeout=60)
+                except Exception as e:
+                    results[key] = f"Erreur avec {key}: {e}"
 
-        Sur base de cette description et des symptômes significatifs présentés par le patient, je vous prie de me préciser les éléments suivants :
+        for model, content in results.items():
+            MessageIA.objects.create(conversation=conversation, role=model, content=content)
 
-        1. Les analyses paracliniques contributives  
-        2. Le syndrome et/ou le(s) diagnostic(s) correspondant(s)  
-        3. Les traitements proposés avec leur posologie  
-        4. Les recommandations en matière d’éducation thérapeutique  
-        5. Les références bibliographiques issues de bibliothèques scientifiques reconnues (PubMed, Google Scholar, Cinahl, etc.)  
-        6. Si le patient poursuit la conversation en posant des questions sur la réponse fournie, merci de lui répondre comme un assistant médical qualifié, avec rigueur, clarté et bienveillance.
+        synthese_message = HumanMessage(content=f"""
+            Trois experts ont donné leur avis :
+            - 🤖 GPT-4 : {results['gpt4']}
+            - 🧠 Claude 3 : {results['claude']}
+            - 🔬 Gemini Pro : {results['gemini']}
+            Formule une **synthèse claire, rigoureuse et prudente**, avec des **emojis** pour la lisibilité. 🩺
+            Si le patient pose des questions, réponds comme un assistant médical qualifié.
         """)
 
-        conversation = Conversation.objects.create(user=request.user)
+        # On génére la chaîne de tokens en streaming
+        def token_stream():
+            full_response = ""
+            for chunk in stream_synthese(synthese_llm, synthese_message):
+                yield chunk
+                full_response += chunk
+            # Cache la réponse complète une fois terminée
+            cache.set(cache_key, full_response, timeout=3600)
+            MessageIA.objects.create(conversation=conversation, role='synthese', content=full_response)
 
-        MessageIA.objects.create(
-            conversation=conversation,
-            role='user',
-            content=symptomes
-        )
+        response = StreamingHttpResponse(token_stream(), content_type='text/plain; charset=utf-8')
+        return response
 
-        results = {}
-
-        def get_gpt4():
-            results["gpt4"] = gpt4([message]).content
-
-        def get_claude():
-            results["claude"] = claude([message]).content
-
-        def get_gemini():
-            results["gemini"] = gemini([message]).content
-
-        threads = [
-            threading.Thread(target=get_gpt4),
-            threading.Thread(target=get_claude),
-            threading.Thread(target=get_gemini),
-        ]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        MessageIA.objects.create(conversation=conversation, role='gpt4', content=results['gpt4'])
-        MessageIA.objects.create(conversation=conversation, role='claude', content=results['claude'])
-        MessageIA.objects.create(conversation=conversation, role='gemini', content=results['gemini'])
-
-        synthese_message = HumanMessage(
-            content=f"""
-        Trois experts ont donné leur avis sur la situation du patient :
-
-        - 🤖 GPT-4 : {results['gpt4']}
-        - 🧠 Claude 3 : {results['claude']}
-        - 🔬 Gemini Pro : {results['gemini']}
-
-        En te basant sur ces trois analyses, formule une **conclusion claire, rigoureuse et prudente**, en intégrant des **emojis** pour rendre la réponse plus lisible et engageante.
-
-        🩺 Par ailleurs, si le patient poursuit la conversation en posant des questions sur la réponse fournie, merci de lui répondre **comme un assistant médical qualifié**, avec **rigueur**, **clarté** et **bienveillance**.
-        """
-        )
-
-        final_response = synthese_llm([synthese_message])
-
-        MessageIA.objects.create(conversation=conversation, role='synthese', content=final_response.content)
-
-        return JsonResponse({
-            "response": final_response.content  # <-- clé attendue côté JS
-        })
 
 def formater_symptomes_en_texte(symptomes: dict) -> str:
     # Informations personnelles

@@ -253,35 +253,54 @@
         }
     });
 
-    function sendMessage() {
+    async function sendMessage() {
         const input = document.getElementById('user-input');
         const message = input.value.trim();
+        if (!message) return;
 
-        if (message) {
-            addMessage(message, 'user');
-            input.value = '';
+        addMessage(message, 'user');
+        input.value = '';
+        showTypingIndicator();
 
-            showTypingIndicator();
+        // Démarrage du stream : pas de .then(response.json()) !
+        const response = await fetch('/analyse/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({message: message})
+        });
 
-            fetch('/analyse/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({message: message})
-            })
-                .then(response => response.json())
-                .then(data => {
-                    removeTypingIndicator();
-                    addMessage(data.response, 'bot'); // réponse envoyée par le backend
-                })
-                .catch(error => {
-                    removeTypingIndicator();
-                    addMessage("Une erreur est survenue. Veuillez réessayer.", 'bot');
-                    console.error(error);
-                });
+        if (!response.ok || !response.body) {
+            removeTypingIndicator();
+            addMessage("Une erreur est survenue. Veuillez réessayer.", 'bot');
+            return;
         }
+
+        // Pour affichage live : on crée d'abord le bloc du bot et le remplit au fur et à mesure
+        const chatContainer = document.getElementById('chat-messages');
+        const botDiv = document.createElement('div');
+        botDiv.className = 'message bot'; // à adapter selon ta CSS!
+        botDiv.innerHTML = `<div class="bg-blue-100 p-3 rounded-2xl rounded-tl-none max-w-full prose prose-sm prose-blue"><span id="bot-stream"></span></div>`
+        chatContainer.appendChild(botDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        let botStream = botDiv.querySelector('#bot-stream');
+        let fullText = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, {stream: true});
+            fullText += chunk;
+            // Mets à jour le texte en direct
+            botStream.innerHTML = marked.parse(fullText); // tu peux enlever marked si tu n'utilises pas markdown
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        removeTypingIndicator();
     }
 
     function sendQuickMessage(message) {
