@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load markdown_deux_tags %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -74,49 +75,7 @@
 </head>
 <body class="bg-gray-100 font-sans">
 <div class="container mx-auto max-w-6xl px-4 py-8">
-    <!-- Header avec Navbar Responsive -->
-    <header class="bg-white shadow-md rounded-lg mb-8">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <!-- Logo et Titre -->
-            <div class="flex items-center space-x-4">
-                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MediAi</h1>
-                    <p class="text-gray-500 text-sm">Votre assistant médical intelligent</p>
-                </div>
-            </div>
-
-            <!-- Bouton du menu hamburger -->
-            <div class="md:hidden">
-                <button id="menu-btn" class="text-blue-700 focus:outline-none text-2xl">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-
-            <!-- Liens de navigation -->
-            <nav id="menu"
-                 class="hidden flex-col space-y-4 mt-4 md:flex md:flex-row md:items-center md:space-y-0 md:space-x-4 md:mt-0">
-                <a href="{% url 'consultation' %}"
-                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
-                </a>
-
-                <a href="{% url 'home' %}"
-                   class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
-                    <i class="fas fa-user mr-2"></i> Profil
-                </a>
-
-                <form action="{% url 'logout' %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit"
-                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
-                    </button>
-                </form>
-            </nav>
-
-        </div>
-    </header>
+    {% include 'chat/header.html' %}
 
     <!-- Main Chat Area -->
     <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -183,6 +142,31 @@
                     Urgence médicale
                 </button>
             </div>
+        </div>
+        <div id="chat-messages" class="space-y-4 p-4 max-h-[60vh] overflow-y-auto">
+            {% for item in chat_items %}
+                <div class="conversation-block mb-6">
+                    {% for message in item.messages %}
+                        <div class="flex items-start space-x-3 p-2 message {% if message.role == 'user' %}justify-end{% endif %}">
+                            {% if message.role == 'user' %}
+                                <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-full">
+                                    <p>{{ message.content }}</p>
+                                </div>
+                                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            {% else %}
+                                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-full prose prose-sm prose-blue">
+                                    {{ message.content|markdown|safe }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
         </div>
 
         <!-- Chat Input -->
@@ -281,7 +265,7 @@
         // Pour affichage live : on crée d'abord le bloc du bot et le remplit au fur et à mesure
         const chatContainer = document.getElementById('chat-messages');
         const botDiv = document.createElement('div');
-        botDiv.className = 'message bot'; // à adapter selon ta CSS!
+        botDiv.className = 'message bot';
         botDiv.innerHTML = `<div class="bg-blue-100 p-3 rounded-2xl rounded-tl-none max-w-full prose prose-sm prose-blue"><span id="bot-stream"></span></div>`
         chatContainer.appendChild(botDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;

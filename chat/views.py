@@ -94,11 +94,29 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             try:
                 symptomes_dict = json.loads(symptomes_json)
                 texte = formater_symptomes_en_texte(symptomes_dict)
-                print("Texte formaté :", texte)
             except (json.JSONDecodeError, TypeError) as e:
                 print("Erreur lors du décodage des symptômes :", e)
 
-        return render(request, self.template_name, {"symptomes_texte": texte})
+        # Intégration de l'historique des chats ici
+        user = request.user
+        conversations = Conversation.objects.filter(user=user).order_by('id')
+
+        chat_items = []
+        for conv in conversations:
+            messages = MessageIA.objects.filter(
+                conversation=conv, role__in=['user', 'synthese']
+            ).order_by('id')
+            if messages.exists():
+                chat_items.append({
+                    "conversation": conv,
+                    "messages": messages
+                })
+
+        context = {
+            "symptomes_texte": texte,
+            "chat_items": chat_items
+        }
+        return render(request, self.template_name, context)
 
     def post(self, request):
         data = json.loads(request.body)
@@ -340,3 +358,30 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
         self.request.session["symptomes_diagnostic"] = json.dumps(symptomes, default=default_serializer)
 
         return redirect("analyse")
+
+class ChatHistoryView(LoginRequiredMixin, TemplateView):
+    template_name = "chat/history.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # On récupère toutes les conversations de ce user
+        conversations = Conversation.objects.filter(user=user).order_by('-id')
+
+        # Pour chaque conversation, on récupère les messages utiles
+        chat_items = []
+        for conv in conversations:
+            # On récupère que les messages 'user' et 'synthese' dans l'ordre d'envoi
+            messages = (
+                MessageIA.objects
+                    .filter(conversation=conv, role__in=['user', 'synthese'])
+                    .order_by('id')
+            )
+            if messages.exists():
+                chat_items.append({
+                    "conversation": conv,
+                    "messages": messages
+                })
+
+        context['chat_items'] = chat_items
+        return context
