@@ -63,6 +63,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
 import hashlib
 import json
+import asyncio
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -70,6 +71,7 @@ from django.shortcuts import render
 from django.core.cache import cache
 from concurrent.futures import ThreadPoolExecutor
 from .models import Conversation, MessageIA, FicheConsultation
+from asgiref.sync import sync_to_async
 
 from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
@@ -84,6 +86,7 @@ def stream_synthese(synthese_llm, synthese_message):
         # chaque chunk est un ChatMessage dans Langchain
         if hasattr(chunk, 'content'):
             yield chunk.content
+
 class AnalyseSymptomesView(LoginRequiredMixin, View):
     template_name = "chat/home.html"
 
@@ -97,7 +100,6 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             except (json.JSONDecodeError, TypeError) as e:
                 print("Erreur lors du décodage des symptômes :", e)
 
-        # Intégration de l'historique des chats ici
         user = request.user
         conversations = Conversation.objects.filter(user=user).order_by('id')
 
@@ -137,21 +139,25 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             5. Références scientifiques fiables
             6. Répondre ensuite comme assistant médical rigoureux et bienveillant.
         """)
+
         conversation = Conversation.objects.create(user=request.user)
         MessageIA.objects.create(conversation=conversation, role='user', content=symptomes)
+
         results = {}
-        # Appels parallèles aux IA (inchangé)
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures = {
-                "gpt4": executor.submit(lambda: gpt4([message]).content),
-                "claude": executor.submit(lambda: claude([message]).content),
-                "gemini": executor.submit(lambda: gemini([message]).content),
-            }
-            for key, future in futures.items():
-                try:
-                    results[key] = future.result(timeout=60)
-                except Exception as e:
-                    results[key] = f"Erreur avec {key}: {e}"
+        try:
+            results["gpt4"] = gpt4.invoke([message]).content
+        except Exception as e:
+            results["gpt4"] = f"Erreur avec GPT-4 : {e}"
+
+        try:
+            results["claude"] = claude.invoke([message]).content
+        except Exception as e:
+            results["claude"] = f"Erreur avec Claude : {e}"
+
+        try:
+            results["gemini"] = gemini.invoke([message]).content
+        except Exception as e:
+            results["gemini"] = f"Erreur avec Gemini : {e}"
 
         for model, content in results.items():
             MessageIA.objects.create(conversation=conversation, role=model, content=content)
@@ -165,18 +171,15 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             Si le patient pose des questions, réponds comme un assistant médical qualifié.
         """)
 
-        # On génére la chaîne de tokens en streaming
         def token_stream():
             full_response = ""
             for chunk in stream_synthese(synthese_llm, synthese_message):
                 yield chunk
                 full_response += chunk
-            # Cache la réponse complète une fois terminée
             cache.set(cache_key, full_response, timeout=3600)
             MessageIA.objects.create(conversation=conversation, role='synthese', content=full_response)
 
-        response = StreamingHttpResponse(token_stream(), content_type='text/plain; charset=utf-8')
-        return response
+        return StreamingHttpResponse(token_stream(), content_type='text/plain; charset=utf-8')
 
 
 def formater_symptomes_en_texte(symptomes: dict) -> str:
