@@ -144,8 +144,10 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
 def diagnostic_result(request):
     cache_key = request.GET.get("cache_key")
     result = cache.get(cache_key)
+    print("Diagnostic result for cache key:", cache_key)
     if result:
         return JsonResponse({"status": "done", "response": result})
+    print("No cached result found for key:", cache_key)
     return JsonResponse({"status": "pending"})
 
 def formater_symptomes_en_texte(symptomes: dict) -> str:
@@ -155,7 +157,7 @@ def formater_symptomes_en_texte(symptomes: dict) -> str:
     date_naissance = symptomes["Identification"]["Date de naissance"]
     telephone = symptomes["Identification"]["Téléphone"]
 
-    texte = f"Je m'appelle {nom}, j'ai {age} ans (né le {date_naissance}), mon numéro de téléphone est {telephone}. Voici toutes mes informations médicales. J'ai besoin d'un diagnostic basé sur les détails suivants :\n\n"
+    texte = f"Je m'appelle {nom}, j'ai {age} ans (né le {date_naissance}). Voici toutes mes informations médicales. J'ai besoin d'un diagnostic basé sur les détails suivants :\n\n"
 
     texte += f"Motif de consultation : {symptomes.get('Motif de consultation', '')}\n"
     texte += f"Histoire de la maladie : {symptomes.get('Histoire de la maladie', '')}\n\n"
