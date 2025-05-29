@@ -26,13 +26,13 @@ gpt4 = ChatOpenAI(
 )
 
 claude = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro-preview-05-06",
+    model="gemini-2.0-flash",
     temperature=0.3,
     google_api_key=google_key
 )
 
 gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.5-pro-preview-05-06",
+    model="gemini-2.0-flash",
     temperature=0.3,
     google_api_key=google_key
 )
