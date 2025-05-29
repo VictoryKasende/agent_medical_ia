@@ -85,6 +85,8 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from langchain.schema import HumanMessage
 from .llm_config import gpt4, claude, gemini, synthese_llm
+from django.db import transaction
+
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -137,7 +139,11 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
 
         conversation = Conversation.objects.create(user=request.user)
         MessageIA.objects.create(conversation=conversation, role='user', content=symptomes)
-        analyse_symptomes_task.delay(symptomes, request.user.id, conversation.id, cache_key)
+
+        def run_task():
+            analyse_symptomes_task.delay(symptomes, request.user.id, conversation.id, cache_key)
+
+        transaction.on_commit(run_task)  # ← la tâche ne sera QUEUE qu'après COMMIT effectif
         return JsonResponse({"status": "pending", "cache_key": cache_key})
 
 
