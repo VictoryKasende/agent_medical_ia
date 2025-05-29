@@ -1,7 +1,6 @@
 # app/tasks.py
 from celery import shared_task
-from .models import Conversation, MessageIA
-from django.core.cache import cache
+
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -12,6 +11,8 @@ def stream_synthese(synthese_llm, synthese_message):
 
 @shared_task
 def analyse_symptomes_task(symptomes, user_id, conversation_id, cache_key):
+    from .models import Conversation, MessageIA
+    from django.core.cache import cache
     # Import à l'intérieur pour éviter des soucis de "AppRegistryNotReady"
     from .llm_config import gpt4, claude, gemini, synthese_llm
     from langchain.schema import HumanMessage
