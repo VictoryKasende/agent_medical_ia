@@ -87,6 +87,8 @@ from langchain.schema import HumanMessage
 from .llm_config import gpt4, claude, gemini, synthese_llm
 from django.db import transaction
 
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -209,6 +211,44 @@ def formater_symptomes_en_texte(symptomes: dict) -> str:
         texte += f"- {k} : {v}\n"
 
     return texte
+
+
+@login_required
+@require_http_methods(["POST"])
+def new_conversation(request):
+    conversation = Conversation.objects.create(user=request.user)
+    return JsonResponse({"success": True, "conversation_id": conversation.id})
+
+
+@login_required
+def get_conversation(request, conversation_id):
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, user=request.user)
+        messages = MessageIA.objects.filter(
+            conversation=conversation,
+            role__in=['user', 'synthese']
+        ).order_by('id')
+
+        messages_data = [{
+            "content": msg.content,
+            "role": msg.role,
+            "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M")
+        } for msg in messages]
+
+        return JsonResponse({"success": True, "messages": messages_data})
+    except Conversation.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Conversation non trouvée"})
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_conversation(request, conversation_id):
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, user=request.user)
+        conversation.delete()
+        return JsonResponse({"success": True})
+    except Conversation.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Conversation non trouvée"})
 
 
 class FicheConsultationCreateView(LoginRequiredMixin, CreateView):

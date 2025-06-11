@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
         /* Animation pour les messages */
@@ -28,21 +29,22 @@
         }
 
         /* Custom scrollbar */
-        .chat-container::-webkit-scrollbar {
+        ::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
 
-        .chat-container::-webkit-scrollbar-track {
+        ::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
 
-        .chat-container::-webkit-scrollbar-thumb {
+        ::-webkit-scrollbar-thumb {
             background: #a0aec0;
             border-radius: 10px;
         }
 
-        .chat-container::-webkit-scrollbar-thumb:hover {
+        ::-webkit-scrollbar-thumb:hover {
             background: #718096;
         }
 
@@ -71,46 +73,143 @@
         .typing-dot:nth-child(3) {
             animation-delay: 0.6s;
         }
+
+        /* Sidebar transition */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 40;
+                height: 100vh;
+            }
+
+            .sidebar-open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 30;
+            }
+
+            .sidebar-overlay-open {
+                display: block;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
-<div class="container mx-auto max-w-6xl px-4 py-8">
-    {% include 'chat/header.html' %}
+<body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
+<!-- Sidebar Overlay (mobile only) -->
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-    <!-- Main Chat Area -->
-    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-        <!-- Chat Header -->
-        <div class="bg-blue-600 text-white p-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="relative">
-                    <div class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user-md text-xl"></i>
+<!-- Sidebar -->
+<div id="sidebar" class="sidebar bg-white w-64 border-r border-gray-200 flex flex-col">
+    <!-- New Chat Button -->
+    <div class="p-4 border-b border-gray-200">
+        <button onclick="newChat()"
+                class="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition">
+            <i class="fas fa-plus"></i>
+            <span>Nouvelle discussion</span>
+        </button>
+    </div>
+
+    <!-- Chat History -->
+    <div class="flex-1 overflow-y-auto">
+        <div class="p-2">
+            <h3 class="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Historique</h3>
+            <div id="chat-history" class="space-y-1">
+                {% for item in chat_items %}
+                    <div onclick="loadConversation({{ item.conversation.id }})"
+                         class="px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between {% if forloop.first %}bg-gray-100{% endif %}">
+                    <span class="truncate">
+                        <i class="fas fa-comment-medical mr-2 text-blue-500"></i>
+                        {% with first_message=item.messages.first %}
+                            {{ first_message.content|truncatechars:30 }}
+                        {% endwith %}
+                    </span>
+                        <i class="fas fa-ellipsis-v text-gray-400 hover:text-gray-600"
+                           onclick="event.stopPropagation(); showConversationOptions(event, {{ item.conversation.id }})"></i>
                     </div>
-                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-600"></span>
-                </div>
-                <div>
-                    <h3 class="font-semibold">Dr. MediAi</h3>
-                    <p class="text-xs text-blue-100">En ligne</p>
-                </div>
-            </div>
-            <div class="flex space-x-2">
-                <button class="p-2 rounded-full hover:bg-blue-500 transition">
-                    <i class="fas fa-phone-alt"></i>
-                </button>
-                <button class="p-2 rounded-full hover:bg-blue-500 transition">
-                    <i class="fas fa-video"></i>
-                </button>
-                <button class="p-2 rounded-full hover:bg-blue-500 transition">
-                    <i class="fas fa-ellipsis-v"></i>
-                </button>
+                {% empty %}
+                    <div class="px-2 py-2 text-gray-500 text-center">
+                        Aucune conversation existante
+                    </div>
+                {% endfor %}
             </div>
         </div>
+    </div>
+    <!-- User Profile -->
+    <div class="p-4 border-t border-gray-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="fas fa-user text-blue-600"></i>
+            </div>
+            <div>
+                <p class="font-medium">Utilisateur</p>
+                <p class="text-xs text-gray-500">Compte gratuit</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <!-- Chat Messages -->
-        <div class="chat-container h-96 overflow-y-auto p-4 space-y-4" id="chat-messages">
+<!-- Main Content -->
+<div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Navbar -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="flex items-center justify-between px-4 py-3">
+            <!-- Mobile menu button -->
+            <button id="mobile-menu-button" class="md:hidden text-gray-500 hover:text-gray-600">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+
+            <!-- Logo / Title -->
+            <div class="flex items-center">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" alt="UDBL Logo" class="h-8 mr-2">
+                <h1 class="text-xl font-bold text-gray-800">MediAi</h1>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="hidden md:flex space-x-6">
+                <a href="#" class="text-gray-700 hover:text-blue-600">Accueil</a>
+                <a href="#" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
+                <a href="#" class="text-gray-700 hover:text-blue-600">À propos</a>
+                <a href="#" class="text-gray-700 hover:text-blue-600">Contact</a>
+            </nav>
+
+            <!-- User Actions -->
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-500 hover:text-blue-600">
+                    <i class="fas fa-sun"></i>
+                </button>
+                <button class="text-gray-500 hover:text-blue-600">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <i class="fas fa-user text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="flex-1 overflow-y-auto bg-gray-50">
+        <div class="max-w-3xl mx-auto p-4">
             <!-- Welcome Message -->
-            <div class="flex items-start space-x-3 message">
-                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-xs lg:max-w-md">
+            <div class="flex items-start space-x-3 message mb-6">
+                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-3xl">
                     <p class="font-medium">Bonjour 👋</p>
                     <p class="mt-1">Je suis MediAi, votre assistant médical virtuel. Je peux vous aider à:</p>
                     <ul class="list-disc pl-5 mt-2 space-y-1">
@@ -120,115 +219,136 @@
                         <li>Rappeler vos médicaments</li>
                     </ul>
                     <p class="mt-2">Comment puis-je vous aider aujourd'hui?</p>
+
+                    <!-- Quick Actions -->
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <button onclick="sendQuickMessage('J\'ai mal à la tête')"
+                                class="bg-white hover:bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm transition border border-gray-200">
+                            J'ai mal à la tête
+                        </button>
+                        <button onclick="sendQuickMessage('Je cherche un médecin généraliste')"
+                                class="bg-white hover:bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm transition border border-gray-200">
+                            Trouver un médecin
+                        </button>
+                        <button onclick="sendQuickMessage('Conseils pour dormir mieux')"
+                                class="bg-white hover:bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm transition border border-gray-200">
+                            Problèmes de sommeil
+                        </button>
+                        <button onclick="sendQuickMessage('Quand consulter en urgence?')"
+                                class="bg-white hover:bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm transition border border-gray-200">
+                            Urgence médicale
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="flex flex-wrap gap-2 mt-2 mb-4">
-                <button onclick="sendQuickMessage('J\'ai mal à la tête')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
-                    J'ai mal à la tête
-                </button>
-                <button onclick="sendQuickMessage('Je cherche un médecin généraliste')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
-                    Trouver un médecin
-                </button>
-                <button onclick="sendQuickMessage('Conseils pour dormir mieux')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
-                    Problèmes de sommeil
-                </button>
-                <button onclick="sendQuickMessage('Quand consulter en urgence?')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition transition">
-                    Urgence médicale
-                </button>
+            <!-- Chat Messages -->
+            <div id="chat-messages" class="space-y-6">
+                {% for item in chat_items %}
+                    <div class="conversation-block">
+                        {% for message in item.messages %}
+                            <div class="flex items-start space-x-3 message {% if message.role == 'user' %}justify-end{% endif %}">
+                                {% if message.role == 'user' %}
+                                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none max-w-full lg:max-w-2xl">
+                                        <p>{{ message.content }}</p>
+                                    </div>
+                                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% else %}
+                                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-2xl prose prose-sm prose-blue">
+                                        {{ message.content|markdown|safe }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
             </div>
         </div>
-        <div id="chat-messages" class="space-y-4 p-4 max-h-[60vh] overflow-y-auto">
-            {% for item in chat_items %}
-                <div class="conversation-block mb-6">
-                    {% for message in item.messages %}
-                        <div class="flex items-start space-x-3 p-2 message {% if message.role == 'user' %}justify-end{% endif %}">
-                            {% if message.role == 'user' %}
-                                <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-full">
-                                    <p>{{ message.content }}</p>
-                                </div>
-                                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                            {% else %}
-                                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-robot"></i>
-                                </div>
-                                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-full prose prose-sm prose-blue">
-                                    {{ message.content|markdown|safe }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
-        </div>
+    </div>
 
-        <!-- Chat Input -->
-        <div class="border-t border-gray-200 p-4 bg-gray-50">
-            <div class="flex items-center space-x-2">
-                <a href="{% url 'consultation' %}">
-                    <button class="text-blue-600 border border-blue-600 p-3 rounded-full hover:bg-blue-600 hover:text-white transition-all duration-300 transform hover:scale-110 active:scale-95 shadow-md">
-                        <i class="fas fa-file-medical"></i>
-                    </button>
-                </a>
-                <div class="flex-1 relative">
-                    <input
-                            type="text"
+    <!-- Chat Input -->
+    <div class="border-t border-gray-200 bg-white p-4">
+        <div class="max-w-3xl mx-auto">
+            <div class="relative">
+                    <textarea
                             id="user-input"
+                            rows="1"
                             placeholder="Décrivez vos symptômes ou posez une question..."
-                            class="w-full bg-white border border-gray-300 rounded-full py-3 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            onkeypress="handleKeyPress(event)"
-                    >
-                    <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-blue-600">
+                            class="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            onkeydown="handleKeyPress(event)"
+                    ></textarea>
+                <div class="absolute right-3 bottom-3 flex space-x-2">
+                    <button class="text-gray-500 hover:text-blue-600">
                         <i class="far fa-smile"></i>
                     </button>
+                    <button onclick="sendMessage()"
+                            class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
-                <button onclick="sendMessage()"
-                        class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
             </div>
             <div class="mt-2 text-xs text-gray-500 text-center">
                 <p>MediBot ne remplace pas un avis médical professionnel. En cas d'urgence, appelez le +243.</p>
             </div>
         </div>
     </div>
-
-    <!-- Features Section -->
-    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <i class="fas fa-heartbeat text-xl"></i>
-            </div>
-            <h3 class="font-bold text-lg mb-2">Analyse de symptômes</h3>
-            <p class="text-gray-600">Décrivez vos symptômes et recevez des conseils sur les prochaines étapes à
-                suivre.</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <div class="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <i class="fas fa-calendar-check text-xl"></i>
-            </div>
-            <h3 class="font-bold text-lg mb-2">Rappels médicaux</h3>
-            <p class="text-gray-600">Programmez des rappels pour vos médicaments et rendez-vous médicaux.</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <i class="fas fa-map-marker-alt text-xl"></i>
-            </div>
-            <h3 class="font-bold text-lg mb-2">Trouver un médecin</h3>
-            <p class="text-gray-600">Localisez les professionnels de santé près de chez vous avec leurs
-                disponibilités.</p>
-        </div>
-    </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <script>
+    // Toggle mobile sidebar
+    document.getElementById('mobile-menu-button').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.toggle('sidebar-open');
+        document.getElementById('sidebar-overlay').classList.toggle('sidebar-overlay-open');
+    });
+
+    // Close sidebar when clicking overlay
+    document.getElementById('sidebar-overlay').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.remove('sidebar-open');
+        this.classList.remove('sidebar-overlay-open');
+    });
+
+    // Auto-resize textarea
+    const textarea = document.getElementById('user-input');
+    textarea.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    function newChat() {
+        // Clear chat messages (keep welcome message)
+        document.getElementById('chat-messages').innerHTML = `
+                <div class="flex items-start space-x-3 message mb-6">
+                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-3xl">
+                        <p class="font-medium">Nouvelle discussion</p>
+                        <p class="mt-1">Comment puis-je vous aider aujourd'hui?</p>
+                    </div>
+                </div>
+            `;
+
+        // Add to chat history
+        const historyItem = document.createElement('div');
+        historyItem.className = 'px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between bg-gray-100';
+        historyItem.innerHTML = `
+                <span class="truncate"><i class="fas fa-comment-medical mr-2 text-blue-500"></i>Nouvelle discussion</span>
+                <i class="fas fa-ellipsis-v text-gray-400 hover:text-gray-600"></i>
+            `;
+        document.getElementById('chat-history').prepend(historyItem);
+
+        // Remove active class from other items
+        document.querySelectorAll('#chat-history > div').forEach(item => {
+            item.classList.remove('bg-gray-100');
+        });
+        historyItem.classList.add('bg-gray-100');
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         const input = document.getElementById('user-input');
         const texte = `{{ symptomes_texte|escapejs }}`;
@@ -243,6 +363,7 @@
         if (!message) return;
         addMessage(message, 'user');
         input.value = '';
+        input.style.height = 'auto';
         showTypingIndicator();
 
         // 1. On envoie la requête pour démarrer l'analyse (POST)
@@ -306,7 +427,8 @@
     }
 
     function handleKeyPress(event) {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             sendMessage();
         }
     }
@@ -315,25 +437,27 @@
         const chatContainer = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex items-start space-x-3 message ${sender === 'user' ? 'justify-end' : ''}`;
+
         if (sender === 'user') {
             messageDiv.innerHTML = `
-        <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-full lg:max-w-full">
-            <p>${text}</p>
-        </div>
-        <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
-            <i class="fas fa-user"></i>
-        </div>
-        `;
+                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none max-w-full lg:max-w-2xl">
+                        <p>${text}</p>
+                    </div>
+                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                        <i class="fas fa-user"></i>
+                    </div>
+                `;
         } else {
             messageDiv.innerHTML = `
-        <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
-            <i class="fas fa-robot"></i>
-        </div>
-        <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-full lg:max-w-full prose prose-sm prose-blue">
-            ${marked.parse(text)}
-        </div>
-        `;
+                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-2xl prose prose-sm prose-blue">
+                        ${marked.parse(text)}
+                    </div>
+                `;
         }
+
         chatContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -344,17 +468,17 @@
         typingDiv.className = 'flex items-start space-x-3 message';
         typingDiv.id = 'typing-indicator';
         typingDiv.innerHTML = `
-    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
-        <i class="fas fa-robot"></i>
-    </div>
-    <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none w-20">
-        <div class="flex space-x-1">
-            <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-            <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-            <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-        </div>
-    </div>
-    `;
+                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none w-20">
+                    <div class="flex space-x-1">
+                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                    </div>
+                </div>
+            `;
         chatContainer.appendChild(typingDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -381,16 +505,73 @@
         return cookieValue;
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const menuBtn = document.getElementById("menu-btn");
-        const menu = document.getElementById("menu");
-        if (menuBtn && menu) {
-            menuBtn.addEventListener("click", function () {
-                menu.classList.toggle("hidden");
+    // Nouvelle conversation
+    function newChat() {
+        fetch('/new-conversation/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recharger la page ou mettre à jour l'interface
+                    window.location.reload();
+                }
             });
-        }
-    });
-</script>
+    }
 
+    // Charger une conversation existante
+    function loadConversation(conversationId) {
+        fetch(`/get-conversation/${conversationId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages) {
+                    // Effacer les messages actuels
+                    document.getElementById('chat-messages').innerHTML = '';
+
+                    // Ajouter les messages de la conversation
+                    data.messages.forEach(msg => {
+                        addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot');
+                    });
+
+                    // Mettre en surbrillance la conversation sélectionnée
+                    document.querySelectorAll('#chat-history > div').forEach(item => {
+                        item.classList.remove('bg-gray-100');
+                    });
+                    event.currentTarget.classList.add('bg-gray-100');
+                }
+            });
+    }
+
+    // Options de conversation (suppression, etc.)
+    function showConversationOptions(event, conversationId) {
+        // Implémentez un menu contextuel ou une modal pour les options
+        console.log(`Options pour la conversation ${conversationId}`);
+        // Exemple: confirmation de suppression
+        if (confirm('Voulez-vous supprimer cette conversation?')) {
+            deleteConversation(conversationId);
+        }
+    }
+
+    // Supprimer une conversation
+    function deleteConversation(conversationId) {
+        fetch(`/delete-conversation/${conversationId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recharger ou mettre à jour l'interface
+                    window.location.reload();
+                }
+            });
+    }
+</script>
 </body>
 </html>
