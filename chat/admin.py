@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Conversation, MessageIA, FicheConsultation
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import Conversation, MessageIA, FicheConsultation, UserProfile
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 @admin.register(Conversation)
@@ -30,3 +34,30 @@ class FicheConsultationAdmin(admin.ModelAdmin):
     search_fields = ('nom', 'prenom', 'conversation__user__username')
     date_hierarchy = 'date_naissance'
     ordering = ('-date_naissance',)
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profil utilisateur'
+    fk_name = 'user'
+
+class CustomUserAdmin(UserAdmin):
+    inlines = (UserProfileInline,)
+
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return []
+        return super().get_inline_instances(request, obj)
+
+# Désenregistre User puis réenregistre-le avec l’inline
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+    else:
+        # Crée le profil s'il n'existe pas (cas d'utilisateurs déjà présents)
+        profile, created = UserProfile.objects.get_or_create(user=instance)
+        profile.save()

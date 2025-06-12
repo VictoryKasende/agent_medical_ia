@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord - Proche Aidant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-collapsed {
+            width: 70px;
+        }
+        
+        .sidebar-collapsed .sidebar-text {
+            display: none;
+        }
+        
+        .sidebar-collapsed .logo-text {
+            display: none;
+        }
+        
+        .sidebar-collapsed .nav-item {
+            justify-content: center;
+        }
+        
+        .main-content {
+            transition: all 0.3s ease;
+        }
+        
+        .main-content-expanded {
+            margin-left: 70px;
+        }
+        
+        .notification-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 12px;
+            height: 12px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .health-card {
+            transition: all 0.3s ease;
+        }
+        
+        .health-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .appointment-card {
+            position: relative;
+        }
+        
+        .appointment-card:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .appointment-card.urgent:before {
+            background-color: #ef4444;
+        }
+        
+        .appointment-card.standard:before {
+            background-color: #3b82f6;
+        }
+        
+        .appointment-card.routine:before {
+            background-color: #10b981;
+        }
+        
+        .medication-progress {
+            height: 6px;
+        }
+        
+        .medication-progress::-webkit-progress-bar {
+            background-color: #e5e7eb;
+            border-radius: 3px;
+        }
+        
+        .medication-progress::-webkit-progress-value {
+            border-radius: 3px;
+        }
+        
+        .medication-progress.high::-webkit-progress-value {
+            background-color: #ef4444;
+        }
+        
+        .medication-progress.medium::-webkit-progress-value {
+            background-color: #f59e0b;
+        }
+        
+        .medication-progress.low::-webkit-progress-value {
+            background-color: #10b981;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Barre latérale -->
+    <div class="sidebar fixed inset-y-0 left-0 bg-white shadow-md w-64 z-50">
+        <div class="flex items-center justify-between px-4 py-6 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i class="fas fa-hands-helping text-xl"></i>
+                </div>
+                <span class="logo-text text-xl font-semibold text-gray-800">CareLink</span>
+            </div>
+            <button id="sidebar-toggle" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="px-4 py-6">
+            <div class="space-y-1">
+                <a href="#" class="nav-item flex items-center px-4 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium">
+                    <i class="fas fa-home text-lg mr-3"></i>
+                    <span class="sidebar-text">Tableau de bord</span>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-calendar-check text-lg mr-3"></i>
+                    <span class="sidebar-text">Rendez-vous</span>
+                    <span class="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">3</span>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-pills text-lg mr-3"></i>
+                    <span class="sidebar-text">Médicaments</span>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-file-medical text-lg mr-3"></i>
+                    <span class="sidebar-text">Dossiers médicaux</span>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-chart-line text-lg mr-3"></i>
+                    <span class="sidebar-text">Suivi santé</span>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-comments text-lg mr-3"></i>
+                    <span class="sidebar-text">Messagerie</span>
+                    <div class="relative ml-auto">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="notification-dot"></span>
+                    </div>
+                </a>
+                
+                <a href="#" class="nav-item flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <i class="fas fa-cog text-lg mr-3"></i>
+                    <span class="sidebar-text">Paramètres</span>
+                </a>
+            </div>
+            
+            <div class="mt-10 pt-6 border-t border-gray-200">
+                <div class="flex items-center px-4">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profil" class="w-10 h-10 rounded-full object-cover">
+                    <div class="ml-3 sidebar-text">
+                        <p class="text-sm font-medium text-gray-800">Marie Dupont</p>
+                        <p class="text-xs text-gray-500">Proche aidant</p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Contenu principal -->
+    <div class="main-content ml-64 min-h-screen">
+        <!-- Barre de navigation supérieure -->
+        <header class="bg-white shadow-sm">
+            <div class="flex items-center justify-between px-6 py-4">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-semibold text-gray-800">Tableau de bord</h1>
+                    <div class="relative">
+                        <select class="appearance-none bg-gray-100 border-0 text-blue-600 font-medium px-3 py-1 pr-8 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>Jean Martin</option>
+                            <option>Sophie Martin</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button class="relative p-2 text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    
+                    <button class="p-2 text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-question-circle text-xl"></i>
+                    </button>
+                    
+                    <div class="relative">
+                        <button id="user-menu-button" class="flex items-center space-x-2 focus:outline-none">
+                            <span class="text-sm font-medium text-gray-700 hidden md:inline">Marie Dupont</span>
+                            <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profil" class="w-8 h-8 rounded-full object-cover">
+                        </button>
+                        
+                        <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
+                            <div class="border-t border-gray-200"></div>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Déconnexion</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Contenu du dashboard -->
+        <main class="p-6">
+            <!-- Alertes urgentes -->
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 animate-fade-in">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">
+                            <span class="font-semibold">Alerte : </span> Jean a manqué sa prise de médicament ce matin à 8h. <a href="#" class="font-medium text-red-600 hover:text-red-800">Voir les détails →</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Carte patient -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-1">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Mon patient</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Voir profil complet</a>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4 mb-6">
+                            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Patient" class="w-16 h-16 rounded-full object-cover border-2 border-blue-200">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Jean Martin</h3>
+                                <p class="text-sm text-gray-500">72 ans • Diabète type 2</p>
+                                <div class="flex items-center mt-1">
+                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded">Stable</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p class="text-sm text-gray-500">Dernière visite</p>
+                                <p class="font-medium text-gray-800">12/06/23</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Prochain RDV</p>
+                                <p class="font-medium text-blue-600">25/06/23</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Médicaments</p>
+                                <p class="font-medium text-gray-800">5</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm text-gray-600">Lien familial : <span class="font-medium text-gray-800">Épouse</span></p>
+                            <button class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                                <i class="fas fa-phone-alt mr-1"></i> Appeler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Rendez-vous -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Prochains rendez-vous</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Voir tout</a>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="appointment-card urgent bg-white p-4 rounded-lg border border-gray-200 hover:border-red-200 shadow-sm">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="bg-red-100 text-red-600 p-2 rounded-lg">
+                                            <i class="fas fa-ambulance"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-800">Consultation cardiologie</h3>
+                                            <p class="text-sm text-gray-500">Dr. Lefèvre • Hôpital Saint-Louis</p>
+                                            <div class="flex items-center mt-2 space-x-4">
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="far fa-clock mr-1"></i> Aujourd'hui, 14h30
+                                                </span>
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="fas fa-map-marker-alt mr-1"></i> Salle 204
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="p-2 text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="appointment-card standard bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-200 shadow-sm">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                                            <i class="fas fa-user-md"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-800">Suivi diabétologie</h3>
+                                            <p class="text-sm text-gray-500">Dr. Martin • Centre médical</p>
+                                            <div class="flex items-center mt-2 space-x-4">
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="far fa-clock mr-1"></i> 25/06/23, 10h00
+                                                </span>
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="fas fa-map-marker-alt mr-1"></i> Cabinet 3
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded-full hover:bg-blue-100">
+                                            Confirmer
+                                        </button>
+                                        <button class="p-2 text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="appointment-card routine bg-white p-4 rounded-lg border border-gray-200 hover:border-green-200 shadow-sm">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="bg-green-100 text-green-600 p-2 rounded-lg">
+                                            <i class="fas fa-heartbeat"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-800">Bilan annuel</h3>
+                                            <p class="text-sm text-gray-500">Dr. Rousseau • Clinique du Parc</p>
+                                            <div class="flex items-center mt-2 space-x-4">
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="far fa-clock mr-1"></i> 05/07/23, 09h15
+                                                </span>
+                                                <span class="flex items-center text-sm text-gray-500">
+                                                    <i class="fas fa-map-marker-alt mr-1"></i> Bâtiment B
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="px-3 py-1 bg-green-50 text-green-600 text-sm rounded-full hover:bg-green-100">
+                                            Planifié
+                                        </button>
+                                        <button class="p-2 text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Médicaments -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-1">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Traitement en cours</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Voir tout</a>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start p-3 bg-red-50 rounded-lg">
+                                <div class="bg-red-100 text-red-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-800">Metformine 500mg</h3>
+                                    <p class="text-sm text-gray-500">1 comprimé matin et soir</p>
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-medium text-red-600">Prise manquée ce matin</span>
+                                            <span class="text-xs text-gray-500">8h00</span>
+                                        </div>
+                                        <progress class="medication-progress high w-full" value="0" max="100"></progress>
+                                    </div>
+                                </div>
+                                <button class="ml-2 text-red-500 hover:text-red-700">
+                                    <i class="fas fa-bell-slash"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
+                                <div class="bg-blue-100 text-blue-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-800">Atorvastatine 20mg</h3>
+                                    <p class="text-sm text-gray-500">1 comprimé le soir</p>
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-medium text-blue-600">Prochaine prise à 20h00</span>
+                                            <span class="text-xs text-gray-500">Dans 4h</span>
+                                        </div>
+                                        <progress class="medication-progress medium w-full" value="60" max="100"></progress>
+                                    </div>
+                                </div>
+                                <button class="ml-2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
+                                <div class="bg-green-100 text-green-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-800">Aspirine 100mg</h3>
+                                    <p class="text-sm text-gray-500">1 comprimé le matin</p>
+                                    <div class="mt-2">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-xs font-medium text-green-600">Prise confirmée à 8h15</span>
+                                            <span class="text-xs text-gray-500">Aujourd'hui</span>
+                                        </div>
+                                        <progress class="medication-progress low w-full" value="100" max="100"></progress>
+                                    </div>
+                                </div>
+                                <button class="ml-2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Indicateurs santé -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-1">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Indicateurs santé</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Historique</a>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="health-card bg-blue-50 p-4 rounded-lg border border-blue-100 hover:border-blue-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-blue-800">Glycémie</span>
+                                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">+2%</span>
+                                </div>
+                                <p class="text-2xl font-bold text-blue-600">1.45 g/L</p>
+                                <p class="text-xs text-blue-500 mt-1">Dernière mesure: 08h30</p>
+                            </div>
+                            
+                            <div class="health-card bg-green-50 p-4 rounded-lg border border-green-100 hover:border-green-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-green-800">Pression art.</span>
+                                    <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Stable</span>
+                                </div>
+                                <p class="text-2xl font-bold text-green-600">12.8/7.5</p>
+                                <p class="text-xs text-green-500 mt-1">Dernière mesure: Hier</p>
+                            </div>
+                            
+                            <div class="health-card bg-yellow-50 p-4 rounded-lg border border-yellow-100 hover:border-yellow-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-yellow-800">Poids</span>
+                                    <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">-1kg</span>
+                                </div>
+                                <p class="text-2xl font-bold text-yellow-600">78.5 kg</p>
+                                <p class="text-xs text-yellow-500 mt-1">Dernière mesure: 15/06</p>
+                            </div>
+                            
+                            <div class="health-card bg-purple-50 p-4 rounded-lg border border-purple-100 hover:border-purple-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-purple-800">Activité</span>
+                                    <span class="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">+15%</span>
+                                </div>
+                                <p class="text-2xl font-bold text-purple-600">4,230 pas</p>
+                                <p class="text-xs text-purple-500 mt-1">Aujourd'hui</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-800">Observations récentes</span>
+                                <span class="text-xs text-gray-500">Aujourd'hui</span>
+                            </div>
+                            <p class="text-sm text-gray-600">"Fatigue inhabituelle ce matin, glycémie légèrement élevée. À surveiller."</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Messagerie et tâches -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-1">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Messagerie récente</h2>
+                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Voir tout</a>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                                <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="Dr. Martin" class="w-10 h-10 rounded-full object-cover mr-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="font-medium text-gray-800">Dr. Martin</h3>
+                                        <span class="text-xs text-gray-500">11h30</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 truncate">Concernant les résultats du dernier bilan sanguin...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start p-3 bg-blue-50 rounded-lg cursor-pointer">
+                                <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Infirmier" class="w-10 h-10 rounded-full object-cover mr-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="font-medium text-gray-800">Inf. Dubois</h3>
+                                        <span class="text-xs text-gray-500">Hier</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 truncate">Confirmation de la visite à domicile demain matin...</p>
+                                </div>
+                                <span class="ml-2 w-2 h-2 bg-blue-500 rounded-full"></span>
+                            </div>
+                            
+                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                                <div class="bg-gray-200 text-gray-600 p-2 rounded-lg mr-3">
+                                    <i class="fas fa-hospital"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="font-medium text-gray-800">Hôpital Saint-Louis</h3>
+                                        <span class="text-xs text-gray-500">15/06</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 truncate">Rappel : Préparation pour l'examen de jeudi...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-4 border-t border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-800 mb-3">Tâches à faire</h3>
+                            
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox" id="task1" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                <label for="task1" class="ml-2 text-sm text-gray-700">Commander des bandelettes</label>
+                            </div>
+                            
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox" id="task2" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                <label for="task2" class="ml-2 text-sm text-gray-700">Préparer les ordonnances</label>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input type="checkbox" id="task3" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                <label for="task3" class="ml-2 text-sm text-gray-700">Appeler l'assistante sociale</label>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="flex">
+                                    <input type="text" placeholder="Ajouter une tâche..." class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    <button class="px-4 py-2 bg-blue-600 text-white text-sm rounded-r-lg hover:bg-blue-700">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Documents récents -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800">Documents récents</h2>
+                        <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Voir tout</a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="bg-blue-100 text-blue-600 p-3 rounded-lg mb-3 inline-block">
+                                <i class="fas fa-file-pdf text-xl"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-800 text-sm mb-1">Bilan sanguin.pdf</h3>
+                            <p class="text-xs text-gray-500">12/06/23 • 250 Ko</p>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="bg-green-100 text-green-600 p-3 rounded-lg mb-3 inline-block">
+                                <i class="fas fa-file-image text-xl"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-800 text-sm mb-1">Scanner.jpg</h3>
+                            <p class="text-xs text-gray-500">05/06/23 • 1.2 Mo</p>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="bg-purple-100 text-purple-600 p-3 rounded-lg mb-3 inline-block">
+                                <i class="fas fa-file-prescription text-xl"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-800 text-sm mb-1">Ordonnance.pdf</h3>
+                            <p class="text-xs text-gray-500">01/06/23 • 180 Ko</p>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="bg-yellow-100 text-yellow-600 p-3 rounded-lg mb-3 inline-block">
+                                <i class="fas fa-file-medical text-xl"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-800 text-sm mb-1">Compte-rendu.doc</h3>
+                            <p class="text-xs text-gray-500">28/05/23 • 320 Ko</p>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+                            <div class="bg-red-100 text-red-600 p-3 rounded-lg mb-3 inline-block">
+                                <i class="fas fa-file-upload text-xl"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-800 text-sm mb-1">Ajouter un document</h3>
+                            <p class="text-xs text-gray-500">Cliquer pour uploader</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Toggle sidebar
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('sidebar-collapsed');
+            document.querySelector('.main-content').classList.toggle('main-content-expanded');
+        });
+        
+        // Toggle user menu
+        document.getElementById('user-menu-button').addEventListener('click', function() {
+            document.getElementById('user-menu').classList.toggle('hidden');
+        });
+        
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('user-menu');
+            const userMenuButton = document.getElementById('user-menu-button');
+            
+            if (!userMenu.contains(event.target) && !userMenuButton.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+        
+        // Simulate medication progress animation
+        setTimeout(() => {
+            document.querySelector('.medication-progress.high').value = 30;
+        }, 300);
+        
+        // Mark today's date in appointment cards
+        document.querySelectorAll('.appointment-card').forEach(card => {
+            const timeElement = card.querySelector('.far.fa-clock').parentElement;
+            if (timeElement.textContent.includes('Aujourd\'hui')) {
+                card.classList.add('ring-2', 'ring-blue-200');
+            }
+        });
+    </script>
+</body>
+</html>

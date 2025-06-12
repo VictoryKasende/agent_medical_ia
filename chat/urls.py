@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from .views import (
+    MedecinDashboardView, ProcheDashboardView, PatientDashboardView
+)
 
 urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='register'),
@@ -11,7 +14,7 @@ urlpatterns = [
     path('chat/history/', views.ChatHistoryView.as_view(), name='chat_history'),
     path('diagnostic-result/', views.diagnostic_result, name='diagnostic_result'),
 
-    path('new-conversation/', views.new_conversation, name='new_conversation'),
-    path('get-conversation/<int:conversation_id>/', views.get_conversation, name='get_conversation'),
-    path('delete-conversation/<int:conversation_id>/', views.delete_conversation, name='delete_conversation'),
+    path('dashboard/medecin/', MedecinDashboardView.as_view(), name='medecin_dashboard'),
+    path('dashboard/proche/', ProcheDashboardView.as_view(), name='proche_dashboard'),
+    path('dashboard/patient/', PatientDashboardView.as_view(), name='patient_dashboard'),
 ]

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 {% load static %}
-{% load markdown_deux_tags %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -108,9 +107,57 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
-<!-- Sidebar Overlay (mobile only) -->
-<div id="sidebar-overlay" class="sidebar-overlay"></div>
+<body class="bg-gray-100 font-sans">
+<div class="container mx-auto max-w-6xl px-4 py-8">
+    <!-- Header avec Navbar Responsive -->
+    <header class="bg-white shadow-md rounded-lg mb-8">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo et Titre -->
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MediAi</h1>
+                    <p class="text-gray-500 text-sm">Votre assistant médical intelligent</p>
+                </div>
+            </div>
+
+            <!-- Bouton du menu hamburger -->
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-blue-700 focus:outline-none text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Liens de navigation -->
+            <nav id="menu"
+                 class="hidden flex-col space-y-4 mt-4 md:flex md:flex-row md:items-center md:space-y-0 md:space-x-4 md:mt-0">
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+
+                <a href="#"
+                {% comment %} {% url 'consultations_distance' %} {% endcomment %}
+                   class="flex items-center px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                    <i class="fas fa-notes-medical mr-2"></i> Consultations à distance
+                </a>
+
+                <a href="{% url 'home' %}"
+                   class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
+                    <i class="fas fa-user mr-2"></i> Profil
+                </a>
+
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
+                    </button>
+                </form>
+            </nav>
+
+        </div>
+    </header>
 
 <!-- Sidebar -->
 <div id="sidebar" class="sidebar bg-white w-64 border-r border-gray-200 flex flex-col">
@@ -269,7 +316,6 @@
                 {% endfor %}
             </div>
         </div>
-    </div>
 
     <!-- Chat Input -->
     <div class="border-t border-gray-200 bg-white p-4">
@@ -361,12 +407,13 @@
         const input = document.getElementById('user-input');
         const message = input.value.trim();
         if (!message) return;
+
         addMessage(message, 'user');
         input.value = '';
         input.style.height = 'auto';
         showTypingIndicator();
 
-        // 1. On envoie la requête pour démarrer l'analyse (POST)
+        // Démarrage du stream : pas de .then(response.json()) !
         const response = await fetch('/analyse/', {
             method: 'POST',
             headers: {
@@ -376,48 +423,35 @@
             body: JSON.stringify({message: message})
         });
 
-        if (!response.ok) {
+        if (!response.ok || !response.body) {
             removeTypingIndicator();
             addMessage("Une erreur est survenue. Veuillez réessayer.", 'bot');
             return;
         }
-        const data = await response.json();
 
-        console.log(data);
+        // Pour affichage live : on crée d'abord le bloc du bot et le remplit au fur et à mesure
+        const chatContainer = document.getElementById('chat-messages');
+        const botDiv = document.createElement('div');
+        botDiv.className = 'message bot'; // à adapter selon ta CSS!
+        botDiv.innerHTML = `<div class="bg-blue-100 p-3 rounded-2xl rounded-tl-none max-w-full prose prose-sm prose-blue"><span id="bot-stream"></span></div>`
+        chatContainer.appendChild(botDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        if (data.status === "done") {
-            removeTypingIndicator();
-            addMessage(data.response, 'bot');
-        } else if (data.status === "pending") {
-            // 2. On poll toutes les 2s (ou moins si tu préfères) pour savoir si le résultat est prêt
-            pollForResult(data.cache_key);
-        } else {
-            removeTypingIndicator();
-            addMessage("Erreur inattendue.", 'bot');
+        let botStream = botDiv.querySelector('#bot-stream');
+        let fullText = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, {stream: true});
+            fullText += chunk;
+            // Mets à jour le texte en direct
+            botStream.innerHTML = marked.parse(fullText); // tu peux enlever marked si tu n'utilises pas markdown
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-    }
-
-    function pollForResult(cacheKey) {
-        setTimeout(async function () {
-            const response = await fetch(`/diagnostic-result/?cache_key=${encodeURIComponent(cacheKey)}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            if (!response.ok) {
-                removeTypingIndicator();
-                addMessage("Erreur lors de la récupération du résultat.", 'bot');
-                return;
-            }
-            const data = await response.json();
-            if (data.status === 'done') {
-                removeTypingIndicator();
-                addMessage(data.response, 'bot');
-            } else {
-                // Continue de poller
-                pollForResult(cacheKey);
-            }
-        }, 2000);
+        removeTypingIndicator();
     }
 
     function sendQuickMessage(message) {
@@ -435,50 +469,55 @@
 
     function addMessage(text, sender) {
         const chatContainer = document.getElementById('chat-messages');
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex items-start space-x-3 message ${sender === 'user' ? 'justify-end' : ''}`;
 
         if (sender === 'user') {
             messageDiv.innerHTML = `
-                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none max-w-full lg:max-w-2xl">
-                        <p>${text}</p>
-                    </div>
-                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
-                        <i class="fas fa-user"></i>
-                    </div>
-                `;
+            <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-full lg:max-w-full">
+                <p>${text}</p>
+            </div>
+            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fas fa-user"></i>
+            </div>
+        `;
         } else {
             messageDiv.innerHTML = `
-                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-2xl prose prose-sm prose-blue">
-                        ${marked.parse(text)}
-                    </div>
-                `;
+            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-full lg:max-w-full prose prose-sm prose-blue">
+                ${marked.parse(text)}
+            </div>
+        `;
         }
 
         chatContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
+
     function showTypingIndicator() {
         const chatContainer = document.getElementById('chat-messages');
+
         const typingDiv = document.createElement('div');
         typingDiv.className = 'flex items-start space-x-3 message';
         typingDiv.id = 'typing-indicator';
+
         typingDiv.innerHTML = `
-                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
-                    <i class="fas fa-robot"></i>
+            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none w-20">
+                <div class="flex space-x-1">
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
                 </div>
-                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none w-20">
-                    <div class="flex space-x-1">
-                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-                        <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                </div>
-            `;
+            </div>
+        `;
+
         chatContainer.appendChild(typingDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -505,23 +544,15 @@
         return cookieValue;
     }
 
-    // Nouvelle conversation
-    function newChat() {
-        fetch('/new-conversation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Recharger la page ou mettre à jour l'interface
-                    window.location.reload();
-                }
-            });
-    }
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuBtn = document.getElementById("menu-btn");
+        const menu = document.getElementById("menu");
+
+        menuBtn.addEventListener("click", function () {
+            menu.classList.toggle("hidden");
+        });
+    });
+</script>
 
     // Charger une conversation existante
     function loadConversation(conversationId) {

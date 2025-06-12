@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche de Consultation à Distance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-section {
+            transition: all 0.3s ease;
+        }
+        
+        .form-section.collapsed {
+            max-height: 60px;
+            overflow: hidden;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        
+        .animated-checkbox {
+            transform: scale(1.2);
+            transition: transform 0.2s;
+        }
+        
+        .animated-checkbox:active {
+            transform: scale(0.9);
+        }
+        
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        .symptom-chip {
+            transition: all 0.3s ease;
+        }
+        
+        .symptom-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .tab-btn.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .tab-pane {
+            display: none;
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            min-width: 160px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .profile-container:hover .profile-dropdown {
+            display: block;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .field-container {
+            position: relative;
+        }
+
+        .info-icon {
+            margin-left: 8px;
+            color: #6b7280;
+            cursor: pointer;
+        }
+
+        .info-icon:hover {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+<div class="container mx-auto p-4 max-w-6xl">
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-6 rounded-t-lg shadow-md">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">FICHE DE CONSULTATION À DISTANCE</h1>
+                <h2 class="text-xl mt-2">Télémédecine avec Patient Partenaire</h2>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="profile-container relative">
+                    <button id="profile-btn" class="flex items-center bg-blue-600 hover:bg-blue-800 px-4 py-2 rounded-lg transition">
+                        <img src="https://randomuser.me/api/portraits/women/45.jpg" alt="Profil" class="w-10 h-10 rounded-full border-2 border-white">
+                        <span class="ml-2 font-medium">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <i class="fas fa-chevron-down ml-2 text-sm"></i>
+                    </button>
+                    <div class="profile-dropdown mt-1 py-2">
+                        <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">
+                            <i class="fas fa-user mr-2"></i> Mon Profil
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">
+                            <i class="fas fa-cog mr-2"></i> Paramètres
+                        </a>
+                        <div class="border-t border-gray-200 my-1"></div>
+                        <form action="{% url 'logout' %}" method="post" class="block">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 bg-transparent border-none flex items-center">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Déconnexion
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="#">
+        <!-- Onglets -->
+        <div class="flex border-b border-gray-200">
+            <button type="button" id="info-tab" class="tab-btn py-3 px-6 font-medium text-gray-500 hover:text-blue-600 active">Informations Patient</button>
+            <button type="button" id="symptoms-tab" class="tab-btn py-3 px-6 font-medium text-gray-500 hover:text-blue-600">Signes & Symptômes</button>
+            <button type="button" id="exam-tab" class="tab-btn py-3 px-6 font-medium text-gray-500 hover:text-blue-600">Examen à Distance</button>
+            <button type="button" id="history-tab" class="tab-btn py-3 px-6 font-medium text-gray-500 hover:text-blue-600">Antécédents</button>
+        </div>
+
+        <!-- Contenu des onglets -->
+        <div class="tab-content">
+            <!-- Onglet Informations Patient -->
+            <div id="info-content" class="tab-pane active">
+                <div class="form-section border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                        <h3 class="text-xl font-semibold text-blue-700">
+                            <i class="fas fa-user-circle mr-2"></i>
+                            <span class="required-field">Renseignements Patient</span>
+                        </h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Nom
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez le nom de famille du patient</span>
+                                </div>
+                            </label>
+                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Postnom
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez le postnom du patient (si applicable)</span>
+                                </div>
+                            </label>
+                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Prénom
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez le prénom du patient</span>
+                                </div>
+                            </label>
+                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Date de naissance
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Sélectionnez la date de naissance du patient</span>
+                                </div>
+                            </label>
+                            <input type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Âge
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez l'âge actuel du patient en années</span>
+                                </div>
+                            </label>
+                            <input type="number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Téléphone
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez un numéro de téléphone valide pour contacter le patient</span>
+                                </div>
+                            </label>
+                            <input type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                État civil
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Sélectionnez la situation matrimoniale du patient</span>
+                                </div>
+                            </label>
+                            <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Sélectionner</option>
+                                <option value="celibataire">Célibataire</option>
+                                <option value="marie">Marié(e)</option>
+                                <option value="divorce">Divorcé(e)</option>
+                                <option value="veuf">Veuf/Veuve</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Occupation
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Entrez la profession ou occupation du patient</span>
+                                </div>
+                            </label>
+                            <input type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <label class="block text-gray-700 font-medium mb-2">Adresse</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Avenue
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez le nom de l'avenue ou de la rue</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Avenue" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Quartier
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez le nom du quartier</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Quartier" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Commune
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez le nom de la commune</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Commune" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <h4 class="text-lg font-medium text-gray-700 mb-2">Personne à contacter</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Nom
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez le nom complet de la personne à contacter en cas d'urgence</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Nom" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Téléphone
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez le numéro de téléphone de la personne à contacter</span>
+                                        </div>
+                                    </label>
+                                    <input type="tel" placeholder="Téléphone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Adresse
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Entrez l'adresse de la personne à contacter</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Adresse" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-times mr-2"></i> Annuler
+                    </button>
+                    <button type="button" id="next-to-symptoms" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        Suivant <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Onglet Signes & Symptômes -->
+            <div id="symptoms-content" class="tab-pane">
+                <div class="form-section border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                        <h3 class="text-xl font-semibold text-blue-700">
+                            <i class="fas fa-heartbeat mr-2"></i>
+                            <span>Signes Vitaux</span>
+                        </h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Température (°C)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Température corporelle en degrés Celsius (normale: 36.5-37.5°C)</span>
+                                </div>
+                            </label>
+                            <input type="number" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                SPO2 (%)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Saturation en oxygène du sang (normale: 95-100%)</span>
+                                </div>
+                            </label>
+                            <input type="number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Poids (kg)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Poids corporel en kilogrammes</span>
+                                </div>
+                            </label>
+                            <input type="number" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Tension Artérielle (mmHg)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Pression artérielle systolique/diastolique (normale: ~120/80 mmHg)</span>
+                                </div>
+                            </label>
+                            <input type="text" placeholder="120/80" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Pouls (/min)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Fréquence cardiaque en battements par minute (normale: 60-100 bpm)</span>
+                                </div>
+                            </label>
+                            <input type="number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                                FR (/min)
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Fréquence respiratoire en cycles par minute (normale: 12-20/min)</span>
+                                </div>
+                            </label>
+                            <input type="number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section border border-gray-200 rounded-lg p-4 mt-6">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                        <h3 class="text-xl font-semibold text-blue-700">
+                            <i class="fas fa-book-medical mr-2"></i>
+                            <span>Symptômes</span>
+                        </h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="mb-6">
+                            <label for="symptom-search" class="block text-gray-700 font-medium mb-2">Rechercher des symptômes</label>
+                            <div class="relative">
+                                <input type="text" id="symptom-search" placeholder="Tapez pour rechercher des symptômes..."
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Symptômes fréquents</h3>
+                            <div id="common-symptoms" class="flex flex-wrap gap-2">
+                                <!-- Les symptômes seront ajoutés dynamiquement -->
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Symptômes sélectionnés</h3>
+                            <div id="selected-symptoms"
+                                class="flex flex-wrap gap-2 min-h-16 border-2 border-dashed border-gray-300 rounded-lg p-3">
+                                <p class="text-gray-400 text-sm">Aucun symptôme sélectionné</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="symptom-details" class="block text-gray-700 font-medium mb-2 flex items-center">
+                                Détails supplémentaires
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Décrivez l'intensité, la fréquence, la durée et les facteurs aggravants/atténuants des symptômes</span>
+                                </div>
+                            </label>
+                            <textarea id="symptom-details" rows="3"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Décrivez vos symptômes en détail..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button type="button" id="back-to-info" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i> Précédent
+                    </button>
+                    <button type="button" id="next-to-exam" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        Suivant <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Onglet Examen à Distance -->
+            <div id="exam-content" class="tab-pane">
+                <div class="form-section border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                        <h3 class="text-xl font-semibold text-blue-700">
+                            <i class="fas fa-stethoscope mr-2"></i>
+                            <span>Examen à Distance</span>
+                        </h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">État général</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        État
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Évaluation globale de l'état de santé du patient</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="bon">Bon</option>
+                                        <option value="moyen">Moyen</option>
+                                        <option value="mauvais">Mauvais</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Capacité physique
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Capacité du patient à effectuer des activités physiques</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="normale">Normale</option>
+                                        <option value="diminuee">Diminuée</option>
+                                        <option value="nulle">Nulle</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Capacité psychologique
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">État mental et capacités cognitives du patient</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="normale">Normale</option>
+                                        <option value="trouble">Trouble</option>
+                                        <option value="alteree">Altérée</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Examen général</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Fébrile
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Présence de fièvre (température > 38°C)</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="oui">Oui</option>
+                                        <option value="non">Non</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Coloration bulbaire
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Couleur de la conjonctive oculaire (indicateur d'anémie ou d'ictère)</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="normale">Normale</option>
+                                        <option value="ictere">Ictère</option>
+                                        <option value="anemie">Anémie</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Tégument
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">État de la peau (couleur, hydratation, lésions)</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="pale">Pâle</option>
+                                        <option value="jaune">Jaune</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Examen par région</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Tête
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Décrivez l'état du cuir chevelu, du visage, des yeux, des oreilles, du nez et de la bouche</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez les observations..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Cou
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Décrivez l'état de la thyroïde, des ganglions lymphatiques et des vaisseaux sanguins</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez les observations..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Thorax
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Décrivez l'état des poumons, du cœur et des seins (si applicable)</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez les observations..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Abdomen
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Décrivez l'état de l'abdomen, y compris la présence de douleurs, masses ou distension</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez les observations..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Membres
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Décrivez l'état des bras et des jambes, y compris la force musculaire, les œdèmes ou les varices</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez les observations..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Expériences et perceptions du patient</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Préoccupations
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Principales inquiétudes du patient concernant sa santé</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Quelles sont les préoccupations du patient?"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Attentes
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Ce que le patient espère obtenir de cette consultation</span>
+                                        </div>
+                                    </label>
+                                    <textarea rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Quelles sont les attentes du patient?"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button type="button" id="back-to-symptoms" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i> Précédent
+                    </button>
+                    <button type="button" id="next-to-history" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        Suivant <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Onglet Antécédents -->
+            <div id="history-content" class="tab-pane">
+                <div class="form-section border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                        <h3 class="text-xl font-semibold text-blue-700">
+                            <i class="fas fa-history mr-2"></i>
+                            <span>Antécédents</span>
+                        </h3>
+                        <i class="fas fa-chevron-down transform transition-transform"></i>
+                    </div>
+
+                    <div class="mt-4">
+                        <!-- Pathologies connues -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Pathologies connues</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Hypertendu</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Le patient a-t-il des antécédents d'hypertension artérielle?</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Diabétique</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Le patient a-t-il des antécédents de diabète?</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Épileptique</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Le patient a-t-il des antécédents d'épilepsie?</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Trouble du comportement</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Le patient a-t-il des antécédents de troubles psychiatriques ou du comportement?</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Gastritique</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Le patient a-t-il des antécédents de gastrite ou d'ulcère gastroduodénal?</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Habitudes de vie -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Habitudes de vie</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Tabac
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Consommation actuelle ou passée de tabac</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="non-fumeur">Non fumeur</option>
+                                        <option value="occasionnel">Occasionnel</option>
+                                        <option value="regulier">Régulier</option>
+                                        <option value="ancien-fumeur">Ancien fumeur</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Alcool
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Consommation actuelle d'alcool</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="non-buveur">Non buveur</option>
+                                        <option value="occasionnel">Occasionnel</option>
+                                        <option value="regulier">Régulier</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Activité physique
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Niveau d'activité physique régulière</span>
+                                        </div>
+                                    </label>
+                                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">Sélectionner</option>
+                                        <option value="aucune">Aucune</option>
+                                        <option value="legere">Légère</option>
+                                        <option value="moderee">Modérée</option>
+                                        <option value="intense">Intense</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Allergies médicamenteuses -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Allergies médicamenteuses</h3>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    <input type="radio" id="allergie-oui" name="allergie" value="oui" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <label for="allergie-oui" class="ml-2">Oui</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="radio" id="allergie-non" name="allergie" value="non" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                    <label for="allergie-non" class="ml-2">Non</label>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-gray-600 mb-2 flex items-center">
+                                        Précisez
+                                        <div class="tooltip info-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span class="tooltiptext">Listez les médicaments auxquels le patient est allergique et les réactions observées</span>
+                                        </div>
+                                    </label>
+                                    <input type="text" placeholder="Précisez" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Antécédents familiaux -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Antécédents familiaux</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Drépanocytaire</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Antécédents familiaux de drépanocytose</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Diabétique</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Antécédents familiaux de diabète</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Obèse</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Antécédents familiaux d'obésité</span>
+                                    </div>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-2">Hypertendu</span>
+                                    <div class="tooltip ml-1">
+                                        <i class="fas fa-info-circle text-gray-400"></i>
+                                        <span class="tooltiptext">Antécédents familiaux d'hypertension</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-gray-600 mb-1">Lien familial</label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2">Père</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2">Mère</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2">Frère</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2">Sœur</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Médicaments actuels -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                Médicaments actuels
+                                <div class="tooltip info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span class="tooltiptext">Listez les médicaments que le patient prend actuellement, y compris les posologies</span>
+                                </div>
+                            </h3>
+                            <div id="medications-container">
+                                <div class="flex items-center mb-2">
+                                    <input type="text" name="medication" placeholder="Nom du médicament"
+                                        class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <input type="text" name="dosage" placeholder="Dosage"
+                                        class="w-24 px-4 py-2 border-t border-b border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                                    <button type="button"
+                                        class="px-4 py-2 bg-red-500 text-white rounded-r-lg hover:bg-red-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" id="add-medication"
+                                class="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm flex items-center">
+                                <i class="fas fa-plus mr-2"></i> Ajouter un médicament
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between">
+                    <button type="button" id="back-to-exam" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i> Précédent
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300">
+                        <i class="fas fa-paper-plane mr-2"></i> Soumettre
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal de confirmation -->
+<div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 fade-in">
+        <div class="flex justify-between items-start mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Consultation soumise</h3>
+            <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mb-6">
+            <div class="flex items-center justify-center text-green-500 text-5xl mb-4">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <p class="text-gray-700 text-center">La consultation à distance a été enregistrée avec succès. Un compte-rendu sera généré et envoyé au patient.</p>
+        </div>
+        <div class="flex justify-center">
+            <button id="modal-ok-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <i class="fas fa-check mr-2"></i> Confirmer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Gestion des onglets
+    const tabs = {
+        'info-tab': 'info-content',
+        'symptoms-tab': 'symptoms-content',
+        'exam-tab': 'exam-content',
+        'history-tab': 'history-content'
+    };
+
+    Object.keys(tabs).forEach(tabId => {
+        document.getElementById(tabId).addEventListener('click', function() {
+            // Désactiver tous les onglets
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Masquer tous les contenus
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // Activer l'onglet courant
+            this.classList.add('active');
+            
+            // Afficher le contenu correspondant
+            document.getElementById(tabs[tabId]).classList.add('active');
+        });
+    });
+
+    // Navigation entre les onglets
+    document.getElementById('next-to-symptoms').addEventListener('click', function() {
+        document.getElementById('symptoms-tab').click();
+    });
+    
+    document.getElementById('back-to-info').addEventListener('click', function() {
+        document.getElementById('info-tab').click();
+    });
+    
+    document.getElementById('next-to-exam').addEventListener('click', function() {
+        document.getElementById('exam-tab').click();
+    });
+    
+    document.getElementById('back-to-symptoms').addEventListener('click', function() {
+        document.getElementById('symptoms-tab').click();
+    });
+    
+    document.getElementById('next-to-history').addEventListener('click', function() {
+        document.getElementById('history-tab').click();
+    });
+    
+    document.getElementById('back-to-exam').addEventListener('click', function() {
+        document.getElementById('exam-tab').click();
+    });
+
+    // Toggle section collapse/expand
+    function toggleSection(section) {
+        section.classList.toggle('collapsed');
+        const icon = section.querySelector('.fa-chevron-down');
+        icon.classList.toggle('rotate-180');
+    }
+
+    // Initialize all sections as expanded
+    document.addEventListener('DOMContentLoaded', function() {
+        const sections = document.querySelectorAll('.form-section');
+        sections.forEach(section => {
+            section.classList.remove('collapsed');
+        });
+
+        // Gestion des symptômes
+        const commonSymptoms = [
+            'Fièvre', 'Toux', 'Maux de tête', 'Fatigue', 'Douleurs musculaires',
+            'Essoufflement', 'Perte de goût/odorat', 'Maux de gorge', 'Nausées',
+            'Douleur thoracique', 'Étourdissements', 'Douleur abdominale'
+        ];
+
+        const symptomsContainer = document.getElementById('common-symptoms');
+        const selectedSymptomsContainer = document.getElementById('selected-symptoms');
+
+        commonSymptoms.forEach(symptom => {
+            const chip = document.createElement('div');
+            chip.className = 'symptom-chip px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm cursor-pointer hover:bg-blue-200';
+            chip.textContent = symptom;
+            chip.addEventListener('click', function() {
+                addSelectedSymptom(symptom);
+                this.remove();
+            });
+            symptomsContainer.appendChild(chip);
+        });
+
+        function addSelectedSymptom(symptom) {
+            if (selectedSymptomsContainer.querySelector('p')) {
+                selectedSymptomsContainer.innerHTML = '';
+            }
+
+            const chip = document.createElement('div');
+            chip.className = 'symptom-chip px-3 py-1 bg-blue-600 text-white rounded-full text-sm flex items-center';
+            chip.innerHTML = `${symptom} <button class="ml-2 text-white hover:text-blue-200"><i class="fas fa-times"></i></button>`;
+
+            chip.querySelector('button').addEventListener('click', function() {
+                chip.remove();
+                if (selectedSymptomsContainer.children.length === 0) {
+                    selectedSymptomsContainer.innerHTML = '<p class="text-gray-400 text-sm">Aucun symptôme sélectionné</p>';
+                }
+
+                // Réajouter le symptôme à la liste commune
+                const newChip = document.createElement('div');
+                newChip.className = 'symptom-chip px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm cursor-pointer hover:bg-blue-200';
+                newChip.textContent = symptom;
+                newChip.addEventListener('click', function() {
+                    addSelectedSymptom(symptom);
+                    this.remove();
+                });
+                symptomsContainer.appendChild(newChip);
+            });
+
+            selectedSymptomsContainer.appendChild(chip);
+        }
+
+        // Recherche de symptômes
+        document.getElementById('symptom-search').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const symptoms = symptomsContainer.querySelectorAll('.symptom-chip');
+
+            symptoms.forEach(symptom => {
+                const symptomText = symptom.textContent.toLowerCase();
+                if (symptomText.includes(searchTerm)) {
+                    symptom.style.display = 'flex';
+                } else {
+                    symptom.style.display = 'none';
+                }
+            });
+        });
+
+        // Gestion des médicaments
+        document.getElementById('add-medication').addEventListener('click', function() {
+            const container = document.getElementById('medications-container');
+            const div = document.createElement('div');
+            div.className = 'flex items-center mb-2';
+            div.innerHTML = `
+                <input type="text" name="medication" placeholder="Nom du médicament" class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" name="dosage" placeholder="Dosage" class="w-24 px-4 py-2 border-t border-b border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                <button type="button" class="px-4 py-2 bg-red-500 text-white rounded-r-lg hover:bg-red-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            div.querySelector('button').addEventListener('click', function() {
+                div.remove();
+            });
+
+            container.appendChild(div);
+        });
+
+        // Soumission du formulaire
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+        });
+
+        // Fermer la modal
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        });
+
+        document.getElementById('modal-ok-btn').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+            // Redirection ou autre action après confirmation
+        });
+
+        // Gestion du bouton de déconnexion
+        document.getElementById('logout-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                window.location.href = this.href;
+            }
+        });
+    });
+</script>
+</body>
+</html>

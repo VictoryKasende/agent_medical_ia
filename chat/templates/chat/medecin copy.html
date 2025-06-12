@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Médecin - Télémédecine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .consultation-card {
+            transition: all 0.3s ease;
+        }
+        
+        .consultation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .highlight {
+            background-color: #fef08a;
+            transition: background-color 0.5s ease;
+        }
+        
+        .symptom-tag {
+            transition: all 0.2s ease;
+        }
+        
+        .symptom-tag:hover {
+            transform: scale(1.05);
+        }
+        
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        .notification-item.unread {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .notification-item.unread .notification-time {
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        /* Animation pour le changement de rôle (plus utilisé mais gardé si besoin pour autre chose) */
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .role-option {
+            transition: all 0.3s ease;
+        }
+
+        .role-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .role-option.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .role-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Authentification avec sélection de rôle - SUPPRIMÉ -->
+    <!-- <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"> ... </div> -->
+
+    <!-- Interface principale (visible par défaut) -->
+    <div id="doctor-interface">
+        <!-- Header -->
+        <header class="bg-blue-700 text-white shadow-md">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold">INTERFACE MÉDECIN</h1>
+                    <p class="text-blue-100">Télémédecine avec Patient Partenaire</p>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <div class="relative">
+                        <button id="notifications-btn" class="text-white hover:text-blue-200 relative">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notification-count" class="notification-badge hidden">0</span>
+                        </button>
+                        
+                        <!-- Dropdown des notifications -->
+                        <div id="notifications-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-20 hidden border border-gray-200">
+                            <div class="px-4 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                                <h3 class="font-semibold text-gray-800">Notifications</h3>
+                                <button id="mark-all-read" class="text-xs text-blue-600 hover:text-blue-800">Tout marquer comme lu</button>
+                            </div>
+                            <div id="notifications-list" class="max-h-96 overflow-y-auto">
+                                <!-- Les notifications seront ajoutées ici -->
+                                <p class="text-gray-500 text-center py-4">Aucune notification</p>
+                            </div>
+                            <div class="px-4 py-2 border-t border-gray-200 text-center bg-gray-50">
+                                <a href="#" class="text-xs text-blue-600 hover:text-blue-800">Voir toutes les notifications</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-container relative">
+                        <button id="profile-btn" class="flex items-center space-x-2">
+                            <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="Profil Médecin" class="w-10 h-10 rounded-full border-2 border-white">
+                            <span class="text-white font-medium">Dr. Jean Dupont</span>
+                            <i class="fas fa-chevron-down text-sm"></i>
+                        </button>
+                        
+                        <div class="profile-dropdown absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 hidden">
+                            <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">
+                                <i class="fas fa-user-md mr-2"></i> Mon Profil
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-gray-800 hover:bg-blue-50">
+                                <i class="fas fa-cog mr-2"></i> Paramètres
+                            </a>
+                            <div class="border-t border-gray-200 my-1"></div>
+                            <a href="#" id="logout-btn" class="block px-4 py-2 text-red-600 hover:bg-red-50">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Déconnexion
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenu principal -->
+        <main class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Liste des consultations -->
+                <div class="md:w-1/3">
+                    <div class="bg-white rounded-lg shadow-md p-4 sticky top-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-gray-800">Consultations en attente</h2>
+                            <span id="pending-count" class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">0</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" id="search-consultations" placeholder="Rechercher un patient..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div id="consultations-list" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto">
+                            <!-- Les consultations seront ajoutées dynamiquement ici -->
+                            <p class="text-gray-500 text-center py-4">Aucune consultation en attente</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Détails de la consultation sélectionnée -->
+                <div class="md:w-2/3">
+                    <div id="consultation-details" class="bg-white rounded-lg shadow-md p-6">
+                        <div class="text-center py-8">
+                            <i class="fas fa-file-medical text-4xl text-gray-300 mb-2"></i>
+                            <p class="text-gray-500">Sélectionnez une consultation pour voir les détails</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de réponse au patient -->
+    <div id="response-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 fade-in max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Réponse au patient</h3>
+                <button id="close-response-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Votre réponse sera envoyée au patient par email et SMS. Vous pouvez également ajouter des documents joints si nécessaire.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Diagnostic préliminaire</label>
+                    <textarea id="diagnosis-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez votre diagnostic préliminaire..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Recommandations</label>
+                    <textarea id="recommendations-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Indiquez les recommandations pour le patient..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Orientation</label>
+                    <select id="orientation-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sélectionner une orientation</option>
+                        <option value="home_care">Soins à domicile</option>
+                        <option value="pharmacy">Consultation en pharmacie</option>
+                        <option value="general_practitioner">Consultation médecin généraliste</option>
+                        <option value="specialist">Consultation spécialiste</option>
+                        <option value="emergency">Urgence hospitalière</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Pièces jointes</label>
+                    <div class="flex items-center">
+                        <input type="file" id="file-upload" class="hidden">
+                        <button type="button" id="upload-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                            <i class="fas fa-paperclip mr-2"></i> Ajouter un fichier
+                        </button>
+                        <span id="file-name" class="ml-3 text-sm text-gray-500">Aucun fichier sélectionné</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Signature électronique</label>
+                    <div class="signature-pad h-32 flex items-center justify-center cursor-pointer" id="signature-pad">
+                        <p class="text-gray-400">Cliquez pour signer</p>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <button id="clear-signature" class="text-sm text-red-600 hover:text-red-800">
+                            <i class="fas fa-eraser mr-1"></i> Effacer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-response" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">
+                    Annuler
+                </button>
+                <button id="send-response" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-paper-plane mr-2"></i> Envoyer la réponse
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation d'envoi -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 fade-in">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Réponse envoyée</h3>
+                <button id="close-confirmation-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-6">
+                <div class="flex items-center justify-center text-green-500 text-5xl mb-4">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p class="text-gray-700 text-center">Votre réponse a été envoyée avec succès au patient. Un accusé de réception vous sera transmis.</p>
+            </div>
+            <div class="flex justify-center">
+                <button id="confirmation-ok-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-check mr-2"></i> Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales et fonctions liées à l'authentification SUPPRIMÉES
+        // let currentRole = null;
+        // const roleFields = { ... };
+        // function selectRole(role) { ... }
+
+        // Données de démonstration
+        let demoConsultations = [
+            {
+                id: "CONS-2023-001",
+                patient: {
+                    name: "Marie Lambert",
+                    age: 32,
+                    gender: "F",
+                    phone: "+243 81 234 5678",
+                    email: "marie.lambert@example.com"
+                },
+                submissionDate: "2023-05-15T14:30:00",
+                symptoms: [
+                    "Fièvre persistante (38.5°C)",
+                    "Toux sèche",
+                    "Fatigue intense",
+                    "Perte d'appétit"
+                ],
+                vitalSigns: {
+                    temperature: 38.5,
+                    bloodPressure: "120/80",
+                    pulse: 92,
+                    spo2: 96
+                },
+                medicalHistory: "Aucun antécédent notable",
+                medications: "Paracétamol 1g toutes les 6 heures",
+                llmPrompt: "Patient: Marie Lambert, 32 ans, femme. Symptômes principaux: fièvre persistante (38.5°C), toux sèche, fatigue intense, perte d'appétit depuis 4 jours. Signes vitaux: TA 120/80, pouls 92, SpO2 96%. Pas d'antécédents médicaux significatifs. Traitement actuel: paracétamol 1g toutes les 6 heures. Aucune allergie connue. Demande une évaluation et des recommandations."
+            },
+            {
+                id: "CONS-2023-002",
+                patient: {
+                    name: "Jean Kabasele",
+                    age: 45,
+                    gender: "M",
+                    phone: "+243 89 765 4321",
+                    email: "jean.kabasele@example.com"
+                },
+                submissionDate: "2023-05-16T09:15:00",
+                symptoms: [
+                    "Douleur abdominale supérieure",
+                    "Nausées après les repas",
+                    "Ballonnements",
+                    "Brûlures d'estomac"
+                ],
+                vitalSigns: {
+                    temperature: 37.2,
+                    bloodPressure: "130/85",
+                    pulse: 78,
+                    spo2: 98
+                },
+                medicalHistory: "Antécédents de gastrite, tabagisme occasionnel",
+                medications: "Aucun traitement actuel",
+                llmPrompt: "Patient: Jean Kabasele, 45 ans, homme. Symptômes principaux: douleur épigastrique, nausées post-prandiales, ballonnements, pyrosis depuis 1 semaine. Signes vitaux: TA 130/85, pouls 78, temp 37.2°C, SpO2 98%. Antécédents: gastrite, tabagisme occasionnel. Pas de traitement actuel. Aucune allergie connue. Demande une évaluation et des conseils."
+            },
+            {
+                id: "CONS-2023-003",
+                patient: {
+                    name: "Sophie Mbuyi",
+                    age: 28,
+                    gender: "F",
+                    phone: "+243 82 345 6789",
+                    email: "sophie.mbuyi@example.com"
+                },
+                submissionDate: "2023-05-17T16:45:00",
+                symptoms: [
+                    "Maux de tête intenses",
+                    "Sensibilité à la lumière",
+                    "Nausées",
+                    "Vertiges"
+                ],
+                vitalSigns: {
+                    temperature: 36.8,
+                    bloodPressure: "110/70",
+                    pulse: 72,
+                    spo2: 99
+                },
+                medicalHistory: "Migraines occasionnelles",
+                medications: "Ibuprofène 400mg si nécessaire",
+                llmPrompt: "Patient: Sophie Mbuyi, 28 ans, femme. Symptômes principaux: céphalées intenses, photophobie, nausées, vertiges depuis 2 jours. Signes vitaux: TA 110/70, pouls 72, temp 36.8°C, SpO2 99%. Antécédents: migraines occasionnelles. Traitement: ibuprofène 400mg PRN. Aucune allergie connue. Demande une évaluation et un avis médical."
+            }
+        ];
+
+        // Notifications
+        let notifications = [
+            {
+                id: "NOTIF-001",
+                type: "new_consultation",
+                consultationId: "CONS-2023-004", // Ce sera lié à la notification ajoutée par addNewNotification
+                patientName: "Pauline Mbayo",
+                message: "Nouvelle fiche patient reçue",
+                time: "2023-05-18T08:15:00",
+                read: false
+            },
+            {
+                id: "NOTIF-002",
+                type: "new_consultation",
+                consultationId: "CONS-2023-005", // Id fictif, pour démonstration
+                patientName: "Jacques Tshibangu",
+                message: "Nouvelle fiche patient reçue",
+                time: "2023-05-17T14:22:00",
+                read: true
+            },
+            {
+                id: "NOTIF-003",
+                type: "system",
+                message: "Mise à jour du système disponible",
+                time: "2023-05-16T11:05:00",
+                read: true
+            }
+        ];
+
+        // Authentification - SUPPRIMÉE
+        // document.getElementById('login-form').addEventListener('submit', function(e) { ... });
+
+        // Déconnexion
+        document.getElementById('logout-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                // Action de déconnexion (par exemple, recharger la page ou afficher un message)
+                // Comme il n'y a plus d'écran de connexion, on affiche une alerte.
+                alert("Déconnexion simulée. L'interface principale reste visible.");
+                // Vous pourriez choisir de cacher l'interface, mais sans moyen de la réafficher via connexion:
+                // document.getElementById('doctor-interface').classList.add('hidden');
+            }
+        });
+
+        // Gestion du profil dropdown
+        document.getElementById('profile-btn').addEventListener('click', function() {
+            document.querySelector('.profile-dropdown').classList.toggle('hidden');
+        });
+
+        // Gestion des notifications
+        document.getElementById('notifications-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('notifications-dropdown').classList.toggle('hidden');
+        });
+
+        // Fermer le dropdown des notifications quand on clique ailleurs
+        document.addEventListener('click', function() {
+            document.getElementById('notifications-dropdown').classList.add('hidden');
+        });
+
+        // Charger les notifications
+        function loadNotifications() {
+            const notificationsList = document.getElementById('notifications-list');
+            const notificationCount = document.getElementById('notification-count');
+            
+            const unreadCount = notifications.filter(n => !n.read).length;
+            
+            if (unreadCount > 0) {
+                notificationCount.textContent = unreadCount;
+                notificationCount.classList.remove('hidden');
+            } else {
+                notificationCount.classList.add('hidden');
+            }
+            
+            if (notifications.length === 0) {
+                notificationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune notification</p>';
+                return;
+            }
+            
+            notificationsList.innerHTML = '';
+            
+            notifications.sort((a, b) => new Date(b.time) - new Date(a.time)).forEach(notification => { // Tri par date décroissante
+                const notificationItem = document.createElement('div');
+                notificationItem.className = `notification-item px-4 py-3 hover:bg-gray-50 cursor-pointer ${!notification.read ? 'unread' : ''}`;
+                
+                let content = '';
+                if (notification.type === 'new_consultation') {
+                    content = `
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <i class="fas fa-file-medical text-blue-500"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900">${notification.patientName}</p>
+                                <p class="text-sm text-gray-500">${notification.message}</p>
+                                <p class="notification-time text-xs mt-1 ${!notification.read ? 'text-blue-600' : 'text-gray-400'}">
+                                    ${formatTime(notification.time)}
+                                </p>
+                            </div>
+                            ${!notification.read ? '<div class="ml-2 flex-shrink-0"><span class="h-2 w-2 rounded-full bg-blue-600 inline-block"></span></div>' : ''}
+                        </div>
+                    `;
+                } else { // system notification
+                    content = `
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 pt-0.5">
+                                <i class="fas fa-cog text-gray-500"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900">Notification système</p>
+                                <p class="text-sm text-gray-500">${notification.message}</p>
+                                <p class="notification-time text-xs mt-1 text-gray-400">
+                                    ${formatTime(notification.time)}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                notificationItem.innerHTML = content;
+                
+                notificationItem.addEventListener('click', () => {
+                    if (!notification.read) {
+                        notification.read = true;
+                        // On recharge les notifications pour refléter le changement
+                        loadNotifications(); 
+                    }
+                    
+                    if (notification.type === 'new_consultation') {
+                        const consultation = demoConsultations.find(c => c.id === notification.consultationId);
+                        if (consultation) {
+                            showConsultationDetails(consultation);
+                        } else {
+                            console.warn(`Consultation ID ${notification.consultationId} not found for notification.`);
+                        }
+                    }
+                    
+                    document.getElementById('notifications-dropdown').classList.add('hidden');
+                });
+                
+                notificationsList.appendChild(notificationItem);
+            });
+        }
+
+        // Marquer toutes les notifications comme lues
+        document.getElementById('mark-all-read').addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            notifications.forEach(notification => {
+                notification.read = true;
+            });
+            
+            loadNotifications(); // Recharge pour mettre à jour l'UI
+        });
+
+        // Formatage de la date/heure
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+
+            if (date.toDateString() === now.toDateString()) {
+                return `Aujourd'hui à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return `Hier à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            }
+            return `${date.toLocaleDateString()} à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+
+        // Simuler l'arrivée d'une nouvelle notification
+        function addNewNotification() {
+            const newConsultation = {
+                id: "CONS-2023-004", // Cet ID doit correspondre à un ID dans `notifications` ou être unique
+                patient: {
+                    name: "Pauline Mbayo",
+                    age: 42,
+                    gender: "F",
+                    phone: "+243 81 987 6543",
+                    email: "pauline.mbayo@example.com"
+                },
+                submissionDate: new Date().toISOString(),
+                symptoms: [
+                    "Douleur thoracique",
+                    "Essoufflement",
+                    "Palpitations"
+                ],
+                vitalSigns: {
+                    temperature: 37.1,
+                    bloodPressure: "140/90",
+                    pulse: 108,
+                    spo2: 94
+                },
+                medicalHistory: "Hypertension traitée",
+                medications: "Amlodipine 5mg/jour",
+                llmPrompt: "Patient: Pauline Mbayo, 42 ans, femme. Symptômes principaux: douleur thoracique, dyspnée, palpitations depuis ce matin. Signes vitaux: TA 140/90, pouls 108, temp 37.1°C, SpO2 94%. Antécédents: hypertension traitée. Traitement: amlodipine 5mg/jour. Aucune allergie connue. Demande une évaluation urgente."
+            };
+            
+            // Vérifier si une consultation avec cet ID existe déjà pour éviter les doublons
+            if (!demoConsultations.find(c => c.id === newConsultation.id)) {
+                demoConsultations.unshift(newConsultation); // Ajouter au début de la liste
+            }
+
+            // La notification NOTIF-001 est déjà configurée pour cette consultation
+            // Si on voulait une nouvelle notification distincte :
+            /*
+            const newNotification = {
+                id: "NOTIF-" + Date.now(),
+                type: "new_consultation",
+                consultationId: newConsultation.id,
+                patientName: newConsultation.patient.name,
+                message: "Nouvelle fiche patient reçue (dynamique)",
+                time: new Date().toISOString(),
+                read: false
+            };
+            notifications.unshift(newNotification); // Ajouter au début de la liste
+            */
+            
+            // Pour la démo, on va juste s'assurer que NOTIF-001 est marquée non lue si elle existe et la remettre au début
+            let existingNotification = notifications.find(n => n.id === "NOTIF-001");
+            if (existingNotification) {
+                existingNotification.read = false;
+                existingNotification.time = new Date().toISOString(); // Mettre à jour l'heure
+                 // Pour la remonter en haut de la liste des notifs
+                notifications = notifications.filter(n => n.id !== "NOTIF-001");
+                notifications.unshift(existingNotification);
+            } else {
+                 // Si NOTIF-001 n'existe pas (par ex. si elle a été modifiée), on en crée une
+                 const newN = {
+                    id: "NOTIF-" + Date.now(), // ID unique
+                    type: "new_consultation",
+                    consultationId: newConsultation.id,
+                    patientName: newConsultation.patient.name,
+                    message: "Nouvelle fiche patient reçue",
+                    time: new Date().toISOString(),
+                    read: false
+                };
+                notifications.unshift(newN);
+            }
+
+            loadConsultations();
+            loadNotifications();
+            showToastNotification(`Nouvelle fiche patient de ${newConsultation.patient.name}`);
+        }
+
+        // Afficher une notification toast
+        function showToastNotification(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center fade-in z-50'; // z-index ajouté
+            toast.innerHTML = `
+                <i class="fas fa-bell mr-3"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.5s ease-out forwards';
+                setTimeout(() => {
+                    toast.remove();
+                }, 500);
+            }, 5000);
+        }
+         // Ajouter keyframes pour fadeOut si ce n'est pas déjà géré par Tailwind/CSS
+        const styleSheet = document.createElement("style")
+        styleSheet.type = "text/css"
+        styleSheet.innerText = `
+            @keyframes fadeOut {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(10px); }
+            }
+            .animate-fade-out { animation: fadeOut 0.5s ease-out forwards; }
+        `;
+        document.head.appendChild(styleSheet);
+
+
+        // Charger les consultations
+        function loadConsultations() {
+            const consultationsList = document.getElementById('consultations-list');
+            const pendingCount = document.getElementById('pending-count');
+            
+            consultationsList.innerHTML = '';
+            
+            if (demoConsultations.length === 0) {
+                consultationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune consultation en attente</p>';
+                pendingCount.textContent = '0';
+                return;
+            }
+            
+            pendingCount.textContent = demoConsultations.length;
+            
+            demoConsultations.sort((a,b) => new Date(b.submissionDate) - new Date(a.submissionDate)).forEach(consultation => { // Tri
+                const consultationCard = document.createElement('div');
+                consultationCard.className = 'consultation-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300';
+                consultationCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">${consultation.patient.name}</h3>
+                            <p class="text-sm text-gray-600">${consultation.patient.age} ans, ${consultation.patient.gender === 'M' ? 'Homme' : 'Femme'}</p>
+                        </div>
+                        <span class="text-xs text-gray-500">${new Date(consultation.submissionDate).toLocaleDateString()}</span>
+                    </div>
+                    <div class="mt-2">
+                        ${consultation.symptoms.slice(0, 2).map(symptom => 
+                            `<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">${symptom}</span>`
+                        ).join('')}
+                        ${consultation.symptoms.length > 2 ? 
+                            `<span class="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">+${consultation.symptoms.length - 2} autres</span>` : ''}
+                    </div>
+                `;
+                
+                consultationCard.addEventListener('click', () => showConsultationDetails(consultation));
+                consultationsList.appendChild(consultationCard);
+            });
+        }
+
+        // Afficher les détails d'une consultation
+        function showConsultationDetails(consultation) {
+            const detailsContainer = document.getElementById('consultation-details');
+            
+            detailsContainer.innerHTML = `
+                <div class="border-b border-gray-200 pb-4 mb-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">${consultation.patient.name}</h2>
+                            <p class="text-gray-600">${consultation.patient.age} ans, ${consultation.patient.gender === 'M' ? 'Homme' : 'Femme'}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">Reçu le ${new Date(consultation.submissionDate).toLocaleString()}</p>
+                            <p class="text-sm">ID: ${consultation.id}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex space-x-4">
+                        <a href="tel:${consultation.patient.phone}" class="flex items-center text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-phone mr-2"></i> ${consultation.patient.phone}
+                        </a>
+                        <a href="mailto:${consultation.patient.email}" class="flex items-center text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-envelope mr-2"></i> ${consultation.patient.email}
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Signes vitaux</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Température</p>
+                                    <p class="font-medium">${consultation.vitalSigns.temperature} °C</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Tension artérielle</p>
+                                    <p class="font-medium">${consultation.vitalSigns.bloodPressure} mmHg</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Pouls</p>
+                                    <p class="font-medium">${consultation.vitalSigns.pulse} /min</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">SpO2</p>
+                                    <p class="font-medium">${consultation.vitalSigns.spo2} %</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Symptômes</h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${consultation.symptoms.map(symptom => 
+                                `<span class="symptom-tag bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">${symptom}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-2">Antécédents médicaux</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p>${consultation.medicalHistory || "Aucun antécédent notable"}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-2">Traitements actuels</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p>${consultation.medications || "Aucun traitement actuel"}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-2">Prompt pour LLM</h3>
+                    <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                        <p>${consultation.llmPrompt}</p>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <button id="copy-prompt" class="text-sm text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-copy mr-1"></i> Copier
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button id="respond-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-reply mr-2"></i> Répondre au patient
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('copy-prompt').addEventListener('click', function() {
+                navigator.clipboard.writeText(consultation.llmPrompt).then(() => {
+                    this.innerHTML = '<i class="fas fa-check mr-1"></i> Copié !';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy mr-1"></i> Copier';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Erreur de copie: ', err);
+                    this.innerHTML = '<i class="fas fa-times mr-1"></i> Erreur';
+                     setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy mr-1"></i> Copier';
+                    }, 2000);
+                });
+            });
+            
+            document.getElementById('respond-btn').addEventListener('click', function() {
+                document.getElementById('response-modal').classList.remove('hidden');
+            });
+        }
+
+        // Gestion de la modal de réponse
+        document.getElementById('close-response-modal').addEventListener('click', function() {
+            document.getElementById('response-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('cancel-response').addEventListener('click', function() {
+            document.getElementById('response-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('upload-btn').addEventListener('click', function() {
+            document.getElementById('file-upload').click();
+        });
+        
+        document.getElementById('file-upload').addEventListener('change', function() {
+            const fileName = this.files[0]?.name || 'Aucun fichier sélectionné';
+            document.getElementById('file-name').textContent = fileName;
+        });
+        
+        document.getElementById('clear-signature').addEventListener('click', function() {
+            const signaturePad = document.getElementById('signature-pad');
+            signaturePad.innerHTML = '<p class="text-gray-400">Cliquez pour signer</p>';
+            const canvas = signaturePad.querySelector('canvas');
+            if (canvas) canvas.remove(); // S'assurer que le canvas est retiré
+        });
+        
+        document.getElementById('send-response').addEventListener('click', function() {
+            const diagnosis = document.getElementById('diagnosis-text').value;
+            const recommendations = document.getElementById('recommendations-text').value;
+            const orientation = document.getElementById('orientation-select').value;
+            
+            if (!diagnosis || !recommendations || !orientation) {
+                alert('Veuillez remplir les champs Diagnostic, Recommandations et Orientation.');
+                return;
+            }
+            
+            document.getElementById('response-modal').classList.add('hidden');
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('diagnosis-text').value = '';
+                document.getElementById('recommendations-text').value = '';
+                document.getElementById('orientation-select').value = '';
+                document.getElementById('file-name').textContent = 'Aucun fichier sélectionné';
+                document.getElementById('file-upload').value = ''; // Réinitialise le champ de fichier
+                document.getElementById('signature-pad').innerHTML = '<p class="text-gray-400">Cliquez pour signer</p>';
+                const canvas = document.getElementById('signature-pad').querySelector('canvas');
+                if (canvas) canvas.remove();
+            }, 1000);
+        });
+        
+        document.getElementById('close-confirmation-modal').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('confirmation-ok-btn').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        });
+
+        // Signature électronique (simplifiée)
+        document.getElementById('signature-pad').addEventListener('click', function(event) {
+            // Ne pas recréer le canvas s'il existe déjà
+            if (this.querySelector('canvas')) return;
+
+            this.innerHTML = ''; // Vider le "Cliquez pour signer"
+            const canvas = document.createElement('canvas');
+            canvas.id = 'signature-canvas';
+            // Ajuster la taille du canvas à son conteneur
+            canvas.width = this.offsetWidth -4; // -4 pour les bordures
+            canvas.height = this.offsetHeight -4;
+            this.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            
+            function getMousePos(canvasDom, mouseEvent) {
+                var rect = canvasDom.getBoundingClientRect();
+                return {
+                    x: mouseEvent.clientX - rect.left,
+                    y: mouseEvent.clientY - rect.top
+                };
+            }
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const pos = getMousePos(canvas, e);
+                [lastX, lastY] = [pos.x, pos.y];
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const pos = getMousePos(canvas, e);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                [lastX, lastY] = [pos.x, pos.y];
+            });
+            
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseout', () => isDrawing = false);
+
+             // Pour écrans tactiles
+            canvas.addEventListener('touchstart', (e) => {
+                isDrawing = true;
+                const touch = e.touches[0];
+                const pos = getMousePos(canvas, touch);
+                [lastX, lastY] = [pos.x, pos.y];
+                e.preventDefault(); // Empêche le défilement
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (!isDrawing) return;
+                const touch = e.touches[0];
+                const pos = getMousePos(canvas, touch);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                [lastX, lastY] = [pos.x, pos.y];
+                e.preventDefault(); // Empêche le défilement
+            });
+
+            canvas.addEventListener('touchend', () => {
+                isDrawing = false;
+            });
+        });
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConsultations();
+            loadNotifications();
+            
+            // Simuler l'arrivée de nouvelles notifications après un délai
+            setTimeout(() => {
+                addNewNotification(); // Cette fonction met à jour les compteurs et affiche un toast
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

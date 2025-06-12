@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import dotenv
+dotenv.load_dotenv()
 
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
@@ -43,7 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'chat',
-    'markdown_deux',
 ]
 
 MIDDLEWARE = [
@@ -74,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/1')
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1')
 
 
 CACHES = {

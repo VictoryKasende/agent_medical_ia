@@ -6,86 +6,28 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import TemplateView
-from django.views.generic.edit import FormView
-from django.contrib.auth.forms import UserCreationForm
+from django.views.generic.edit import FormView, CreateView
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, authenticate, logout
+from .models import UserProfile
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.shortcuts import redirect
-from django.contrib.auth import login
-
-from .forms import FicheConsultationForm
-
-
-# Vue d'inscription
-class RegisterView(FormView):
-    template_name = 'chat/register.html'
-    form_class = UserCreationForm
-    success_url = reverse_lazy('login')
-
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)  # Connexion automatique après l'inscription
-        messages.success(self.request, "Inscription réussie ! Vous êtes maintenant connecté.")
-        return redirect('home')  # Redirige vers la page d'accueil
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Une erreur est survenue lors de l'inscription.")
-        return super().form_invalid(form)
-
-
-# Vue de connexion
-class CustomLoginView(LoginView):
-    template_name = 'chat/login.html'
-    redirect_authenticated_user = True
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Nom d'utilisateur ou mot de passe incorrect.")
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('home')
-
-
-# Vue de déconnexion
-class CustomLogoutView(LogoutView):
-    next_page = 'login'
-
-
-class HomeView(LoginRequiredMixin, TemplateView):
-    template_name = 'chat/home.html'
-    login_url = 'login'  # URL de redirection si l'utilisateur n'est pas connecté
-    redirect_field_name = 'next'  # Nom du paramètre de requête pour la redirection après connexion
-
-
-### chat
-
-
-
-import hashlib
-import json
-import asyncio
-from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.core.cache import cache
-from concurrent.futures import ThreadPoolExecutor
-from .models import Conversation, MessageIA, FicheConsultation
+import hashlib
+from .tasks import analyse_symptomes_task
+from django.db import transaction
 from asgiref.sync import sync_to_async
-
-from django.views.generic.edit import CreateView
-from django.urls import reverse_lazy
-from django.http import StreamingHttpResponse
-
+from .llm_config import gpt4, claude, gemini, synthese_llm
+from langchain.schema import HumanMessage
+from concurrent.futures import ThreadPoolExecutor
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from .tasks import analyse_symptomes_task
-import hashlib
-from django.core.cache import cache
-from django.http import JsonResponse
-from langchain.schema import HumanMessage
-from .llm_config import gpt4, claude, gemini, synthese_llm
-from django.db import transaction
+
+from .models import Conversation, MessageIA, FicheConsultation
+from django.views import View
+from .forms import FicheConsultationForm
 
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
@@ -402,3 +344,60 @@ class ChatHistoryView(LoginRequiredMixin, TemplateView):
 
         context['chat_items'] = chat_items
         return context
+
+class RegisterView(FormView):
+    template_name = "chat/register.html"
+    form_class = UserCreationForm
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        role = self.request.POST.get('role')
+        user = form.save()
+        UserProfile.objects.create(user=user, role=role)
+        return response
+
+class CustomLoginView(LoginView):
+    template_name = "chat/login.html"
+    authentication_form = AuthenticationForm
+
+    def get_success_url(self):
+        # Redirige selon le rôle
+        profile = self.request.user.userprofile
+        if profile.role == 'medecin':
+            return reverse_lazy('medecin_dashboard')
+        elif profile.role == 'proche':
+            return reverse_lazy('proche_dashboard')
+        elif profile.role == 'patient':
+            return reverse_lazy('patient_dashboard')  # ← c'est bon !
+        else:
+            return reverse_lazy('home')
+
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy('login')
+
+@login_required
+def dashboard_redirect(request):
+    profile = request.user.userprofile
+    if profile.role == 'medecin':
+        return redirect('medecin_dashboard')
+    elif profile.role == 'proche':
+        return redirect('proche_dashboard')
+    elif profile.role == 'soignant':
+        return redirect('soignant_dashboard')
+    elif profile.role == 'patient':
+        return redirect('patient_dashboard')
+    else:
+        return redirect('home')
+
+@method_decorator(login_required, name='dispatch')
+class MedecinDashboardView(TemplateView):
+    template_name = "chat/medecin.html"
+
+@method_decorator(login_required, name='dispatch')
+class ProcheDashboardView(TemplateView):
+    template_name = "chat/proche_aidant.html"
+
+@method_decorator(login_required, name='dispatch')
+class PatientDashboardView(TemplateView):
+    template_name = "chat/patient.html"

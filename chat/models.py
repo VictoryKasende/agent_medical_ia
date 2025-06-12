@@ -216,3 +216,19 @@ class FicheConsultation(models.Model):
 
     class Meta:
         ordering = ['-date_consultation']
+
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('patient', 'Patient'),
+        ('proche', 'Proche aidant'),
+        ('soignant', 'Soignant'),
+        ('medecin', 'Médecin'),
+        ('autre', 'Autre'),
+    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    # Ajoute d'autres champs si besoin
+
+    def __str__(self):
+        return f"{self.user.username} ({self.get_role_display()})"
