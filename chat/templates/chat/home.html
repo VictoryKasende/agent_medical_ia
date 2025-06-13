@@ -7,10 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediBot - Assistant Médical Virtuel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    
     <style>
         /* Animation pour les messages */
         @keyframes fadeIn {
@@ -114,12 +115,33 @@
 
 <!-- Sidebar -->
 <div id="sidebar" class="sidebar bg-white w-64 border-r border-gray-200 flex flex-col">
-    <!-- New Chat Button -->
-    <div class="p-4 border-b border-gray-200">
+    <!-- Logo / Title -->
+    <div class="flex items-center px-0 mt-4 mb-8">
+        <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" alt="UDBL Logo" class="h-8">
+        <h1 class="text-xl font-bold text-gray-800">MediAi</h1>
+    </div>
+
+    <!-- Header actions -->
+    <div class="p-0 space-y-2 border-b border-gray-200">
+        <!-- Nouveau Chat -->
         <button onclick="newChat()"
-                class="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition">
-            <i class="fas fa-plus"></i>
-            <span>Nouvelle discussion</span>
+            class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-plus text-blue-600"></i>
+            <span class="text-gray-800 font-medium">Nouveau chat</span>
+        </button>
+
+        <!-- Bouton Rechercher -->
+        <button onclick="showSearchModal()"
+                class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-search text-gray-600"></i>
+            <span class="text-gray-800 font-medium">Rechercher les chats</span>
+        </button>
+
+        <!-- Bibliothèque -->
+        <button onclick="openLibrary()"
+            class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-book text-blue-600"></i>
+            <span class="text-gray-800 font-medium">Bibliothèque</span>
         </button>
     </div>
 
@@ -130,7 +152,9 @@
             <div id="chat-history" class="space-y-1">
                 {% for item in chat_items %}
                     <div onclick="loadConversation({{ item.conversation.id }})"
-                         class="px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between {% if forloop.first %}bg-gray-100{% endif %}">
+     class="px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between {% if forloop.last %}bg-gray-100{% endif %}"
+     data-conversation-id="{{ item.conversation.id }}">
+
                     <span class="truncate">
                         <i class="fas fa-comment-medical mr-2 text-blue-500"></i>
                         {% with first_message=item.messages.first %}
@@ -162,6 +186,60 @@
     </div>
 </div>
 
+<!-- Menu contextuel conversation -->
+<div id="conversation-options-menu"
+     class="hidden absolute z-50 bg-white border rounded-lg shadow-lg w-48 py-2 text-sm"
+     onclick="event.stopPropagation();">
+    <button onclick="shareConversation()" class="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+        <i class="fas fa-share mr-2 text-blue-500"></i> Partager
+    </button>
+    <button onclick="archiveConversation()" class="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+        <i class="fas fa-archive mr-2 text-gray-600"></i> Archiver
+    </button>
+    <button onclick="renameConversation()" class="flex items-center w-full px-4 py-2 hover:bg-gray-100">
+        <i class="fas fa-edit mr-2 text-green-600"></i> Renommer
+    </button>
+    <button onclick="confirmDeleteConversation()" class="flex items-center w-full px-4 py-2 text-red-600 hover:bg-gray-100">
+        <i class="fas fa-trash-alt mr-2"></i> Supprimer
+    </button>
+</div>
+
+<!-- Modal de confirmation -->
+<div id="delete-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+        <h2 class="text-lg font-semibold mb-4 text-gray-800">Confirmer la suppression</h2>
+        <p class="text-sm text-gray-600 mb-6">Voulez-vous vraiment supprimer cette conversation ?</p>
+        <div class="flex justify-end space-x-3">
+            <button onclick="hideDeleteModal()"
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                Annuler
+            </button>
+            <button onclick="deleteConversation(selectedConversationId)"
+                    class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                Supprimer
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Rechercher une conversation</h2>
+            <button onclick="closeSearchModal()" class="text-gray-500 hover:text-red-600 text-xl">&times;</button>
+        </div>
+
+        <!-- Barre de recherche -->
+        <input type="text" id="searchInput" oninput="performSearch()"
+               placeholder="Rechercher dans les messages ou titres..."
+               class="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring focus:border-blue-300">
+
+        <!-- Résultats -->
+        <div id="searchResults" class="max-h-96 overflow-y-auto space-y-2"></div>
+    </div>
+</div>
+
+
 <!-- Main Content -->
 <div class="flex-1 flex flex-col overflow-hidden">
     <!-- Navbar -->
@@ -172,37 +250,28 @@
                 <i class="fas fa-bars text-xl"></i>
             </button>
 
-            <!-- Logo / Title -->
-            <div class="flex items-center">
-                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" alt="UDBL Logo" class="h-8 mr-2">
-                <h1 class="text-xl font-bold text-gray-800">MediAi</h1>
-            </div>
-
             <!-- Nav Links -->
-            <nav class="hidden md:flex space-x-6">
-                <a href="#" class="text-gray-700 hover:text-blue-600">Accueil</a>
-                <a href="#" class="text-gray-700 hover:text-blue-600">Fonctionnalités</a>
-                <a href="#" class="text-gray-700 hover:text-blue-600">À propos</a>
-                <a href="#" class="text-gray-700 hover:text-blue-600">Contact</a>
+            <nav class="hidden md:flex space-x-6 items-center ml-auto">
+                <!-- Nouvelle Consultation -->
+                <a href="{% url 'consultation' %}" class="text-gray-700 hover:text-blue-600 flex items-center">
+                    <i class="fas fa-plus mr-1"></i> Nouvelle Consultation
+                </a>
+
+                <!-- Se déconnecter -->
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="text-gray-700 hover:text-red-600 flex items-center">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Se déconnecter
+                    </button>
+                </form>
             </nav>
 
-            <!-- User Actions -->
-            <div class="flex items-center space-x-4">
-                <button class="text-gray-500 hover:text-blue-600">
-                    <i class="fas fa-sun"></i>
-                </button>
-                <button class="text-gray-500 hover:text-blue-600">
-                    <i class="fas fa-cog"></i>
-                </button>
-                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <i class="fas fa-user text-blue-600"></i>
-                </div>
-            </div>
+
         </div>
     </header>
 
     <!-- Chat Container -->
-    <div class="flex-1 overflow-y-auto bg-gray-50">
+    <div class="flex-3 overflow-y-auto bg-gray-50">
         <div class="max-w-3xl mx-auto p-4">
             <!-- Welcome Message -->
             <div class="flex items-start space-x-3 message mb-6">
@@ -293,13 +362,17 @@
                 </div>
             </div>
             <div class="mt-2 text-xs text-gray-500 text-center">
-                <p>MediBot ne remplace pas un avis médical professionnel. En cas d'urgence, appelez le +243.</p>
+                <p>MediAi ne remplace pas un avis médical professionnel. En cas d'urgence, appelez le +243.</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+
+    let activeConversationId = null;
+    let selectedConversationId = null;
+
     // Toggle mobile sidebar
     document.getElementById('mobile-menu-button').addEventListener('click', function () {
         document.getElementById('sidebar').classList.toggle('sidebar-open');
@@ -319,41 +392,30 @@
         this.style.height = (this.scrollHeight) + 'px';
     });
 
-    function newChat() {
-        // Clear chat messages (keep welcome message)
-        document.getElementById('chat-messages').innerHTML = `
-                <div class="flex items-start space-x-3 message mb-6">
-                    <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-3xl">
-                        <p class="font-medium">Nouvelle discussion</p>
-                        <p class="mt-1">Comment puis-je vous aider aujourd'hui?</p>
-                    </div>
-                </div>
-            `;
 
-        // Add to chat history
-        const historyItem = document.createElement('div');
-        historyItem.className = 'px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between bg-gray-100';
-        historyItem.innerHTML = `
-                <span class="truncate"><i class="fas fa-comment-medical mr-2 text-blue-500"></i>Nouvelle discussion</span>
-                <i class="fas fa-ellipsis-v text-gray-400 hover:text-gray-600"></i>
-            `;
-        document.getElementById('chat-history').prepend(historyItem);
+    document.querySelectorAll('#chat-history > div').forEach(item => {
+    item.addEventListener('click', async function () {
+        const conversationId = this.dataset.conversationId;
+        activeConversationId = conversationId;
 
-        // Remove active class from other items
-        document.querySelectorAll('#chat-history > div').forEach(item => {
-            item.classList.remove('bg-gray-100');
-        });
-        historyItem.classList.add('bg-gray-100');
-    }
+        // Fetch messages
+        const response = await fetch(`/get-conversation/${conversationId}/`);
+        const data = await response.json();
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const input = document.getElementById('user-input');
-        const texte = `{{ symptomes_texte|escapejs }}`;
-        if (texte) {
-            input.value = texte;
+        if (data.success) {
+            document.getElementById('chat-messages').innerHTML = '';
+            data.messages.forEach(msg => {
+                addMessage(msg.content, msg.role);
+            });
+        }
+    });
+
+});
+document.addEventListener('DOMContentLoaded', function () {
+        const chatItems = document.querySelectorAll('#chat-history > div[data-conversation-id]');
+        if (chatItems.length > 0) {
+            const lastItem = chatItems[0];
+            lastItem.click();  // simule un clic sur le dernier élément
         }
     });
 
@@ -365,6 +427,7 @@
         input.value = '';
         input.style.height = 'auto';
         showTypingIndicator();
+    
 
         // 1. On envoie la requête pour démarrer l'analyse (POST)
         const response = await fetch('/analyse/', {
@@ -373,7 +436,10 @@
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({message: message})
+            body: JSON.stringify({
+                message: message,
+                conversation_id: activeConversationId 
+            })
         });
 
         if (!response.ok) {
@@ -505,27 +571,42 @@
         return cookieValue;
     }
 
-    // Nouvelle conversation
-    function newChat() {
-        fetch('/new-conversation/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Recharger la page ou mettre à jour l'interface
-                    window.location.reload();
-                }
-            });
+    async function newChat() {
+    const response = await fetch("/conversation/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCookie('csrftoken'),
+            "Content-Type": "application/json"
+        }
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+        alert("Erreur lors de la création de la conversation");
+        return;
     }
+
+    activeConversationId = data.conversation_id;
+
+    // Ensuite, mets à jour l'interface comme tu le fais déjà :
+    document.getElementById('chat-messages').innerHTML = `
+        <div class="flex items-start space-x-3 message mb-6">
+            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-3xl">
+                <p class="font-medium">Nouvelle discussion</p>
+                <p class="mt-1">Comment puis-je vous aider aujourd'hui?</p>
+            </div>
+        </div>
+    `;
+}
+
 
     // Charger une conversation existante
     function loadConversation(conversationId) {
-        fetch(`/get-conversation/${conversationId}/`)
+        activeConversationId = conversationId;
+        fetch(`/conversation/${conversationId}/`)
             .then(response => response.json())
             .then(data => {
                 if (data.messages) {
@@ -546,19 +627,10 @@
             });
     }
 
-    // Options de conversation (suppression, etc.)
-    function showConversationOptions(event, conversationId) {
-        // Implémentez un menu contextuel ou une modal pour les options
-        console.log(`Options pour la conversation ${conversationId}`);
-        // Exemple: confirmation de suppression
-        if (confirm('Voulez-vous supprimer cette conversation?')) {
-            deleteConversation(conversationId);
-        }
-    }
 
     // Supprimer une conversation
     function deleteConversation(conversationId) {
-        fetch(`/delete-conversation/${conversationId}/`, {
+        fetch(`/conversation/${conversationId}/`, {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -571,6 +643,116 @@
                     window.location.reload();
                 }
             });
+    }
+
+    function showConversationOptions(event, conversationId) {
+        selectedConversationId = conversationId;
+        const menu = document.getElementById('conversation-options-menu');
+
+        // Positionne le menu à l’endroit du clic
+        menu.style.left = `${event.pageX}px`;
+        menu.style.top = `${event.pageY}px`;
+        menu.classList.remove('hidden');
+
+        // Ferme si on clique ailleurs
+        document.addEventListener('click', hideConversationOptions);
+    }
+
+    function hideConversationOptions() {
+        const menu = document.getElementById('conversation-options-menu');
+        menu.classList.add('hidden');
+        document.removeEventListener('click', hideConversationOptions);
+    }
+
+    function confirmDeleteConversation() {
+    document.getElementById("delete-modal").classList.remove("hidden");
+    }
+
+    function hideDeleteModal() {
+        document.getElementById("delete-modal").classList.add("hidden");
+    }
+
+
+    // Placeholder functions
+    function shareConversation() {
+        alert("Fonction de partage à implémenter.");
+    }
+
+    function archiveConversation() {
+        alert("Fonction d'archivage à implémenter.");
+    }
+
+    function renameConversation() {
+        const newName = prompt("Nouveau nom pour la conversation :");
+        if (newName) {
+            alert(`Renommée en "${newName}" (à connecter au backend)`);
+        }
+    }
+    let chatItems = [
+        {% for item in chat_items %}
+            {
+                id: {{ item.conversation.id }},
+                messages: [
+                    {% for message in item.messages %}
+                        `{{ message.content|markdown|safe}}`,
+                    {% endfor %}
+                ]
+            },
+        {% endfor %}
+    ];
+
+    function showSearchModal() {
+        document.getElementById('searchModal').classList.remove('hidden');
+        document.getElementById('searchInput').focus();
+    }
+
+    function closeSearchModal() {
+        document.getElementById('searchModal').classList.add('hidden');
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+    }
+
+        function performSearch() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const resultsContainer = document.getElementById('searchResults');
+        resultsContainer.innerHTML = '';
+
+        if (query.trim() === '') return;
+
+        const filtered = chatItems.filter(item =>
+            item.messages.some(msg => msg.toLowerCase().includes(query))
+        );
+
+        if (filtered.length === 0) {
+            resultsContainer.innerHTML = '<p class="text-gray-500">Aucun résultat trouvé.</p>';
+            return;
+        }
+
+        filtered.forEach(item => {
+            // Trouver le premier message contenant le mot recherché (pour l'affichage)
+            const matchedMessage = item.messages.find(msg => msg.toLowerCase().includes(query));
+            
+            const resultElement = document.createElement('div');
+            resultElement.className = 'cursor-pointer px-3 py-2 rounded hover:bg-gray-100';
+            resultElement.innerHTML = `<i class="fas fa-comment text-blue-500 mr-2"></i>${matchedMessage}`;
+            resultElement.onclick = () => {
+                closeSearchModal();
+                loadConversation(item.id);
+            };
+            resultsContainer.appendChild(resultElement);
+        });
+    }
+
+</script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                },
+            },
+        },
     }
 </script>
 </body>

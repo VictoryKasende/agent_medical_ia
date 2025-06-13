@@ -1,6 +1,8 @@
 import json
 import datetime
-
+import hashlib
+import json
+import hashlib
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -12,28 +14,54 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.contrib.auth import login
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.core.cache import cache
+from django.views.generic.edit import CreateView
+from django.urls import reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.core.cache import cache
+from django.http import JsonResponse
+from django.db import transaction
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 
 from .forms import FicheConsultationForm
+from .models import Conversation, MessageIA, FicheConsultation
+from .tasks import analyse_symptomes_task
 
 
-# Vue d'inscription
+def stream_synthese(synthese_llm, synthese_message):
+    """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
+    for chunk in synthese_llm.stream([synthese_message]):
+        # chaque chunk est un ChatMessage dans Langchain
+        if hasattr(chunk, 'content'):
+            yield chunk.content
+
+
 class RegisterView(FormView):
+    """
+    Vue pour l'inscription des utilisateurs.
+    Permet aux utilisateurs de s'inscrire et de se connecter automatiquement après l'inscription.
+    """
     template_name = 'chat/register.html'
     form_class = UserCreationForm
     success_url = reverse_lazy('login')
 
     def form_valid(self, form):
         user = form.save()
-        login(self.request, user)  # Connexion automatique après l'inscription
+        login(self.request, user) 
         messages.success(self.request, "Inscription réussie ! Vous êtes maintenant connecté.")
-        return redirect('home')  # Redirige vers la page d'accueil
+        return redirect('home') 
 
     def form_invalid(self, form):
         messages.error(self.request, "Une erreur est survenue lors de l'inscription.")
         return super().form_invalid(form)
 
 
-# Vue de connexion
 class CustomLoginView(LoginView):
     template_name = 'chat/login.html'
     redirect_authenticated_user = True
@@ -46,59 +74,23 @@ class CustomLoginView(LoginView):
         return reverse_lazy('home')
 
 
-# Vue de déconnexion
 class CustomLogoutView(LogoutView):
+    """
+    Vue pour la déconnexion des utilisateurs.
+    """
     next_page = 'login'
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
+    """Vue d'accueil pour les utilisateurs connectés."""
     template_name = 'chat/home.html'
-    login_url = 'login'  # URL de redirection si l'utilisateur n'est pas connecté
-    redirect_field_name = 'next'  # Nom du paramètre de requête pour la redirection après connexion
+    login_url = 'login'  
+    redirect_field_name = 'next'  
 
-
-### chat
-
-
-
-import hashlib
-import json
-import asyncio
-from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.core.cache import cache
-from concurrent.futures import ThreadPoolExecutor
-from .models import Conversation, MessageIA, FicheConsultation
-from asgiref.sync import sync_to_async
-
-from django.views.generic.edit import CreateView
-from django.urls import reverse_lazy
-from django.http import StreamingHttpResponse
-
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from .tasks import analyse_symptomes_task
-import hashlib
-from django.core.cache import cache
-from django.http import JsonResponse
-from langchain.schema import HumanMessage
-from .llm_config import gpt4, claude, gemini, synthese_llm
-from django.db import transaction
-
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
-
-def stream_synthese(synthese_llm, synthese_message):
-    """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
-    for chunk in synthese_llm.stream([synthese_message]):
-        # chaque chunk est un ChatMessage dans Langchain
-        if hasattr(chunk, 'content'):
-            yield chunk.content
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AnalyseSymptomesView(LoginRequiredMixin, View):
+
     template_name = "chat/home.html"
 
     def get(self, request):
@@ -131,21 +123,32 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
 
     def post(self, request):
         data = json.loads(request.body)
-        symptomes = data.get("message")
-        hash_key = hashlib.md5(symptomes.encode("utf-8")).hexdigest()
+        message_text = data.get("message")
+        conversation_id = data.get("conversation_id")
+
+        if conversation_id:
+            conversation = Conversation.objects.get(id=conversation_id)
+        else:
+            conversation = Conversation.objects.create(user=request.user)
+
+        MessageIA.objects.create(
+            conversation=conversation,
+            role='user',
+            content=message_text
+        )
+
+        # Création de la clé de cache
+        hash_key = hashlib.md5(message_text.encode("utf-8")).hexdigest()
         cache_key = f"diagnostic_{hash_key}"
 
         cached_result = cache.get(cache_key)
         if cached_result:
             return JsonResponse({"status": "done", "response": cached_result})
 
-        conversation = Conversation.objects.create(user=request.user)
-        MessageIA.objects.create(conversation=conversation, role='user', content=symptomes)
-
         def run_task():
-            analyse_symptomes_task.delay(symptomes, request.user.id, conversation.id, cache_key)
+            analyse_symptomes_task.delay(message_text, request.user.id, conversation.id, cache_key)
 
-        transaction.on_commit(run_task)  # ← la tâche ne sera QUEUE qu'après COMMIT effectif
+        transaction.on_commit(run_task)
         return JsonResponse({"status": "pending", "cache_key": cache_key})
 
 
@@ -158,12 +161,12 @@ def diagnostic_result(request):
     print("No cached result found for key:", cache_key)
     return JsonResponse({"status": "pending"})
 
+
 def formater_symptomes_en_texte(symptomes: dict) -> str:
     # Informations personnelles
     nom = symptomes["Identification"]["Nom complet"]
     age = symptomes["Identification"]["Âge"]
     date_naissance = symptomes["Identification"]["Date de naissance"]
-    telephone = symptomes["Identification"]["Téléphone"]
 
     texte = f"Je m'appelle {nom}, j'ai {age} ans (né le {date_naissance}). Voici toutes mes informations médicales. J'ai besoin d'un diagnostic basé sur les détails suivants :\n\n"
 
@@ -213,43 +216,44 @@ def formater_symptomes_en_texte(symptomes: dict) -> str:
     return texte
 
 
-@login_required
-@require_http_methods(["POST"])
-def new_conversation(request):
-    conversation = Conversation.objects.create(user=request.user)
-    return JsonResponse({"success": True, "conversation_id": conversation.id})
+@method_decorator(login_required, name='dispatch')
+class ConversationView(View):
+    """
+    Gère la création, la récupération et la suppression d'une conversation.
+    """
 
+    def post(self, request):
+        # Création d'une nouvelle conversation
+        conversation = Conversation.objects.create(user=request.user)
+        return JsonResponse({"success": True, "conversation_id": conversation.id})
 
-@login_required
-def get_conversation(request, conversation_id):
-    try:
-        conversation = Conversation.objects.get(id=conversation_id, user=request.user)
-        messages = MessageIA.objects.filter(
-            conversation=conversation,
-            role__in=['user', 'synthese']
-        ).order_by('id')
+    def get(self, request, conversation_id):
+        # Récupération d'une conversation et de ses messages
+        try:
+            conversation = Conversation.objects.get(id=conversation_id, user=request.user)
+            messages = MessageIA.objects.filter(
+                conversation=conversation,
+                role__in=['user', 'synthese']
+            ).order_by('id')
 
-        messages_data = [{
-            "content": msg.content,
-            "role": msg.role,
-            "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M")
-        } for msg in messages]
+            messages_data = [{
+                "content": msg.content,
+                "role": msg.role,
+                "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M")
+            } for msg in messages]
 
-        return JsonResponse({"success": True, "messages": messages_data})
-    except Conversation.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Conversation non trouvée"})
+            return JsonResponse({"success": True, "messages": messages_data})
+        except Conversation.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Conversation non trouvée"})
 
-
-@login_required
-@require_http_methods(["DELETE"])
-def delete_conversation(request, conversation_id):
-    try:
-        conversation = Conversation.objects.get(id=conversation_id, user=request.user)
-        conversation.delete()
-        return JsonResponse({"success": True})
-    except Conversation.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Conversation non trouvée"})
-
+    def delete(self, request, conversation_id):
+        # Suppression d'une conversation
+        try:
+            conversation = Conversation.objects.get(id=conversation_id, user=request.user)
+            conversation.delete()
+            return JsonResponse({"success": True})
+        except Conversation.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Conversation non trouvée"})
 
 class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
     model = FicheConsultation
