@@ -20,6 +20,9 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install markdown dependencies
+RUN pip install --no-cache-dir markdown==3.5.1 bleach==6.1.0 pygments==2.17.2
+
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

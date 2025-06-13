@@ -521,10 +521,35 @@
         </div>
 
         <div class="mt-6 flex justify-center">
-            <a href="{% url 'home' %}"
-               class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
-                <i class="fas fa-arrow-left mr-2"></i> Retour
-            </a>
+            {% if user.is_authenticated %}
+                {% if user.groups.all.0.name == 'Patient' or user.userprofile.role == 'patient' %}
+                    <a href="{% url 'patient_dashboard' %}"
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% elif user.groups.all.0.name == 'Medecin' or user.userprofile.role == 'medecin' %}
+                    <a href="{% url 'medecin_dashboard' %}"
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% elif user.is_staff or user.is_superuser %}
+                    <a href="{% url 'admin_dashboard' %}"
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% else %}
+                    <a href="{% url 'home' %}"
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}"
+                   class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Connexion
+                </a>
+            {% endif %}
+            
             <button type="submit"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg">
                 <i class="fas fa-paper-plane mr-2"></i> Envoyer

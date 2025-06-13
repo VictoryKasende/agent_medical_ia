@@ -199,6 +199,27 @@ class FicheConsultation(models.Model):
     attentes = models.TextField(blank=True, null=True)
     engagement = models.TextField(blank=True, null=True)
 
+    # Nouveaux champs pour la consultation à distance
+    is_patient_distance = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=[
+        ('en_analyse', 'En cours d\'analyse'),
+        ('analyse_terminee', 'Analyse terminée'),
+        ('valide_medecin', 'Validé par médecin'),
+        ('rejete_medecin', 'Rejeté par médecin'),
+    ], default='en_analyse')
+    
+    commentaire_medecin = models.TextField(blank=True, null=True)
+    medecin_validateur = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='consultations_validees'
+    )
+    date_validation = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    diagnostic_ia = models.TextField(blank=True, null=True)
+
     def save(self, *args, **kwargs):
         if not self.heure_debut:
             self.heure_debut = timezone.localtime().time()
