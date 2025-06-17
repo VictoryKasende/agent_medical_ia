@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import dotenv
+dotenv.load_dotenv()
 
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
@@ -29,9 +31,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "OhcmqJJ6ODIGo6Z2TyR£S~:afl2#4~*V")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG_VALUE = os.getenv("DEBUG", "False")
+DEBUG = DEBUG_VALUE.lower() in ['true', '1', 'yes', 'on']
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+# ALLOWED_HOSTS configuration (plus permissif pour Docker)
+ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,*')
+if ALLOWED_HOSTS_ENV == '*':
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = ALLOWED_HOSTS_ENV.split(',')
 
 # Application definition
 
@@ -43,7 +51,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'chat',
-    'markdown_deux',
 ]
 
 MIDDLEWARE = [
@@ -74,7 +81,7 @@ TEMPLATES = [
     },
 ]
 
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/1')
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1')
 
 
 CACHES = {
@@ -151,10 +158,22 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Paris'
+
+# Configuration CSRF pour Docker
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://0.0.0.0:8000',
+]
+
+# Permettre les cookies CSRF
+CSRF_COOKIE_SECURE = False  # True en production avec HTTPS
+CSRF_COOKIE_HTTPONLY = False
+CSRF_USE_SESSIONS = False
 
