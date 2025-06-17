@@ -491,7 +491,7 @@
         };
 
         // Envoi des données au serveur
-        fetch('/url/', {
+        fetch("{% url 'register' %}", {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),

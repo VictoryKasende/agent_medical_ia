@@ -213,7 +213,7 @@
 
         // Example of using fetch with CSRF token
         const data = { key: 'value' };  // Your data here
-        fetch('/url/', {
+        fetch("{% url 'login' %}", {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
