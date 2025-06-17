@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultations à Distance - MediAi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Ajouter marked.js pour le Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .consultation-card {
+            transition: all 0.3s ease;
+        }
+        
+        .consultation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .symptom-tag {
+            transition: all 0.2s ease;
+        }
+        
+        .symptom-tag:hover {
+            transform: scale(1.05);
+        }
+        
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+        
+        /* Styles pour le contenu Markdown */
+        .diagnostic-content {
+            line-height: 1.7;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .diagnostic-content h1, .diagnostic-content h2, .diagnostic-content h3, .diagnostic-content h4 {
+            color: #1e40af;
+            margin: 1.5em 0 0.8em 0;
+            font-weight: 600;
+        }
+        
+        .diagnostic-content h1 { font-size: 1.5em; }
+        .diagnostic-content h2 { font-size: 1.3em; }
+        .diagnostic-content h3 { font-size: 1.2em; }
+        .diagnostic-content h4 { font-size: 1.1em; }
+        
+        .diagnostic-content ul, .diagnostic-content ol {
+            margin: 1.2em 0;
+            padding-left: 2em;
+        }
+        
+        .diagnostic-content li {
+            margin: 0.6em 0;
+        }
+        
+        .diagnostic-content strong {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        
+        .diagnostic-content em {
+            color: #059669;
+            font-style: italic;
+        }
+        
+        .diagnostic-content p {
+            margin: 1em 0;
+        }
+        
+        .diagnostic-content code {
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .diagnostic-content blockquote {
+            border-left: 4px solid #3b82f6;
+            margin: 1.5em 0;
+            padding-left: 1em;
+            color: #4b5563;
+            font-style: italic;
+        }
+        
+        .diagnostic-content hr {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 2em 0;
+        }
+        
+        .diagnostic-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1.5em 0;
+        }
+        
+        .diagnostic-content th, .diagnostic-content td {
+            border: 1px solid #d1d5db;
+            padding: 0.5em 1em;
+            text-align: left;
+        }
+        
+        .diagnostic-content th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Header -->
+         <!-- Header harmonisé avec home.html -->
+    <header class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo et Titre -->
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="h-10 w-auto" alt="Logo">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">Consultations à Distance</h1>
+                    <p class="text-gray-500 text-sm">Gestion des téléconsultations</p>
+                </div>
+            </div>
+            <!-- Navigation -->
+            <nav class="flex items-center space-x-4">
+                <a href="{% url 'home' %}"
+                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour au Dashboard
+                </a>
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
+                    </button>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="container mx-auto px-4 py-6">
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- Liste des consultations -->
+            <div class="md:w-1/3">
+                <div class="bg-white rounded-lg shadow-md p-4 sticky top-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Consultations en attente</h2>
+                        <span id="pending-count" class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
+                            {{ consultations_en_attente|length }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="relative">
+                            <input type="text" id="search-consultations" placeholder="Rechercher un patient..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                    
+                    <div id="consultations-list" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto">
+                        {% if fiches %}
+                            {% for fiche in fiches %}
+                            <div class="consultation-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300" 
+                                 data-consultation-id="{{ fiche.id }}"
+                                 onclick="showConsultationDetails({{ fiche.id }})">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-800">{{ fiche.nom }} {{ fiche.prenom }}</h3>
+                                        <p class="text-sm text-gray-600">{{ fiche.age }} ans</p>
+                                    </div>
+                                    <span class="text-xs text-gray-500">{{ fiche.created_at|date:"d/m/Y" }}</span>
+                                </div>
+                                <div class="mt-2">
+                                    <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">
+                                        {{ fiche.motif_consultation|truncatewords:3 }}
+                                    </span>
+                                    {% if fiche.cephalees %}
+                                        <span class="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Céphalées</span>
+                                    {% endif %}
+                                    {% if fiche.febrile %}
+                                        <span class="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Fièvre</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-2">
+                                    <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                        {{ fiche.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-500 text-center py-4">Aucune consultation à distance</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Détails de la consultation sélectionnée -->
+            <div class="md:w-2/3">
+                <div id="consultation-details" class="bg-white rounded-lg shadow-md p-6">
+                    <div class="text-center py-8">
+                        <i class="fas fa-file-medical text-4xl text-gray-300 mb-2"></i>
+                        <p class="text-gray-500">Sélectionnez une consultation pour voir les détails</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de validation -->
+    <div id="validation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 fade-in max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Validation du diagnostic</h3>
+                <button id="close-validation-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="validation-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="consultation-id" name="consultation_id">
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Commentaires du médecin</label>
+                    <textarea name="commentaire" rows="4" 
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Ajoutez vos commentaires, corrections ou recommandations..."></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancel-validation" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">
+                        Annuler
+                    </button>
+                    <button type="submit" name="action" value="rejeter"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-times mr-2"></i> Rejeter
+                    </button>
+                    <button type="submit" name="action" value="valider"
+                            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-check mr-2"></i> Valider
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Données des consultations (passées depuis Django)
+        const consultationsData = {{ consultations_json|safe }};
+        
+        function showConsultationDetails(consultationId) {
+            const consultation = consultationsData.find(c => c.id === consultationId);
+            if (!consultation) return;
+            
+            const detailsContainer = document.getElementById('consultation-details');
+            
+            // Convertir le diagnostic IA Markdown en HTML
+            let diagnosticHtml = '';
+            if (consultation.diagnostic_ia) {
+                try {
+                    diagnosticHtml = marked.parse(consultation.diagnostic_ia);
+                } catch (error) {
+                    console.error('Erreur parsing Markdown:', error);
+                    diagnosticHtml = consultation.diagnostic_ia.replace(/\n/g, '<br>');
+                }
+            }
+            
+            detailsContainer.innerHTML = `
+                <div class="border-b border-gray-200 pb-4 mb-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">${consultation.nom} ${consultation.prenom}</h2>
+                            <p class="text-gray-600">${consultation.age} ans</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">Reçu le ${new Date(consultation.created_at).toLocaleString()}</p>
+                            <span class="inline-block bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full">
+                                ${consultation.status_display}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex space-x-4">
+                        <span class="flex items-center text-blue-600">
+                            <i class="fas fa-phone mr-2"></i> ${consultation.telephone || 'Non renseigné'}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Motif de consultation</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p>${consultation.motif_consultation || 'Non spécifié'}</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Signes vitaux</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div><strong>Température:</strong> ${consultation.temperature || 'N/A'}°C</div>
+                                <div><strong>Tension:</strong> ${consultation.tension_arterielle || 'N/A'}</div>
+                                <div><strong>Pouls:</strong> ${consultation.pouls || 'N/A'}/min</div>
+                                <div><strong>SpO2:</strong> ${consultation.spo2 || 'N/A'}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-2">Histoire de la maladie</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p>${consultation.histoire_maladie || 'Non spécifiée'}</p>
+                    </div>
+                </div>
+                
+                ${consultation.diagnostic_ia ? `
+                <div class="mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-2 text-blue-700">
+                        <i class="fas fa-robot mr-2"></i>
+                        Diagnostic généré par l'IA
+                    </h3>
+                    <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
+                        <div class="diagnostic-content text-sm">
+                            ${diagnosticHtml}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="flex justify-end space-x-3">
+                    <button onclick="openValidationModal(${consultation.id})" 
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-check-double mr-2"></i> Valider/Rejeter
+                    </button>
+                </div>
+            `;
+        }
+        
+        function openValidationModal(consultationId) {
+            document.getElementById('consultation-id').value = consultationId;
+            document.getElementById('validation-modal').classList.remove('hidden');
+        }
+        
+        // Gestion des modals
+        document.getElementById('close-validation-modal').addEventListener('click', function() {
+            document.getElementById('validation-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('cancel-validation').addEventListener('click', function() {
+            document.getElementById('validation-modal').classList.add('hidden');
+        });
+        
+        // Gestion du formulaire de validation
+        document.getElementById('validation-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const consultationId = formData.get('consultation_id');
+            
+            fetch(`/valider-diagnostic/${consultationId}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload(); // Recharger la page pour voir les changements
+                } else {
+                    alert('Erreur lors de la validation');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la validation');
+            });
+        });
+        
+        // Recherche
+        document.getElementById('search-consultations').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const consultationCards = document.querySelectorAll('.consultation-card');
+            
+            consultationCards.forEach(card => {
+                const patientName = card.querySelector('h3').textContent.toLowerCase();
+                if (patientName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
