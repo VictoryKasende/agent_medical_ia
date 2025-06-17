@@ -605,6 +605,18 @@
             radio.addEventListener("change", toggleFields);
         });
     });
+
+    // Example of a fetch POST request with CSRF token
+    function postData(url = '', data = {}) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+    }
 </script>
 
 </body>

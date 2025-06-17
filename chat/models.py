@@ -3,32 +3,6 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 
-class Conversation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Conversation #{self.id} - {self.user.username}"
-
-
-class MessageIA(models.Model):
-    ROLE_CHOICES = [
-        ('user', 'Utilisateur'),
-        ('gpt4', 'GPT-4'),
-        ('claude', 'Claude 3'),
-        ('gemini', 'Gemini Pro'),
-        ('synthese', 'Synthèse Finale'),
-    ]
-
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"[{self.get_role_display()}] {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
-
-
 class FicheConsultation(models.Model):
     CELIBATAIRE = 'Célibataire'
     MARIE = 'Marié(e)'
@@ -41,8 +15,6 @@ class FicheConsultation(models.Model):
         (DIVORCE, 'Divorcé(e)'),
         (VEUF, 'Veuf(ve)'),
     ]
-
-    conversation = models.ForeignKey('Conversation', on_delete=models.CASCADE, related_name='fiches_consultation')
 
     # Informations Patient
     nom = models.CharField(max_length=100)
@@ -237,6 +209,35 @@ class FicheConsultation(models.Model):
 
     class Meta:
         ordering = ['-date_consultation']
+
+
+class Conversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name="conversations", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        if self.fiche:
+            return f"Conversation #{self.id} - {self.user.username} (Fiche {self.fiche.numero_dossier})"
+        return f"Conversation #{self.id} - {self.user.username}"
+
+
+class MessageIA(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'Utilisateur'),
+        ('gpt4', 'GPT-4'),
+        ('claude', 'Claude 3'),
+        ('gemini', 'Gemini Pro'),
+        ('synthese', 'Synthèse Finale'),
+    ]
+
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.get_role_display()}] {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
 class UserProfile(models.Model):

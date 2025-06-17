@@ -2,14 +2,7 @@
 from celery import shared_task
 from celery.exceptions import Ignore
 from django.core.cache import cache
-from .llm_config import gpt4, claude, gemini, synthese_llm
-from langchain.schema import HumanMessage
-import json
-import logging
-from .models import FicheConsultation, MessageIA
-import uuid
-
-logger = logging.getLogger(__name__)
+from .models import Conversation, MessageIA, FicheConsultation
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -17,246 +10,144 @@ def stream_synthese(synthese_llm, synthese_message):
         if hasattr(chunk, 'content'):
             yield chunk.content
 
-def call_llm(prompt):
-    # Remplace par ton vrai appel LLM si besoin
-    return "Réponse simulée du LLM pour : " + prompt
-
-def execute_symptomes_analysis(symptomes_text, user_id=None):
-    """
-    Fonction Python pure pour analyser les symptômes (sans contexte Celery)
-    """
-    try:
-        # Étape 1: Analyse avec GPT-4
-        gpt4_response = gpt4.invoke([HumanMessage(content=symptomes_text)])
-        if hasattr(gpt4_response, "content"):
-            gpt4_result = gpt4_response.content
-        else:
-            gpt4_result = "".join([chunk.content for chunk in gpt4_response])
-
-        # Étape 2: Analyse avec Claude
-        claude_response = claude.invoke([HumanMessage(content=symptomes_text)])
-        if hasattr(claude_response, "content"):
-            claude_result = claude_response.content
-        else:
-            claude_result = "".join([chunk.content for chunk in claude_response])
-
-        # Étape 3: Synthèse finale
-        synthese_prompt = f"""
-        Vous êtes un médecin expert. Analysez ces deux diagnostics et fournissez une synthèse médicale complète.
-
-        Diagnostic GPT-4:
-        {gpt4_result}
-
-        Diagnostic Claude:
-        {claude_result}
-
-        Fournissez une synthèse qui inclut:
-        1. Diagnostic le plus probable
-        2. Diagnostics différentiels
-        3. Examens complémentaires recommandés
-        4. Traitement suggéré
-        5. Conseils de prévention
-        """
-
-        # Utilisation du streaming : concatène les chunks pour obtenir la synthèse complète
-        synthese_chunks = []
-        for chunk in synthese_llm.stream([HumanMessage(content=synthese_prompt)]):
-            if hasattr(chunk, "content"):
-                synthese_chunks.append(chunk.content)
-            else:
-                synthese_chunks.append(str(chunk))
-        synthese_result = "".join(synthese_chunks)
-
-        return {
-            'gpt4_analysis': gpt4_result,
-            'claude_analysis': claude_result,
-            'synthese': synthese_result,
-            'status': 'completed'
-        }
-
-    except Exception as exc:
-        logger.error(f"Erreur dans execute_symptomes_analysis: {str(exc)}")
-        raise exc
-
 @shared_task(bind=True)
-def analyse_symptomes_task(self, symptomes_text, user_id=None):
+def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key):
     """
-    Tâche Celery pour analyser les symptômes de manière asynchrone
+    Analyse les symptômes via plusieurs LLM en parallèle, stocke chaque réponse et la synthèse.
+    Résultat final mis en cache.
     """
     try:
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 0, 'total': 3, 'status': "Démarrage de l'analyse..."}
-        )
+        from .llm_config import gpt4, claude, gemini, synthese_llm
+        from langchain.schema import HumanMessage
+        from concurrent.futures import ThreadPoolExecutor
 
-        # Étape 1: Analyse avec GPT-4
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 1, 'total': 3, 'status': "Analyse avec GPT-4..."}
-        )
-        gpt4_response = gpt4.invoke([HumanMessage(content=symptomes_text)])
-        if hasattr(gpt4_response, "content"):
-            gpt4_result = gpt4_response.content
-        else:
-            # Si c'est un flux (stream), concatène les morceaux
-            gpt4_result = "".join([chunk.content for chunk in gpt4_response])
+        message = HumanMessage(content=f"""
+            Symptômes du patient : {symptomes}
+            Veuillez préciser :
+            1. Analyses nécessaires
+            2. Diagnostic(s)
+            3. Traitement(s) avec posologie
+            4. Éducation thérapeutique
+            5. Références scientifiques fiables
+            6. Répondre ensuite comme assistant médical rigoureux et bienveillant.
+        """)
 
-        # Étape 2: Analyse avec Claude
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 2, 'total': 3, 'status': "Analyse avec Claude..."}
-        )
-        claude_response = claude.invoke([HumanMessage(content=symptomes_text)])
-        if hasattr(claude_response, "content"):
-            claude_result = claude_response.content
-        else:
-            claude_result = "".join([chunk.content for chunk in claude_response])
+        def gpt4_call():
+            return gpt4.invoke([message]).content
 
-        # Étape 3: Synthèse finale
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 3, 'total': 3, 'status': "Synthèse finale..."}
-        )
-        synthese_prompt = f"""
-        Vous êtes un médecin expert. Analysez ces deux diagnostics et fournissez une synthèse médicale complète.
+        def claude_call():
+            return claude.invoke([message]).content
 
-        Diagnostic GPT-4:
-        {gpt4_result}
+        def gemini_call():
+            return gemini.invoke([message]).content
 
-        Diagnostic Claude:
-        {claude_result}
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            tasks = {
+                'gpt4': executor.submit(gpt4_call),
+                'claude': executor.submit(claude_call),
+                'gemini': executor.submit(gemini_call),
+            }
+            results = {}
+            for name, future in tasks.items():
+                try:
+                    results[name] = future.result(timeout=120)
+                except Exception as e:
+                    results[name] = f"Erreur {name} : {e}"
 
-        Fournissez une synthèse qui inclut:
-        1. Diagnostic le plus probable
-        2. Diagnostics différentiels
-        3. Examens complémentaires recommandés
-        4. Traitement suggéré
-        5. Conseils de prévention
-        """
+        conv = Conversation.objects.get(id=conversation_id)
+        for model, content in results.items():
+            MessageIA.objects.create(conversation=conv, role=model, content=content)
 
-        # Utilisation du streaming : concatène les chunks pour obtenir la synthèse complète
-        synthese_chunks = []
-        for chunk in synthese_llm.stream([HumanMessage(content=synthese_prompt)]):
-            if hasattr(chunk, "content"):
-                synthese_chunks.append(chunk.content)
-            else:
-                synthese_chunks.append(str(chunk))
-        synthese_result = "".join(synthese_chunks)
-
-        # Résultat final
-        result = {
-            'gpt4_analysis': gpt4_result,
-            'claude_analysis': claude_result,
-            'synthese': synthese_result,
-            'status': 'completed'
-        }
-
-        # Stocker le résultat en cache pour 30 minutes
-        try:
-            import uuid
-
-            if hasattr(self, "request") and hasattr(self.request, "id"):
-                cache_key = f"analysis_result_{self.request.id}"
-            else:
-                cache_key = f"analysis_result_{uuid.uuid4()}"
-            cache.set(cache_key, result, 1800)
-
-        except Exception:
-            logger.warning("Erreur lors de la mise en cache du résultat")
-
-        return result
+        synthese_message = HumanMessage(content=f"""
+            Trois experts ont donné leur avis :
+            - 🤖 GPT-4 : {results['gpt4']}
+            - 🧠 Claude 3 : {results['claude']}
+            - 🔬 Gemini Pro : {results['gemini']}
+            Formule une **synthèse claire, rigoureuse et prudente**, avec des **emojis** pour la lisibilité. 🩺
+            Si le patient pose des questions, réponds comme un assistant médical qualifié.
+        """)
+        full_response = ""
+        for chunk in stream_synthese(synthese_llm, synthese_message):
+            full_response += chunk
+        MessageIA.objects.create(conversation=conv, role='synthese', content=full_response)
+        cache.set(cache_key, full_response, timeout=3600)
+        return full_response
 
     except Exception as exc:
-        logger.error(f"Erreur dans analyse_symptomes_task: {str(exc)}")
         self.update_state(
             state='FAILURE',
             meta={'error': str(exc), 'status': "Erreur lors de l'analyse"}
         )
         raise Ignore()
 
+# --- Fonctions avancées pour analyse de fiches et consultation ---
+
 @shared_task(bind=True)
-def analyse_consultation_task(self, fiche_id):
+def analyse_fiche_consultation_task(self, fiche_id):
     """
-    Tâche Celery pour analyser une consultation médicale
+    Analyse une fiche de consultation complète et stocke le diagnostic IA dans la fiche.
     """
     try:
+        from .llm_config import gpt4
+        from langchain.schema import HumanMessage
+
         fiche = FicheConsultation.objects.get(id=fiche_id)
-        
-        # Mise à jour du statut
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 0, 'total': 2, 'status': 'Préparation de l\'analyse...'}
-        )
-        
-        # Construire le dictionnaire des symptômes
-        from .views import FicheConsultationCreateView
-        view_instance = FicheConsultationCreateView()
-        symptomes_dict = view_instance.construire_dictionnaire_symptomes(fiche)
-        
-        # Convertir en texte
-        from .views import formater_formulaire_en_texte
-        symptomes_text = formater_formulaire_en_texte(symptomes_dict)
-
-        # Lancer l'analyse
-        self.update_state(
-            state='PROGRESS',
-            meta={'current': 1, 'total': 2, 'status': 'Analyse en cours...'}
-        )
-
-        # Appel de la fonction Python pure
-        analysis_result = execute_symptomes_analysis(symptomes_text, fiche.conversation.user.id if fiche.conversation else None)
-
-        fiche.diagnostic_ia = analysis_result.get('synthese', '')
-        fiche.status = 'analyse_terminee'
+        prompt = f"""
+        Patient : {fiche.nom}, {fiche.age} ans
+        Symptômes : {fiche.motif_consultation} - {fiche.histoire_maladie}
+        Signes vitaux : Température {fiche.temperature}, SpO2 {fiche.spo2}, TA {fiche.tension_arterielle}, Pouls {fiche.pouls}
+        Antécédents : {fiche.autres_antecedents}
+        Plaintes : Céphalées={fiche.cephalees}, Vertiges={fiche.vertiges}, Palpitations={fiche.palpitations}
+        Examen clinique : {fiche.etat}
+        Donne un diagnostic différentiel, examens complémentaires, traitement, conseils.
+        """
+        message = HumanMessage(content=prompt)
+        result = gpt4.invoke([message]).content
+        fiche.diagnostic_ia = result
         fiche.save()
-        
-        if fiche.conversation:
-            MessageIA.objects.create(
-                conversation=fiche.conversation,
-                role='synthese',
-                content=fiche.diagnostic_ia
-            )
-        
-        self.update_state(
-            state='SUCCESS',
-            meta={'current': 2, 'total': 2, 'status': 'Analyse terminée'}
-        )
-        
-        return {
-            'fiche_id': fiche_id,
-            'status': 'completed',
-            'analysis': analysis_result
-        }
-        
+        return result
     except Exception as exc:
-        logger.error(f"Erreur dans analyse_consultation_task: {str(exc)}")
         self.update_state(
             state='FAILURE',
-            meta={'error': str(exc), 'status': 'Erreur lors de l\'analyse'}
+            meta={'error': str(exc), 'status': "Erreur analyse fiche"}
         )
         raise Ignore()
 
-@shared_task
-def analyse_fiche_consultation_task(fiche_id):
-    fiche = FicheConsultation.objects.get(id=fiche_id)
-    prompt = f"Nom: {fiche.nom if hasattr(fiche, 'nom') else fiche.id}, Symptômes: {fiche.motif_consultation}"
+@shared_task(bind=True)
+def analyse_consultation_task(self, consultation_id):
+    """
+    Analyse une consultation médicale (exemple pour extension future).
+    """
     try:
-        result = call_llm(prompt)
-        fiche.commentaire_medecin = result
-        fiche.status = "analyse_terminee"
-        fiche.save()
-    except Exception:
-        fiche.commentaire_medecin = "Une erreur est survenue. Veuillez réessayer."
-        fiche.status = "en_analyse"
-        fiche.save()
+        from .llm_config import gpt4
+        from langchain.schema import HumanMessage
 
-    # Création du message de synthèse dans la conversation
-    MessageIA.objects.create(
-        conversation=fiche.conversation,
-        role='synthese',
-        content=fiche.diagnostic_ia
-    )
+        consultation = FicheConsultation.objects.get(id=consultation_id)
+        prompt = f"""
+        Consultation du patient {consultation.nom}, {consultation.age} ans.
+        Motif : {consultation.motif_consultation}
+        Histoire : {consultation.histoire_maladie}
+        Examen : {consultation.etat}
+        Propose un diagnostic, examens, traitement, conseils.
+        """
+        message = HumanMessage(content=prompt)
+        result = gpt4.invoke([message]).content
+        consultation.diagnostic_ia = result
+        consultation.save()
+        return result
+    except Exception as exc:
+        self.update_state(
+            state='FAILURE',
+            meta={'error': str(exc), 'status': "Erreur analyse consultation"}
+        )
+        raise Ignore()
 
-    analyse_consultation_task.delay(fiche.id)
+def execute_symptomes_analysis(symptomes):
+    """
+    Fonction Python pure pour analyse rapide (hors Celery).
+    """
+    from .llm_config import gpt4
+    from langchain.schema import HumanMessage
+    message = HumanMessage(content=f"Analyse ces symptômes : {symptomes}")
 
 

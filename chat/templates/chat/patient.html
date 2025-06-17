@@ -102,7 +102,7 @@
                     <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
                 </a>
 
-                <a href="{% url 'home' %}"
+                <a href="#"
                    class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
                     <i class="fas fa-user mr-2"></i> Profil
                 </a>
@@ -149,20 +149,6 @@
     <!-- Dans la section qui affiche les consultations du patient -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <div class="consultation-history">
-        {% for consultation in consultations_patient %}
-        <div class="consultation-item">
-            <!-- ...autres détails... -->
-
-            {% if consultation.diagnostic_ia %}
-            <div class="diagnostic-ia-section">
-                <h4>Diagnostic IA</h4>
-                <div class="diagnostic-content" data-markdown="{{ consultation.diagnostic_ia }}"></div>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
 
     <script>
     // Convertir tous les diagnostics Markdown en HTML
