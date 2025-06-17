@@ -144,25 +144,28 @@
 </head>
 <body class="bg-gray-50 font-sans">
     <!-- Header -->
-    <header class="bg-white shadow-md">
+         <!-- Header harmonisé avec home.html -->
+    <header class="bg-white border-b border-gray-200 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <!-- Logo et Titre -->
             <div class="flex items-center space-x-4">
-                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="h-10 w-auto" alt="Logo">
                 <div>
                     <h1 class="text-2xl md:text-3xl font-bold text-blue-700">Consultations à Distance</h1>
                     <p class="text-gray-500 text-sm">Gestion des téléconsultations</p>
                 </div>
             </div>
-
             <!-- Navigation -->
             <nav class="flex items-center space-x-4">
-                <a href="{% url 'medecin_dashboard' %}"
+                <a href="{% url 'home' %}"
                    class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
                     <i class="fas fa-arrow-left mr-2"></i> Retour au Dashboard
                 </a>
-
-                <form action="{% url 'logout' %}" method="post">
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="inline">
                     {% csrf_token %}
                     <button type="submit"
                             class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
@@ -194,38 +197,38 @@
                     </div>
                     
                     <div id="consultations-list" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto">
-                        {% if consultations_en_attente %}
-                            {% for consultation in consultations_en_attente %}
+                        {% if fiches %}
+                            {% for fiche in fiches %}
                             <div class="consultation-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300" 
-                                 data-consultation-id="{{ consultation.id }}"
-                                 onclick="showConsultationDetails({{ consultation.id }})">
+                                 data-consultation-id="{{ fiche.id }}"
+                                 onclick="showConsultationDetails({{ fiche.id }})">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <h3 class="font-semibold text-gray-800">{{ consultation.nom }} {{ consultation.prenom }}</h3>
-                                        <p class="text-sm text-gray-600">{{ consultation.age }} ans</p>
+                                        <h3 class="font-semibold text-gray-800">{{ fiche.nom }} {{ fiche.prenom }}</h3>
+                                        <p class="text-sm text-gray-600">{{ fiche.age }} ans</p>
                                     </div>
-                                    <span class="text-xs text-gray-500">{{ consultation.created_at|date:"d/m/Y" }}</span>
+                                    <span class="text-xs text-gray-500">{{ fiche.created_at|date:"d/m/Y" }}</span>
                                 </div>
                                 <div class="mt-2">
                                     <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">
-                                        {{ consultation.motif_consultation|truncatewords:3 }}
+                                        {{ fiche.motif_consultation|truncatewords:3 }}
                                     </span>
-                                    {% if consultation.cephalees %}
+                                    {% if fiche.cephalees %}
                                         <span class="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Céphalées</span>
                                     {% endif %}
-                                    {% if consultation.febrile %}
+                                    {% if fiche.febrile %}
                                         <span class="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Fièvre</span>
                                     {% endif %}
                                 </div>
                                 <div class="mt-2">
                                     <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                                        {{ consultation.get_status_display }}
+                                        {{ fiche.get_status_display }}
                                     </span>
                                 </div>
                             </div>
                             {% endfor %}
                         {% else %}
-                            <p class="text-gray-500 text-center py-4">Aucune consultation en attente</p>
+                            <p class="text-gray-500 text-center py-4">Aucune consultation à distance</p>
                         {% endif %}
                     </div>
                 </div>
@@ -431,16 +434,6 @@
             });
         });
     </script>
-
-    {% for fiche in fiches %}
-    <div>
-        <p>{{ fiche.motif_consultation }}</p>
-        <form method="post" action="{% url 'relancer_analyse' fiche.id %}">
-            {% csrf_token %}
-            <button type="submit">Relancer l'analyse IA</button>
-        </form>
-    </div>
-    {% endfor %}
 
 </body>
 </html>

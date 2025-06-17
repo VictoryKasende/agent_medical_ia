@@ -150,4 +150,14 @@ def execute_symptomes_analysis(symptomes):
     from langchain.schema import HumanMessage
     message = HumanMessage(content=f"Analyse ces symptômes : {symptomes}")
 
+@shared_task
+def analyse_symptomes_task(fiche_id):
+    fiche = FicheConsultation.objects.get(id=fiche_id)
+    # Appel à ton LLM ici (OpenAI, local, etc.)
+    # Par exemple :
+    diagnostic_ia = appel_llm(fiche)  # fonction qui retourne le texte IA
+    fiche.diagnostic_ia = diagnostic_ia
+    fiche.status = 'analyse_terminee'
+    fiche.save()
+
 

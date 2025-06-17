@@ -224,123 +224,17 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
     model = FicheConsultation
     form_class = FicheConsultationForm
     template_name = "chat/fiche_form.html"
-    success_url = reverse_lazy('home')
+    success_url = reverse_lazy('patient_dashboard')
 
     def form_valid(self, form):
         fiche = form.save(commit=False)
         fiche.conversation = Conversation.objects.create(user=self.request.user)
+        fiche.status = 'en_attente'
         fiche.save()
-
-        symptomes = {
-            "Identification": {
-                "Nom complet": fiche.nom,
-                "Âge": fiche.age,
-                "Date de naissance": fiche.date_naissance,
-                "Téléphone": fiche.telephone,
-                "État civil": fiche.etat_civil,
-                "Occupation": fiche.occupation,
-                "Adresse": {
-                    "Avenue": fiche.avenue,
-                    "Quartier": fiche.quartier,
-                    "Commune": fiche.commune,
-                },
-                "Contact d'urgence": {
-                    "Nom": fiche.contact_nom,
-                    "Téléphone": fiche.contact_telephone,
-                    "Adresse": fiche.contact_adresse,
-                },
-            },
-            "Motif de consultation": fiche.motif_consultation,
-            "Histoire de la maladie": fiche.histoire_maladie,
-            "Plaintes": {
-                "Céphalées": fiche.cephalees,
-                "Vertiges": fiche.vertiges,
-                "Palpitations": fiche.palpitations,
-                "Troubles visuels": fiche.troubles_visuels,
-                "Nycturie": fiche.nycturie,
-            },
-            "Signes vitaux": {
-                "Température": fiche.temperature,
-                "SpO2": fiche.spo2,
-                "Tension artérielle": fiche.tension_arterielle,
-                "Pouls": fiche.pouls,
-                "Fréquence respiratoire": fiche.frequence_respiratoire,
-                "Poids": fiche.poids,
-            },
-            "Antécédents personnels": {
-                "Hypertension": fiche.hypertendu,
-                "Diabète": fiche.diabetique,
-                "Épilepsie": fiche.epileptique,
-                "Troubles du comportement": fiche.trouble_comportement,
-                "Gastrite": fiche.gastritique,
-                "Autres antécédents": fiche.autres_antecedents,
-            },
-            "Antécédents familiaux": {
-                "Drépanocytose": fiche.familial_drepanocytaire,
-                "Diabète": fiche.familial_diabetique,
-                "Obésité": fiche.familial_obese,
-                "Hypertension": fiche.familial_hypertendu,
-                "Troubles du comportement": fiche.familial_trouble_comportement,
-                "Lien avec la mère": fiche.lien_mere,
-                "Lien avec le père": fiche.lien_pere,
-                "Lien avec le frère": fiche.lien_frere,
-                "Lien avec la sœur": fiche.lien_soeur,
-            },
-            "Mode de vie": {
-                "Tabac": fiche.tabac,
-                "Alcool": fiche.alcool,
-                "Activité physique": fiche.activite_physique,
-                "Détail de l'activité physique": fiche.activite_physique_detail,
-                "Alimentation habituelle": fiche.alimentation_habituelle,
-            },
-            "Allergies": {
-                "Allergie médicamenteuse": fiche.allergie_medicamenteuse,
-                "Nom du médicament allergène": fiche.medicament_allergique,
-            },
-            "Traumatismes": {
-                "Événement traumatique": fiche.evenement_traumatique,
-                "Traumatisme lié au décès d’un enfant": fiche.trauma_deces_enfant,
-                "État général": fiche.etat_general,
-            },
-            "Capacités": {
-                "Capacité physique": fiche.capacite_physique,
-                "Score physique": fiche.capacite_physique_score,
-                "Capacité psychologique": fiche.capacite_psychologique,
-                "Score psychologique": fiche.capacite_psychologique_score,
-            },
-            "Examen clinique": {
-                "État général": fiche.etat,
-                "Fièvre": fiche.febrile,
-                "Coloration bulbaire": fiche.coloration_bulbaire,
-                "Coloration palpébrale": fiche.coloration_palpebrale,
-                "Téguments": fiche.tegument,
-                "Tête": fiche.tete,
-                "Cou": fiche.cou,
-                "Paroi thoracique": fiche.paroi_thoracique,
-                "Poumons": fiche.poumons,
-                "Cœur": fiche.coeur,
-                "Épigastre et hypochondres": fiche.epigastre_hypochondres,
-                "Péri-ombilical et flancs": fiche.peri_ombilical_flancs,
-                "Hypogastre et fosses iliaques": fiche.hypogastre_fosses_iliaques,
-                "Membres": fiche.membres,
-                "Colonne et bassin": fiche.colonne_bassin,
-                "Examen gynécologique": fiche.examen_gynecologique,
-            },
-            "Évaluation psychosociale": {
-                "Préoccupations": fiche.preoccupations,
-                "Compréhension": fiche.comprehension,
-                "Attentes": fiche.attentes,
-                "Engagement": fiche.engagement,
-            }
-        }
-
-        def default_serializer(obj):
-            if isinstance(obj, (datetime.date, datetime.datetime)):
-                return obj.isoformat()
-            raise TypeError(f"Type {type(obj)} non sérialisable")
-
-        self.request.session["symptomes_diagnostic"] = json.dumps(symptomes, default=default_serializer)
-        return redirect("analyse")
+        # Lance l'analyse IA en tâche de fond (asynchrone)
+        analyse_symptomes_task.delay(fiche.id)
+        messages.success(self.request, "Votre formulaire a été envoyé. Un médecin va l'analyser.")
+        return super().form_valid(form)
 
 class ChatHistoryView(LoginRequiredMixin, TemplateView):
     template_name = "chat/history.html"
@@ -372,8 +266,8 @@ class RelancerAnalyseMedecinView(View):
         fiche = get_object_or_404(FicheConsultation, id=fiche_id)
         # Ici, tu peux relancer la tâche Celery d'analyse IA si besoin
         # Par exemple :
-        # from .tasks import analyse_fiche_consultation_task
-        # analyse_fiche_consultation_task.delay(fiche.id)
+        from .tasks import analyse_fiche_consultation_task
+        analyse_fiche_consultation_task.delay(fiche.id)
         messages.success(request, "L'analyse IA a été relancée pour ce dossier.")
         return redirect(reverse_lazy('consultation'))
 
@@ -386,8 +280,36 @@ class MedecinDashboardView(TemplateView):
 class ProcheDashboardView(TemplateView):
     template_name = "chat/dashboard_proche.html"
 
-class ConsultationsDistanceView(TemplateView):
+class ConsultationsDistanceView(LoginRequiredMixin, TemplateView):
     template_name = "chat/consultations_distance.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        fiches = FicheConsultation.objects.all().order_by('-created_at')
+        context['fiches'] = fiches
+        context['consultations_json'] = json.dumps([
+            {
+                "id": f.id,
+                "nom": f.nom,
+                "prenom": f.prenom,
+                "age": f.age,
+                "created_at": f.created_at.isoformat(),
+                "motif_consultation": f.motif_consultation,
+                "cephalees": f.cephalees,
+                "febrile": f.febrile,
+                "status": f.status,
+                "status_display": f.get_status_display(),
+                "telephone": f.telephone,
+                "temperature": f.temperature,
+                "tension_arterielle": f.tension_arterielle,
+                "pouls": f.pouls,
+                "spo2": f.spo2,
+                "histoire_maladie": f.histoire_maladie,
+                "diagnostic_ia": f.diagnostic_ia,  # <-- pour affichage IA
+            }
+            for f in fiches
+        ])
+        return context
 
 def check_task_status(request, task_id):
     """
@@ -406,12 +328,8 @@ def check_task_status(request, task_id):
     return JsonResponse(response)
 
 def api_consultations_distance(request):
-    """
-    API qui retourne la liste des fiches de consultation à distance (exemple : toutes les fiches).
-    Adapte le filtre selon ton besoin.
-    """
-    fiches = FicheConsultation.objects.all().values(
-        'id', 'nom', 'prenom', 'date_naissance', 'age', 'numero_dossier'
+    fiches = FicheConsultation.objects.filter(status='en_attente').values(
+        'id', 'nom', 'prenom', 'date_naissance', 'age', 'numero_dossier', 'created_at', 'status'
     )
     return JsonResponse(list(fiches), safe=False)
 
