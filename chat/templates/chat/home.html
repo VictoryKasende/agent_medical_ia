@@ -54,14 +54,14 @@
             <i class="fas fa-search text-gray-600"></i>
             <span class="text-gray-800 font-medium">Rechercher les chats</span>
         </button>
-        <button onclick="openLibrary()" class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-            <i class="fas fa-book text-blue-600"></i>
-            <span class="text-gray-800 font-medium">Bibliothèque</span>
-        </button>
-        <button onclick="window.location.href='{% url 'consultations_distance' %}'"
+         <button onclick="window.location.href='{% url 'consultations_distance' %}'"
                 class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
             <i class="fas fa-globe text-green-600"></i>
             <span class="text-gray-800 font-medium">Consultations à distance</span>
+        </button>
+        <button onclick="openLibrary()" class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-book text-blue-600"></i>
+            <span class="text-gray-800 font-medium">Bibliothèque</span>
         </button>
     </div>
     <div class="flex-1 overflow-y-auto">
