@@ -48,6 +48,18 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Create .env file
+      run: |
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
+        echo "DATABASE_URL=${{ vars.DATABASE_URL }}" >> .env
+        echo "CELERY_BROKER_URL=${{ vars.CELERY_BROKER_URL }}" >> .env
+        echo "CELERY_RESULT_BACKEND=${{ vars.CELERY_RESULT_BACKEND }}" >> .env
+        echo "ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}" >> .env
+        echo "DEVELOPMENT_MODE=${{ vars.DEVELOPMENT_MODE }}" >> .env
+        echo "DEBUG=${{ vars.DEBUG }}" >> .env
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
