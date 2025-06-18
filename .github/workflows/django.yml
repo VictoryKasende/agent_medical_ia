@@ -45,9 +45,9 @@ jobs:
 
     - name: Create .env file
       run: |
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-        echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env
+        echo "OPENAI_API_KEY=${{ vars.OPENAI_API_KEY }}" >> .env
+        echo "ANTHROPIC_API_KEY=${{ vars.ANTHROPIC_API_KEY }}" >> .env
+        echo "GOOGLE_API_KEY=${{ vars.GOOGLE_API_KEY }}" >> .env
         echo "DATABASE_URL=${{ vars.DATABASE_URL }}" >> .env
         echo "CELERY_BROKER_URL=${{ vars.CELERY_BROKER_URL }}" >> .env
         echo "CELERY_RESULT_BACKEND=${{ vars.CELERY_RESULT_BACKEND }}" >> .env
