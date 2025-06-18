@@ -243,8 +243,12 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
         fiche.conversation = Conversation.objects.create(user=self.request.user)
         fiche.status = 'en_attente'
         fiche.save()
-        # Lance l'analyse IA en tâche de fond (asynchrone)
-        analyse_symptomes_task.delay(fiche.id)
+        # Prépare les arguments pour la tâche
+        symptomes = fiche.motif_consultation or ""  # ou adapte selon tes besoins
+        user_id = self.request.user.id
+        conversation_id = fiche.conversation.id
+        cache_key = f"diagnostic_{fiche.id}"
+        analyse_symptomes_task.delay(symptomes, user_id, conversation_id, cache_key)
         messages.success(self.request, "Votre formulaire a été envoyé. Un médecin va l'analyser.")
         return super().form_valid(form)
 
