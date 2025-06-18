@@ -3,7 +3,6 @@ from celery import shared_task
 from celery.exceptions import Ignore
 from django.core.cache import cache
 from .models import Conversation, MessageIA, FicheConsultation
-from .llm_utils import appel_llm
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -72,6 +71,14 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
             full_response += chunk
         MessageIA.objects.create(conversation=conv, role='synthese', content=full_response)
         cache.set(cache_key, full_response, timeout=3600)
+
+        try:
+            fiche = FicheConsultation.objects.get(user_id=user_id, conversation_id=conversation_id)
+            fiche.diagnostic_ia = full_response
+            fiche.status = 'analyse_terminee'
+            fiche.save()
+        except FicheConsultation.DoesNotExist:
+                pass
         return full_response
 
     except Exception as exc:
@@ -80,105 +87,3 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
             meta={'error': str(exc), 'status': "Erreur lors de l'analyse"}
         )
         raise Ignore()
-
-@shared_task(bind=True)
-def analyse_consultation_task(self, fiche_id):
-    """
-    Analyse une fiche médicale structurée (téléconsultation ou présentiel) et stocke le diagnostic IA dans la fiche.
-    """
-    try:
-        fiche = FicheConsultation.objects.get(id=fiche_id)
-        diagnostic_ia = appel_llm(fiche)
-        fiche.diagnostic_ia = diagnostic_ia
-        fiche.status = 'analyse_terminee'
-        fiche.save()
-        return diagnostic_ia
-    except Exception as exc:
-        self.update_state(
-            state='FAILURE',
-            meta={'error': str(exc), 'status': "Erreur analyse fiche médicale"}
-        )
-        raise Ignore()
-
-# --- Fonctions avancées pour analyse de fiches et consultation ---
-
-# @shared_task(bind=True)
-# def analyse_fiche_consultation_task(self, fiche_id):
-#     """
-#     Analyse une fiche de consultation complète et stocke le diagnostic IA dans la fiche.
-#     """
-#     try:
-#         from .llm_config import gpt4
-#         from langchain.schema import HumanMessage
-
-#         fiche = FicheConsultation.objects.get(id=fiche_id)
-#         prompt = f"""
-#         Patient : {fiche.nom}, {fiche.age} ans
-#         Symptômes : {fiche.motif_consultation} - {fiche.histoire_maladie}
-#         Signes vitaux : Température {fiche.temperature}, SpO2 {fiche.spo2}, TA {fiche.tension_arterielle}, Pouls {fiche.pouls}
-#         Antécédents : {fiche.autres_antecedents}
-#         Plaintes : Céphalées={fiche.cephalees}, Vertiges={fiche.vertiges}, Palpitations={fiche.palpitations}
-#         Examen clinique : {fiche.etat}
-#         Donne un diagnostic différentiel, examens complémentaires, traitement, conseils.
-#         """
-#         message = HumanMessage(content=prompt)
-#         result = gpt4.invoke([message]).content
-#         fiche.diagnostic_ia = result
-#         fiche.save()
-#         return result
-#     except Exception as exc:
-#         self.update_state(
-#             state='FAILURE',
-#             meta={'error': str(exc), 'status': "Erreur analyse fiche"}
-#         )
-#         raise Ignore()
-
-# @shared_task(bind=True)
-# def analyse_consultation_task(self, consultation_id):
-#     """
-#     Analyse une consultation médicale (exemple pour extension future).
-#     """
-#     try:
-#         from .llm_config import gpt4
-#         from langchain.schema import HumanMessage
-
-#         consultation = FicheConsultation.objects.get(id=consultation_id)
-#         prompt = f"""
-#         Consultation du patient {consultation.nom}, {consultation.age} ans.
-#         Motif : {consultation.motif_consultation}
-#         Histoire : {consultation.histoire_maladie}
-#         Examen : {consultation.etat}
-#         Propose un diagnostic, examens, traitement, conseils.
-#         """
-#         message = HumanMessage(content=prompt)
-#         result = gpt4.invoke([message]).content
-#         consultation.diagnostic_ia = result
-#         consultation.save()
-#         return result
-#     except Exception as exc:
-#         self.update_state(
-#             state='FAILURE',
-#             meta={'error': str(exc), 'status': "Erreur analyse consultation"}
-#         )
-#         raise Ignore()
-
-# def execute_symptomes_analysis(symptomes):
-#     """
-#     Fonction Python pure pour analyse rapide (hors Celery).
-#     """
-#     from .llm_config import gpt4
-#     from langchain.schema import HumanMessage
-#     message = HumanMessage(content=f"Analyse ces symptômes : {symptomes}")
-
-# @shared_task
-# def analyse_symptomes_task(fiche_id):
-#     """
-#     Analyse une fiche de consultation à distance et stocke le diagnostic IA dans la fiche.
-#     """
-#     fiche = FicheConsultation.objects.get(id=fiche_id)
-#     diagnostic_ia = appel_llm(fiche)
-#     fiche.diagnostic_ia = diagnostic_ia
-#     fiche.status = 'analyse_terminee'
-#     fiche.save()
-
-
