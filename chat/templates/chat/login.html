@@ -1,37 +1,226 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <title>Connexion</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification - Télémédecine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .role-option {
+            transition: all 0.3s ease;
+        }
+        .role-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .role-option.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .role-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-<form method="post" class="bg-white p-6 rounded shadow-md w-full max-w-sm">
-    {% if messages %}
-        <div class="mb-4">
-        {% for message in messages %}
-            {% if "success" in message.tags %}
-                <div class="p-2 text-white rounded bg-green-500">
-            {% elif "error" in message.tags %}
-                <div class="p-2 text-white rounded bg-red-500">
-            {% else %}
-                <div class="p-2 text-white rounded bg-gray-500">
-            {% endif %}
-        {{ message }}
+<body class="bg-gray-50 font-sans min-h-screen flex items-center justify-center">
+    <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 fade-in shadow-lg">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">Télémédecine</h1>
+            <h2 class="text-2xl font-bold text-gray-800">Connexion</h2>
+            <p class="text-gray-600 mt-2">Veuillez sélectionner votre profil et vous authentifier</p>
         </div>
-        {% endfor %}
+
+        {% if messages %}
+            <div class="mb-4">
+            {% for message in messages %}
+                {% if "success" in message.tags %}
+                    <div class="p-3 text-white rounded bg-green-500 text-sm">
+                {% elif "error" in message.tags %}
+                    <div class="p-3 text-white rounded bg-red-500 text-sm">
+                {% else %}
+                    <div class="p-3 text-white rounded bg-gray-500 text-sm">
+                {% endif %}
+            {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Sélection du rôle -->
+        <div class="mb-6">
+            <label class="block text-gray-700 font-medium mb-3">Je suis :</label>
+            <div class="grid grid-cols-2 gap-3" id="role-selection">
+                <div class="role-option p-3 border-2 border-gray-200 rounded-lg text-center cursor-pointer" data-role="patient" onclick="selectRole('patient')">
+                    <div class="role-icon text-blue-500">
+                        <i class="fas fa-user-injured"></i>
+                    </div>
+                    <p class="font-medium">Patient</p>
+                </div>
+                <div class="role-option p-3 border-2 border-gray-200 rounded-lg text-center cursor-pointer" data-role="medecin" onclick="selectRole('medecin')">
+                    <div class="role-icon text-red-500">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <p class="font-medium">Médecin</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire de connexion -->
+        <form id="login-form" class="hidden" method="POST" action="{% url 'login' %}" onsubmit="return handleLogin(event)">
+            {% csrf_token %}
+            <input type="hidden" name="role" id="selected-role" value="">
+
+            <div id="role-specific-fields">
+                <!-- Les champs spécifiques au rôle seront injectés ici -->
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-2">Identifiant</label>
+                <input type="text" id="user-id" name="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre identifiant" required>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 font-medium mb-2">Mot de passe</label>
+                <input type="password" id="user-password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre mot de passe" required>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                <i class="fas fa-sign-in-alt mr-2"></i> Se connecter
+            </button>
+        </form>
+
+        <div class="mt-4 text-center text-sm text-gray-500">
+            <a href="#" class="text-blue-600 hover:text-blue-800">Problème de connexion ?</a>
+        </div>
+        <p class="mt-4 text-sm text-center">Pas encore de compte ? <a href="{% url 'register' %}" class="text-blue-600 hover:underline">S'inscrire</a></p>
     </div>
-    {% endif %}
-    {% csrf_token %}
-    <h2 class="text-2xl font-bold mb-4">Se connecter</h2>
 
-    <input type="text" name="username" placeholder="Nom d'utilisateur" class="w-full mb-2 p-2 border rounded" required>
-    <input type="password" name="password" placeholder="Mot de passe" class="w-full mb-4 p-2 border rounded" required>
+    <script>
+        let currentRole = null;
+        const roleFields = {
+            patient: `
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Numéro de dossier</label>
+                    <input type="text" id="patient-file" name="patient_file" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre numéro de dossier patient" required>
+                </div>
+            `,
+            medecin: `
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Spécialité</label>
+                    <select id="doctor-specialty" name="doctor_specialty" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        <option value="">Sélectionner votre spécialité</option>
+                        <option value="generaliste">Médecin généraliste</option>
+                        <option value="cardiologue">Cardiologue</option>
+                        <option value="dermatologue">Dermatologue</option>
+                        <option value="pediatre">Pédiatre</option>
+                        <option value="autre_specialite">Autre spécialité</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Numéro RPPS</label>
+                    <input type="text" id="doctor-rpps" name="doctor_rpps" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre numéro RPPS" required>
+                </div>
+            `
+        };
 
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-400">Connexion</button>
-    <p class="mt-4 text-sm text-center">Pas encore de compte ? <a href="{% url 'register' %}"
-                                                                  class="text-blue-600 hover:underline">S'inscrire</a>
-    </p>
-</form>
+        function selectRole(role) {
+            currentRole = role;
+            document.getElementById('selected-role').value = role;
+
+            document.querySelectorAll('.role-option').forEach(option => {
+                option.classList.remove('selected');
+                if (option.dataset.role === role) {
+                    option.classList.add('selected');
+                }
+            });
+
+            const loginForm = document.getElementById('login-form');
+            const roleFieldsContainer = document.getElementById('role-specific-fields');
+
+            if (roleFields[role]) {
+                roleFieldsContainer.innerHTML = roleFields[role];
+            } else {
+                roleFieldsContainer.innerHTML = '';
+            }
+
+            loginForm.classList.remove('hidden');
+            roleFieldsContainer.style.animation = 'slideIn 0.3s ease-out';
+            setTimeout(() => {
+                roleFieldsContainer.style.animation = '';
+            }, 300);
+        }
+
+        function handleLogin(event) {
+            const userId = document.getElementById('user-id').value;
+            const password = document.getElementById('user-password').value;
+
+            if (!currentRole) {
+                alert('Veuillez sélectionner votre profil.');
+                event.preventDefault();
+                return false;
+            }
+
+            let roleValid = true;
+            if (currentRole === 'patient' && !document.getElementById('patient-file')?.value) {
+                roleValid = false;
+            } else if (currentRole === 'medecin' && (!document.getElementById('doctor-specialty')?.value || !document.getElementById('doctor-rpps')?.value)) {
+                roleValid = false;
+            }
+
+            if (!userId || !password) {
+                alert('Veuillez remplir votre identifiant et mot de passe.');
+                event.preventDefault();
+                return false;
+            }
+
+            if (!roleValid) {
+                alert('Veuillez remplir tous les champs spécifiques à votre profil.');
+                event.preventDefault();
+                return false;
+            }
+
+            return true;
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Check if this is the cookie we want
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Example of using fetch with CSRF token
+        const data = { key: 'value' };  // Your data here
+        fetch("{% url 'login' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+    </script>
 </body>
 </html>

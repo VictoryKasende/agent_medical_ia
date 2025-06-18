@@ -1,0 +1,83 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: EnvironnementMediAi
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: agent_medical_ia
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/agent_medical_ia
+      REDIS_URL: redis://localhost:6379/1
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      DJANGO_SETTINGS_MODULE: agent_medical_ia.settings
+      DEBUG: "True"
+      ALLOWED_HOSTS: "*"
+      PYTHONUNBUFFERED: 1
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Create .env file
+      run: |
+        echo "OPENAI_API_KEY=${{ vars.OPENAI_API_KEY }}" >> .env
+        echo "ANTHROPIC_API_KEY=${{ vars.ANTHROPIC_API_KEY }}" >> .env
+        echo "GOOGLE_API_KEY=${{ vars.GOOGLE_API_KEY }}" >> .env
+        echo "DATABASE_URL=${{ vars.DATABASE_URL }}" >> .env
+        echo "CELERY_BROKER_URL=${{ vars.CELERY_BROKER_URL }}" >> .env
+        echo "CELERY_RESULT_BACKEND=${{ vars.CELERY_RESULT_BACKEND }}" >> .env
+        echo "ALLOWED_HOSTS=${{ vars.ALLOWED_HOSTS }}" >> .env
+        echo "DEVELOPMENT_MODE=${{ vars.DEVELOPMENT_MODE }}" >> .env
+        echo "DEBUG=${{ vars.DEBUG }}" >> .env
+
+    - name: Affiche le .env pour debug
+      run: cat .env
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Wait for Postgres
+      run: |
+        until pg_isready -h localhost -p 5432; do
+          sleep 1
+        done
+
+    - name: Run migrations
+      run: |
+        python manage.py migrate
+
+    - name: Collect static files
+      run: |
+        python manage.py collectstatic --noinput
+
+    - name: Run tests
+      run: |
+        python manage.py test

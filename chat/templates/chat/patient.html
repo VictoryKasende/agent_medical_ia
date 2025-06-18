@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+{% load static %}
+{% load markdown_tags %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Patient - MediAi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* Animation pour les messages */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar */
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #a0aec0;
+            border-radius: 10px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+
+        /* Pulse animation for bot typing indicator */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .typing-dot {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+<div class="container mx-auto max-w-6xl px-4 py-8">
+    <!-- Header harmonisé avec boutons patient -->
+    <header class="bg-white shadow-md rounded-lg mb-8">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo et Titre -->
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MediAi</h1>
+                    <p class="text-gray-500 text-sm">Fiche de Consultation</p>
+                </div>
+            </div>
+
+            <!-- Bouton du menu hamburger -->
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-blue-700 focus:outline-none text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Liens de navigation -->
+            <nav id="menu"
+                 class="hidden flex-col space-y-4 mt-4 md:flex md:flex-row md:items-center md:space-y-0 md:space-x-4 md:mt-0">
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+                <a href="#"
+                   class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
+                    <i class="fas fa-user mr-2"></i> Profil
+                </a>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
+                    </button>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-heartbeat text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Analyse de symptômes</h3>
+            <p class="text-gray-600">Décrivez vos symptômes et recevez des conseils sur les prochaines étapes à
+                suivre.</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-calendar-check text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Rappels médicaux</h3>
+            <p class="text-gray-600">Programmez des rappels pour vos médicaments et rendez-vous médicaux.</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-map-marker-alt text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Trouver un médecin</h3>
+            <p class="text-gray-600">Localisez les professionnels de santé près de chez vous avec leurs
+                disponibilités.</p>
+        </div>
+    </div>
+
+    <!-- Dans la section qui affiche les consultations du patient -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+
+    <script>
+    // Convertir tous les diagnostics Markdown en HTML
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.diagnostic-content[data-markdown]').forEach(function(element) {
+            const markdownText = element.getAttribute('data-markdown');
+            if (markdownText) {
+                try {
+                    element.innerHTML = marked.parse(markdownText);
+                } catch (error) {
+                    console.error('Erreur parsing Markdown:', error);
+                    element.innerHTML = markdownText.replace(/\n/g, '<br>');
+                }
+            }
+        });
+    });
+    </script>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuBtn = document.getElementById("menu-btn");
+        const menu = document.getElementById("menu");
+
+        if (menuBtn && menu) {
+            menuBtn.addEventListener("click", function () {
+                menu.classList.toggle("hidden");
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

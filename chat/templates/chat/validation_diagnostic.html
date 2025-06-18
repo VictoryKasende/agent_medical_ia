@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+    .diagnostic-content {
+        line-height: 1.7;
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    .diagnostic-content h1, .diagnostic-content h2, .diagnostic-content h3, .diagnostic-content h4 {
+        color: #1e40af;
+        margin: 1.5em 0 0.8em 0;
+        font-weight: 600;
+    }
+    
+    .diagnostic-content ul, .diagnostic-content ol {
+        margin: 1.2em 0;
+        padding-left: 2em;
+    }
+    
+    .diagnostic-content strong {
+        color: #dc2626;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold mb-4">Validation du diagnostic IA</h2>
+        
+        <!-- Informations patient -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2">Patient</h3>
+            <p><strong>Nom:</strong> {{ fiche.nom }} {{ fiche.prenom }}</p>
+            <p><strong>Âge:</strong> {{ fiche.age }} ans</p>
+            <p><strong>Téléphone:</strong> {{ fiche.telephone }}</p>
+        </div>
+        
+        <!-- Diagnostic IA -->
+        {% if diagnostic_ia %}
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-2 text-blue-700">
+                <i class="fas fa

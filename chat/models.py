@@ -3,32 +3,6 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 
-class Conversation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Conversation #{self.id} - {self.user.username}"
-
-
-class MessageIA(models.Model):
-    ROLE_CHOICES = [
-        ('user', 'Utilisateur'),
-        ('gpt4', 'GPT-4'),
-        ('claude', 'Claude 3'),
-        ('gemini', 'Gemini Pro'),
-        ('synthese', 'Synthèse Finale'),
-    ]
-
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"[{self.get_role_display()}] {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
-
-
 class FicheConsultation(models.Model):
     CELIBATAIRE = 'Célibataire'
     MARIE = 'Marié(e)'
@@ -41,8 +15,6 @@ class FicheConsultation(models.Model):
         (DIVORCE, 'Divorcé(e)'),
         (VEUF, 'Veuf(ve)'),
     ]
-
-    conversation = models.ForeignKey('Conversation', on_delete=models.CASCADE, related_name='fiches_consultation')
 
     # Informations Patient
     nom = models.CharField(max_length=100)
@@ -199,6 +171,27 @@ class FicheConsultation(models.Model):
     attentes = models.TextField(blank=True, null=True)
     engagement = models.TextField(blank=True, null=True)
 
+    # Nouveaux champs pour la consultation à distance
+    is_patient_distance = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=[
+        ('en_analyse', 'En cours d\'analyse'),
+        ('analyse_terminee', 'Analyse terminée'),
+        ('valide_medecin', 'Validé par médecin'),
+        ('rejete_medecin', 'Rejeté par médecin'),
+    ], default='en_analyse')
+    
+    commentaire_medecin = models.TextField(blank=True, null=True)
+    medecin_validateur = models.ForeignKey(
+        'auth.User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='consultations_validees'
+    )
+    date_validation = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    diagnostic_ia = models.TextField(blank=True, null=True)
+
     def save(self, *args, **kwargs):
         if not self.heure_debut:
             self.heure_debut = timezone.localtime().time()
@@ -216,3 +209,48 @@ class FicheConsultation(models.Model):
 
     class Meta:
         ordering = ['-date_consultation']
+
+
+class Conversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name="conversations", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        if self.fiche:
+            return f"Conversation #{self.id} - {self.user.username} (Fiche {self.fiche.numero_dossier})"
+        return f"Conversation #{self.id} - {self.user.username}"
+
+
+class MessageIA(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'Utilisateur'),
+        ('gpt4', 'GPT-4'),
+        ('claude', 'Claude 3'),
+        ('gemini', 'Gemini Pro'),
+        ('synthese', 'Synthèse Finale'),
+    ]
+
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.get_role_display()}] {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('patient', 'Patient'),
+        ('proche', 'Proche aidant'),
+        ('soignant', 'Soignant'),
+        ('medecin', 'Médecin'),
+        ('autre', 'Autre'),
+    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    # Ajoute d'autres champs si besoin
+
+    def __str__(self):
+        return f"{self.user.username} ({self.get_role_display()})"

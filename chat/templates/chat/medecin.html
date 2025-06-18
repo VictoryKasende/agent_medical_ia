@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+{% load static %}
+{% load markdown_tags %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>MediBot - Assistant Médical Virtuel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* Animation pour les messages */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Custom scrollbar */
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #a0aec0;
+            border-radius: 10px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+
+        /* Pulse animation for bot typing indicator */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .typing-dot {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        /* Nouvelles classes pour les notifications */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .notification-item.unread {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .notification-item.unread .notification-time {
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+<div class="container mx-auto max-w-6xl px-4 py-8">
+    <!-- Header avec Navbar Responsive -->
+    <header class="bg-white shadow-md rounded-lg mb-8">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo et Titre -->
+            <div class="flex items-center space-x-4">
+                <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="w-20 h-30" alt="Logo">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MediAi</h1>
+                    <p class="text-gray-500 text-sm">Votre assistant médical intelligent</p>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="flex items-center space-x-6">
+                <div class="relative">
+                    <button id="notifications-btn" class="text-blue-700 hover:text-blue-500 relative">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span id="notification-count" class="notification-badge hidden">0</span>
+                    </button>
+                    
+                    <!-- Dropdown des notifications -->
+                    <div id="notifications-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg py-1 z-20 hidden border border-gray-200">
+                        <div class="px-4 py-2 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                            <h3 class="font-semibold text-gray-800">Notifications</h3>
+                            <button id="mark-all-read" class="text-xs text-blue-600 hover:text-blue-800">Tout marquer comme lu</button>
+                        </div>
+                        <div id="notifications-list" class="max-h-96 overflow-y-auto">
+                            <!-- Les notifications seront ajoutées ici -->
+                            <p class="text-gray-500 text-center py-4">Aucune notification</p>
+                        </div>
+                        <div class="px-4 py-2 border-t border-gray-200 text-center bg-gray-50">
+                            <a href="{% url 'consultations_distance' %}" class="text-xs text-blue-600 hover:text-blue-800">Voir toutes les consultations</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton du menu hamburger -->
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-blue-700 focus:outline-none text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <!-- Liens de navigation -->
+            <nav id="menu"
+                 class="hidden flex-col space-y-4 mt-4 md:flex md:flex-row md:items-center md:space-y-0 md:space-x-4 md:mt-0">
+                <a href="{% url 'consultation' %}"
+                   class="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i> Nouvelle Consultation
+                </a>
+
+                <a href="{% url 'consultations_distance' %}"
+                   class="flex items-center px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition relative">
+                    <i class="fas fa-notes-medical mr-2"></i> Mes consultations
+                    <span id="nav-notification-badge" class="notification-badge hidden ml-2">0</span>
+                </a>
+
+                <a href="{% url 'home' %}"
+                   class="flex items-center px-4 py-2 text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition">
+                    <i class="fas fa-user mr-2"></i> Profil
+                </a>
+
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="flex items-center px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Se déconnecter
+                    </button>
+                </form>
+            </nav>
+
+        </div>
+    </header>
+
+    <!-- Main Chat Area -->
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Chat Header -->
+        <div class="bg-blue-600 text-white p-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <div class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-md text-xl"></i>
+                    </div>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-blue-600"></span>
+                </div>
+                <div>
+                    <h3 class="font-semibold">Dr. MediAi</h3>
+                    <p class="text-xs text-blue-100">En ligne</p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button class="p-2 rounded-full hover:bg-blue-500 transition">
+                    <i class="fas fa-phone-alt"></i>
+                </button>
+                <button class="p-2 rounded-full hover:bg-blue-500 transition">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="p-2 rounded-full hover:bg-blue-500 transition">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-container h-96 overflow-y-auto p-4 space-y-4" id="chat-messages">
+            <!-- Welcome Message -->
+            <div class="flex items-start space-x-3 message">
+                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-xs lg:max-w-md">
+                    <p class="font-medium">Bonjour Dr. {{ user.get_full_name|default:user.username }} 👋</p>
+                    <p class="mt-1">Je suis MediAi, votre assistant médical virtuel. Je peux vous aider à:</p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>Analyser des cas complexes</li>
+                        <li>Suggérer des diagnostics différentiels</li>
+                        <li>Recommander des examens complémentaires</li>
+                        <li>Vérifier des interactions médicamenteuses</li>
+                    </ul>
+                    <p class="mt-2">Comment puis-je vous assister aujourd'hui?</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="flex flex-wrap gap-2 mt-2 mb-4">
+                <button onclick="sendQuickMessage('Patient avec fièvre et toux depuis 3 jours')"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
+                    Syndrome fébrile
+                </button>
+                <button onclick="sendQuickMessage('Douleur thoracique chez homme 45 ans')"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
+                    Douleur thoracique
+                </button>
+                <button onclick="sendQuickMessage('Céphalées chroniques diagnostic différentiel')"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
+                    Céphalées chroniques
+                </button>
+                <button onclick="sendQuickMessage('Interactions entre warfarine et antibiotiques')"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition">
+                    Interactions médicamenteuses
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="border-t border-gray-200 p-4 bg-gray-50">
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'consultation' %}">
+                    <button class="text-blue-600 border border-blue-600 p-3 rounded-full hover:bg-blue-600 hover:text-white transition-all duration-300 transform hover:scale-110 active:scale-95 shadow-md">
+                        <i class="fas fa-file-medical"></i>
+                    </button>
+                </a>
+                <div class="flex-1 relative">
+                    <input
+                            type="text"
+                            id="user-input"
+                            placeholder="Décrivez le cas médical ou posez une question..."
+                            class="w-full bg-white border border-gray-300 rounded-full py-3 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onkeypress="handleKeyPress(event)"
+                    >
+                    <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-blue-600">
+                        <i class="far fa-smile"></i>
+                    </button>
+                </div>
+                <button onclick="sendMessage()"
+                        class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 text-center">
+                <p>MediBot ne remplace pas votre jugement clinique. En cas d'urgence, suivez les protocoles établis.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-heartbeat text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Analyse clinique</h3>
+            <p class="text-gray-600">Analysez les symptômes et recevez des suggestions de diagnostic différentiel.</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-notes-medical text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Consultations à distance</h3>
+            <p class="text-gray-600">Gérez les consultations télémédecine de vos patients partenaires.</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
+            <div class="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-pills text-xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Guide thérapeutique</h3>
+            <p class="text-gray-600">Vérifiez les interactions et obtenez des recommandations thérapeutiques.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Données pour les notifications (récupérées via Django context ou AJAX)
+    let consultationsDistance = {{ consultations_en_attente|default:"[]"|safe }};
+    let notifications = [];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const input = document.getElementById('user-input');
+        const texte = `{{ symptomes_texte|escapejs }}`;
+        if (texte) {
+            input.value = texte;
+        }
+        
+        // Initialiser les notifications
+        loadNotifications();
+        
+        // Polling pour nouvelles consultations toutes les 30 secondes
+        setInterval(checkForNewConsultations, 30000);
+    });
+
+    // Fonction pour charger les notifications
+    function loadNotifications() {
+        fetch('/api/consultations-distance/')
+            .then(response => response.json())
+            .then(data => {
+                consultationsDistance = data;
+                updateNotifications();
+            })
+            .catch(error => console.error('Erreur lors du chargement des consultations:', error));
+    }
+
+    function updateNotifications() {
+        const notificationsList = document.getElementById('notifications-list');
+        const notificationCount = document.getElementById('notification-count');
+        const navNotificationBadge = document.getElementById('nav-notification-badge');
+        
+        const newConsultations = consultationsDistance.filter(c => c.status === 'analyse_terminee');
+        const unreadCount = newConsultations.length;
+        
+        // Mettre à jour les badges
+        if (unreadCount > 0) {
+            notificationCount.textContent = unreadCount;
+            notificationCount.classList.remove('hidden');
+            navNotificationBadge.textContent = unreadCount;
+            navNotificationBadge.classList.remove('hidden');
+        } else {
+            notificationCount.classList.add('hidden');
+            navNotificationBadge.classList.add('hidden');
+        }
+        
+        // Mettre à jour la liste des notifications
+        if (newConsultations.length === 0) {
+            notificationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune nouvelle consultation</p>';
+            return;
+        }
+        
+        notificationsList.innerHTML = '';
+        
+        newConsultations.forEach(consultation => {
+            const notificationItem = document.createElement('div');
+            notificationItem.className = 'notification-item px-4 py-3 hover:bg-gray-50 cursor-pointer unread';
+            
+            notificationItem.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 pt-0.5">
+                        <i class="fas fa-file-medical text-blue-500"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm font-medium text-gray-900">${consultation.nom} ${consultation.prenom}</p>
+                        <p class="text-sm text-gray-500">Nouvelle consultation à distance analysée</p>
+                        <p class="notification-time text-xs mt-1 text-blue-600">
+                            ${formatTime(consultation.created_at)}
+                        </p>
+                    </div>
+                    <div class="ml-2 flex-shrink-0">
+                        <span class="h-2 w-2 rounded-full bg-blue-600 inline-block"></span>
+                    </div>
+                </div>
+            `;
+            
+            notificationItem.addEventListener('click', () => {
+                window.location.href = '{% url "consultations_distance" %}';
+            });
+            
+            notificationsList.appendChild(notificationItem);
+        });
+    }
+
+    function checkForNewConsultations() {
+        loadNotifications();
+    }
+
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+
+        if (date.toDateString() === now.toDateString()) {
+            return `Aujourd'hui à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return `Hier à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+        return `${date.toLocaleDateString()} à ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+    }
+
+    // Gestion des notifications
+    document.getElementById('notifications-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('notifications-dropdown').classList.toggle('hidden');
+    });
+
+    // Fermer le dropdown des notifications quand on clique ailleurs
+    document.addEventListener('click', function() {
+        document.getElementById('notifications-dropdown').classList.add('hidden');
+    });
+
+    document.getElementById('mark-all-read').addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Marquer toutes comme lues (logique côté serveur à implémenter)
+        window.location.href = '{% url "consultations_distance" %}';
+    });
+
+    // Corriger la fonction getCSRFToken
+    function getCSRFToken() {
+        // Essayer d'abord la meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken) {
+            return metaToken.getAttribute('content');
+        }
+        
+        // Fallback: chercher dans les cookies
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                return value;
+            }
+        }
+        
+        // Dernier recours: chercher un input hidden
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) {
+            return csrfInput.value;
+        }
+        
+        console.error('Token CSRF non trouvé');
+        return '';
+    }
+
+    // Fonction hideTypingIndicator manquante
+    function hideTypingIndicator() {
+        removeTypingIndicator();
+    }
+
+    // Fonction sendMessage modifiée pour Celery
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        addMessage(message, 'user');
+        input.value = '';
+        showTypingIndicator();
+
+        try {
+            const csrftoken = getCSRFToken();
+            
+            const response = await fetch('/analyse/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({message: message})
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur réseau');
+            }
+
+            const data = await response.json();
+            
+            if (data.task_id) {
+                // Démarrer le polling pour vérifier le statut de la tâche
+                pollTaskStatus(data.task_id);
+            } else {
+                hideTypingIndicator();
+                addMessage('Erreur lors du démarrage de l\'analyse', 'bot');
+            }
+
+        } catch (error) {
+            console.error('Erreur:', error);
+            hideTypingIndicator();
+            addMessage('Erreur lors de l\'envoi du message', 'bot');
+        }
+    }
+
+    // Fonction pour polling du statut de la tâche Celery
+    function pollTaskStatus(taskId) {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/check-task-status/${taskId}/`);
+                const data = await response.json();
+                
+                if (data.state === 'PROGRESS') {
+                    // Mettre à jour l'indicateur de progression
+                    updateProgressIndicator(data.current, data.total, data.status);
+                } else if (data.state === 'SUCCESS') {
+                    clearInterval(pollInterval);
+                    hideTypingIndicator();
+                    
+                    // Afficher les résultats
+                    if (data.result) {
+                        addMessage(data.result.synthese, 'bot');
+                    }
+                    
+                } else if (data.state === 'FAILURE') {
+                    clearInterval(pollInterval);
+                    hideTypingIndicator();
+                    addMessage('Erreur lors de l\'analyse: ' + data.error, 'bot');
+                }
+                
+            } catch (error) {
+                clearInterval(pollInterval);
+                hideTypingIndicator();
+                addMessage('Erreur lors de la vérification du statut', 'bot');
+            }
+        }, 2000); // Vérifier toutes les 2 secondes
+    }
+
+    // Fonction pour mettre à jour l'indicateur de progression
+    function updateProgressIndicator(current, total, status) {
+        const typingIndicator = document.querySelector('.typing-indicator');
+        if (typingIndicator) {
+            const progressText = `${status} (${current}/${total})`;
+            typingIndicator.innerHTML = `
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="progress-text">${progressText}</span>
+            `;
+        }
+    }
+
+    function sendQuickMessage(message) {
+        const input = document.getElementById('user-input');
+        input.value = message;
+        sendMessage();
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    function addMessage(text, sender) {
+        const chatContainer = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex items-start space-x-3 message ${sender === 'user' ? 'justify-end' : ''}`;
+
+        if (sender === 'user') {
+            messageDiv.innerHTML = `
+                <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none max-w-full lg:max-w-full">
+                    <p>${text}</p>
+                </div>
+                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user"></i>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-full lg:max-w-full prose prose-sm prose-blue">
+                    ${marked.parse(text)}
+                </div>
+            `;
+        }
+
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+        const chatContainer = document.getElementById('chat-messages');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'flex items-start space-x-3 message';
+        typingDiv.id = 'typing-indicator';
+
+        typingDiv.innerHTML = `
+            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bg-blue-100 text-blue-800 p-3 rounded-2xl rounded-tl-none w-20">
+                <div class="flex space-x-1">
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-blue-600 rounded-full"></div>
+                </div>
+            </div>
+        `;
+
+        chatContainer.appendChild(typingDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuBtn = document.getElementById("menu-btn");
+        const menu = document.getElementById("menu");
+
+        if (menuBtn && menu) {
+            menuBtn.addEventListener("click", function () {
+                menu.classList.toggle("hidden");
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

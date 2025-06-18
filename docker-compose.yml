@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: agent_medical_ia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  # Redis (sur un port différent pour éviter le conflit)
+  redis:
+    image: redis:latest
+    ports:
+      - "6380:6379"
+
+  # Application Django
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DEBUG=True  # Changé de DEBUG=1 à DEBUG=True
+      - DEVELOPMENT_MODE=False
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/agent_medical_ia
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - ALLOWED_HOSTS=*  # Accepter tous les hosts pour le développement
+
+  # Worker Celery (sans migrations)
+  celery:
+    build: .
+    command: celery -A agent_medical_ia worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web  # Attendre que web ait fait les migrations
+    environment:
+      - DEBUG=1
+      - DEVELOPMENT_MODE=False
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/agent_medical_ia
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+  # Monitor Celery (sans migrations)
+  celery-beat:
+    build: .
+    command: celery -A agent_medical_ia beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web  # Attendre que web ait fait les migrations
+    environment:
+      - DEBUG=1
+      - DEVELOPMENT_MODE=False
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/agent_medical_ia
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+volumes:
+  postgres_data:
