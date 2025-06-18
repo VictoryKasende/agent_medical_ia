@@ -76,7 +76,9 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
             except (json.JSONDecodeError, TypeError) as e:
                 print("Erreur lors du décodage des symptômes :", e)
         user = request.user
-        conversations = Conversation.objects.filter(user=user).order_by('id')
+        conversations = Conversation.objects.filter(
+            user=user
+        ).order_by('id')
         chat_items = []
         for conv in conversations:
             messages = MessageIA.objects.filter(
