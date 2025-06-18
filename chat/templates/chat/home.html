@@ -233,23 +233,30 @@
         fetch('/api/consultations-distance/')
             .then(response => response.json())
             .then(data => {
-                consultationsDistance = data;
-                updateNotifications();
+                const notificationsList = document.getElementById('notifications-list');
+                if (!data.length) {
+                    notificationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune notification</p>';
+                    return;
+                }
+                notificationsList.innerHTML = '';
+                data.forEach(consultation => {
+                    const notif = document.createElement('div');
+                    notif.className = "bg-white shadow rounded p-4 mb-2 cursor-pointer hover:bg-blue-50 transition";
+                    notif.innerHTML = `
+                        <div class="font-semibold text-blue-700">${consultation.nom} ${consultation.prenom}</div>
+                        <div class="text-sm text-gray-600">Statut : ${consultation.status_display}</div>
+                        <div class="text-xs text-gray-400">${new Date(consultation.created_at).toLocaleString()}</div>
+                    `;
+                    notif.addEventListener('click', function() {
+                        window.location.href = "{% url 'consultations_distance' %}";
+                    });
+                    notificationsList.appendChild(notif);
+                });
             });
     }
 
-    function updateNotifications() {
-        const notificationCount = document.getElementById('notification-count');
-        const pendingConsultations = consultationsDistance.filter(c => c.status === 'en_attente');
-        const unreadCount = pendingConsultations.length;
-        if (unreadCount > 0) {
-            notificationCount.textContent = unreadCount;
-            notificationCount.classList.remove('hidden');
-        } else {
-            notificationCount.classList.add('hidden');
-        }
-    }
-
+    // Appel au chargement de la page
+    document.addEventListener("DOMContentLoaded", loadNotifications);
     document.addEventListener("DOMContentLoaded", function () {
         loadNotifications();
         setInterval(loadNotifications, 30000);
