@@ -166,7 +166,17 @@
 
     {% if messages %}
       {% for message in messages %}
-        <div class="alert alert-success">{{ message }}</div>
+        <div
+          class="message px-4 py-3 rounded mb-4 text-sm font-medium
+          {% if message.tags == 'success' %}
+            bg-green-100 text-green-800 border border-green-300
+          {% elif message.tags == 'error' or message.tags == 'danger' %}
+            bg-red-100 text-red-800 border border-red-300
+          {% else %}
+            bg-blue-100 text-blue-800 border border-blue-300
+          {% endif %}">
+          {{ message }}
+        </div>
       {% endfor %}
     {% endif %}
 </div>
