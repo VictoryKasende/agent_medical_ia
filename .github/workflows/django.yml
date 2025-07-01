@@ -56,9 +56,6 @@ jobs:
         echo "DEVELOPMENT_MODE=${{ vars.DEVELOPMENT_MODE }}" >> .env
         echo "DEBUG=${{ vars.DEBUG }}" >> .env
 
-    - name: Affiche le .env pour debug
-      run: cat .env
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip

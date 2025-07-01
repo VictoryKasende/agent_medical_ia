@@ -300,7 +300,6 @@
                 try {
                     diagnosticHtml = marked.parse(consultation.diagnostic_ia);
                 } catch (error) {
-                    console.error('Erreur parsing Markdown:', error);
                     diagnosticHtml = consultation.diagnostic_ia.replace(/\n/g, '<br>');
                 }
             }
@@ -433,6 +432,22 @@
                 }
             });
         });
+        
+        function reloadConsultations() {
+            fetch(window.location.href, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(response => response.text())
+                .then(html => {
+                    // Parse le HTML et remplace la liste et les détails
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    document.getElementById('consultations-list').innerHTML =
+                        doc.getElementById('consultations-list').innerHTML;
+                    // Optionnel: recharge aussi les détails si besoin
+                });
+        }
+
+        // Rafraîchit toutes les 30 secondes
+        setInterval(reloadConsultations, 30000);
     </script>
 
 </body>
