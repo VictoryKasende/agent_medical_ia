@@ -1,26 +1,35 @@
 import json
-import datetime
 import hashlib
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import TemplateView, View
-from django.views.generic.edit import FormView, CreateView
-from django.contrib.auth.forms import UserCreationForm
+from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
-from django.contrib.auth import login
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import transaction
+from django.contrib.auth.decorators import user_passes_test
+from django.template.loader import render_to_string
 
 from .forms import FicheConsultationForm
 from .models import Conversation, MessageIA, FicheConsultation
 from .tasks import analyse_symptomes_task
+
+PATIENT = 'patient'
+MEDECIN = 'medecin'
+
+def is_patient(user):
+    """Vérifie si l'utilisateur est un patient."""
+    return user.is_authenticated and user.role == PATIENT
+
+def is_medecin(user):
+    """Vérifie si l'utilisateur est un médecin."""
+    return user.is_authenticated and user.role == MEDECIN
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -28,42 +37,10 @@ def stream_synthese(synthese_llm, synthese_message):
         if hasattr(chunk, 'content'):
             yield chunk.content
 
-class RegisterView(FormView):
-    template_name = 'chat/register.html'
-    form_class = UserCreationForm
-    success_url = reverse_lazy('login')
-
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-        messages.success(self.request, "Inscription réussie ! Vous êtes maintenant connecté.")
-        return redirect('home')
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Une erreur est survenue lors de l'inscription.")
-        return super().form_invalid(form)
-
-class CustomLoginView(LoginView):
-    template_name = 'chat/login.html'
-    redirect_authenticated_user = True
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Nom d'utilisateur ou mot de passe incorrect.")
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('dashboard_redirect')
-
-class CustomLogoutView(LogoutView):
-    next_page = 'login'
-
-class HomeView(LoginRequiredMixin, TemplateView):
-    template_name = 'chat/home.html'
-    login_url = 'login'
-    redirect_field_name = 'next'
-
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(user_passes_test(is_medecin), name='dispatch')
 class AnalyseSymptomesView(LoginRequiredMixin, View):
+
     template_name = "chat/home.html"
 
     def get(self, request):
@@ -75,10 +52,8 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
                 texte = formater_symptomes_en_texte(symptomes_dict)
             except (json.JSONDecodeError, TypeError) as e:
                 print("Erreur lors du décodage des symptômes :", e)
-        user = request.user
-        conversations = Conversation.objects.filter(
-            user=user
-        ).order_by('id')
+        # user = request.user
+        conversations = Conversation.objects.all().order_by('-id')
         chat_items = []
         for conv in conversations:
             messages = MessageIA.objects.filter(
@@ -127,6 +102,23 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
 
         transaction.on_commit(run_task)
         return JsonResponse({"status": "pending", "cache_key": cache_key})
+
+@login_required
+def chat_history_partial(request):
+    conversations = Conversation.objects.filter(user=request.user).order_by('-created_at')
+    chat_items = []
+    for conv in conversations:
+        messages = MessageIA.objects.filter(
+            conversation=conv,
+            role__in=['user', 'synthese']
+        ).order_by('id')
+        if messages.exists():
+            chat_items.append({
+                "conversation": conv,
+                "messages": messages
+            })
+    html = render_to_string("chat/chat_history.html", {"chat_items": chat_items})
+    return JsonResponse({"html": html})
 
 def diagnostic_result(request):
     cache_key = request.GET.get("cache_key")
@@ -186,8 +178,8 @@ def formater_symptomes_en_texte(symptomes: dict) -> str:
 
     return texte
 
-@method_decorator(login_required, name='dispatch')
-class ConversationView(View):
+@method_decorator(user_passes_test(is_medecin), name='dispatch')
+class ConversationView(LoginRequiredMixin, View):
     """
     Gère la création, la récupération et la suppression d'une conversation.
     """
@@ -198,7 +190,7 @@ class ConversationView(View):
 
     def get(self, request, conversation_id):
         try:
-            conversation = Conversation.objects.get(id=conversation_id, user=request.user)
+            conversation = Conversation.objects.get(id=conversation_id)
             messages = MessageIA.objects.filter(
                 conversation=conversation,
                 role__in=['user', 'synthese']
@@ -245,28 +237,6 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
         messages.success(self.request, "Votre formulaire a été envoyé. Un médecin va l'analyser.")
         return super().form_valid(form)
 
-class ChatHistoryView(LoginRequiredMixin, TemplateView):
-    template_name = "chat/history.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        conversations = Conversation.objects.filter(user=user).order_by('-id')
-        chat_items = []
-        for conv in conversations:
-            messages = (
-                MessageIA.objects
-                    .filter(conversation=conv, role__in=['user', 'synthese'])
-                    .order_by('id')
-            )
-            if messages.exists():
-                chat_items.append({
-                    "conversation": conv,
-                    "messages": messages
-                })
-        context['chat_items'] = chat_items
-        return context
-
 class RelancerAnalyseMedecinView(View):
     """
     Relance l'analyse IA pour une fiche de consultation donnée.
@@ -280,11 +250,14 @@ class RelancerAnalyseMedecinView(View):
         messages.success(request, "L'analyse IA a été relancée pour ce dossier.")
         return redirect(reverse_lazy('consultation'))
 
+@method_decorator(user_passes_test(is_patient), name='dispatch')
 class PatientDashboardView(TemplateView):
     template_name = "chat/patient.html"
 
+@method_decorator(user_passes_test(is_medecin), name='dispatch')
 class MedecinDashboardView(TemplateView):
-    template_name = "chat/home.html"  # ou le nom du template voulu
+    template_name = "chat/home.html" 
+    
 
 class ProcheDashboardView(TemplateView):
     template_name = "chat/dashboard_proche.html"
@@ -360,6 +333,7 @@ def valider_diagnostic_medecin(request, fiche_id):
 
 @login_required
 def redirection_dashboard(request):
+
     if request.user.groups.filter(name='medecin').exists():
         consultations_en_attente = FicheConsultation.objects.filter(status='en_attente')
         # Ajout de l'historique des conversations pour le médecin
@@ -394,3 +368,60 @@ def redirection_dashboard(request):
             )
         ]
         return render(request, 'chat/patient.html', {'consultations_patient': consultations_patient})
+    
+### ===========================================================
+# Consultation presente des patients
+# ConsultationPatientView
+@method_decorator(user_passes_test(is_medecin), name='dispatch')
+class ConsultationPatientView(LoginRequiredMixin, TemplateView):
+    template_name = 'chat/consultation_present.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        consultations = FicheConsultation.objects.filter(
+            is_patient_distance=False,  
+            status='en_attente' 
+        ).order_by('-id')
+
+        context['consultations_patient'] = consultations
+        context['nombre_en_attente'] = consultations.count()  
+        return context
+    
+class FicheConsultationUpdateView(LoginRequiredMixin, View):
+    """
+    Vue pour mettre à jour une fiche de consultation.
+    """
+
+    def get(self, request, fiche_id):
+        fiche = get_object_or_404(FicheConsultation, id=fiche_id)
+        form = FicheConsultationForm(instance=fiche)
+        return render(request, 'chat/fiche_update.html', {'form': form, 'fiche': fiche})
+    
+    def post(self, request, fiche_id):
+        fiche = get_object_or_404(FicheConsultation, id=fiche_id)
+        form = FicheConsultationForm(request.POST, instance=fiche)
+
+        if form.is_valid():
+            fiche = form.save(commit=False)
+            fiche.commentaire_medecin = request.POST.get('diagnostic', '')
+            fiche.save()
+            print(f"Fiche mise à jour : {fiche.id}, Diagnostic : {fiche.commentaire_medecin}")
+            messages.success(request, "Fiche de consultation mise à jour avec succès.")
+            return redirect('consultation_present')
+        else:
+            print(f"Erreur de validation du formulaire : {form.errors}")
+            messages.error(request, "Erreur lors de la mise à jour de la fiche.")
+            return render(request, 'chat/fiche_update.html', {'form': form, 'fiche': fiche})
+        
+class FicheConsultationDetailView(LoginRequiredMixin, View):
+    """
+    Vue pour afficher les détails d'une fiche de consultation.
+    """
+    
+    def get(self, request, fiche_id):
+        fiche = get_object_or_404(FicheConsultation, id=fiche_id)
+        context = {
+            'consultation': fiche,
+        }
+        return render(request, 'chat/fiche_detail.html', context)

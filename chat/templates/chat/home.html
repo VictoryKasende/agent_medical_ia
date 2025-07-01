@@ -36,10 +36,17 @@
         .notification-item.unread .notification-time { font-weight: bold; color: #3b82f6; }
     </style>
 </head>
+
 <body class="bg-gray-50 font-sans flex h-screen overflow-hidden">
 <!-- Sidebar Overlay (mobile only) -->
 <div id="sidebar-overlay" class="sidebar-overlay"></div>
 <!-- Sidebar -->
+<!-- Toast de copie -->
+<div id="copy-toast" class="fixed bottom-6 right-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+    Réponse copiée !
+</div>
+<!--Fin Toast de copie-->
+
 <div id="sidebar" class="sidebar bg-white w-64 border-r border-gray-200 flex flex-col">
     <div class="flex items-center px-0 mt-4 mb-8">
         <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" alt="UDBL Logo" class="h-8">
@@ -59,9 +66,10 @@
             <i class="fas fa-globe text-green-600"></i>
             <span class="text-gray-800 font-medium">Consultations à distance</span>
         </button>
-        <button onclick="openLibrary()" class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-            <i class="fas fa-book text-blue-600"></i>
-            <span class="text-gray-800 font-medium">Bibliothèque</span>
+        <button onclick="window.location.href='{% url 'consultation_patient_present' %}'"
+                class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+            <i class="fas fa-user-md text-blue-600"></i>
+            <span class="text-gray-800 font-medium">Consultations présentes</span>
         </button>
     </div>
     <div class="flex-1 overflow-y-auto">
@@ -78,7 +86,7 @@
                                 {{ first_message.content|truncatechars:30 }}
                             {% endwith %}
                         </span>
-                        <i class="fas fa-ellipsis-v text-gray-400 hover:text-gray-600"
+                        <i class="fa-solid fa-sliders text-gray-400 hover:text-gray-600"
                            onclick="event.stopPropagation(); showConversationOptions(event, {{ item.conversation.id }})"></i>
                     </div>
                 {% empty %}
@@ -342,7 +350,7 @@
         input.value = '';
         input.style.height = 'auto';
         showTypingIndicator();
-        const response = await fetch('/analyse/', {
+        const response = await fetch('/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -399,10 +407,12 @@
             sendMessage();
         }
     }
-    function addMessage(text, sender) {
+    
+    async function addMessage(text, sender) {
         const chatContainer = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex items-start space-x-3 message ${sender === 'user' ? 'justify-end' : ''}`;
+
         if (sender === 'user') {
             messageDiv.innerHTML = `
                 <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none max-w-full lg:max-w-2xl">
@@ -413,18 +423,52 @@
                 </div>
             `;
         } else {
+            const parsedText = marked.parse(text);
+            const textId = `response-${Date.now()}`; // Unique ID for each message
+            
             messageDiv.innerHTML = `
                 <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center shrink-0">
                     <i class="fas fa-robot"></i>
                 </div>
-                <div class="bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-2xl prose prose-sm prose-blue">
-                    ${marked.parse(text)}
+                <div class="relative bg-blue-100 text-blue-800 p-4 rounded-2xl rounded-tl-none max-w-full lg:max-w-2xl prose prose-sm prose-blue">
+                    <div id="${textId}" class="message-content">${parsedText}</div>
+                    <button onclick="copyToClipboard('${textId}')" 
+                        class="absolute top-2 right-2 text-blue-600 hover:text-blue-800" 
+                        title="Copier la réponse">
+                        <i class="fas fa-copy"></i>
+                    </button>
                 </div>
             `;
         }
+
         chatContainer.appendChild(messageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        await refreshChatHistory();
     }
+
+    function copyToClipboard(elementId) {
+        const tempElement = document.createElement("div");
+        tempElement.innerHTML = document.getElementById(elementId).innerText;
+        const textToCopy = tempElement.innerText;
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showCopyToast();
+        }).catch(err => {
+            console.error("Erreur de copie :", err);
+        });
+    }
+
+    function showCopyToast() {
+        const toast = document.getElementById('copy-toast');
+        toast.classList.remove('opacity-0');
+        toast.classList.add('opacity-100');
+
+        setTimeout(() => {
+            toast.classList.remove('opacity-100');
+            toast.classList.add('opacity-0');
+        }, 5000); // Affiche pendant 2 secondes
+    }
+
     function showTypingIndicator() {
         const chatContainer = document.getElementById('chat-messages');
         const typingDiv = document.createElement('div');
@@ -463,6 +507,13 @@
         }
         return cookieValue;
     }
+
+    async function refreshChatHistory() {
+        const response = await fetch('/chat-history-partial/');
+        const data = await response.json();
+        document.getElementById('chat-history').outerHTML = data.html;
+    }
+
     async function newChat() {
         const response = await fetch("/conversation/", {
             method: "POST",
@@ -488,6 +539,7 @@
                 </div>
             </div>
         `;
+        await refreshChatHistory(); 
     }
     function loadConversation(conversationId) {
         activeConversationId = conversationId;

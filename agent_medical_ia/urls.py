@@ -20,8 +20,10 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    
     path('', include('chat.urls')),
+    path('admin/', admin.site.urls),
+    path('auth/', include('authentication.urls')),
 ]
 
 if settings.DEBUG:

@@ -312,5 +312,5 @@ class FicheConsultationForm(forms.ModelForm):
                 attrs={'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50', 'rows': 2}),
             'attentes': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50', 'rows': 2}),
             'engagement': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50', 'rows': 2}),
-
+            'commentaire_medecin' : forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50', 'rows': 2})
         }

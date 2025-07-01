@@ -1,0 +1,234 @@
+<!-- Détails de la consultation sélectionnée -->
+<div class="container mx-auto ">
+    <div id="consultation-details" class="bg-white rounded-lg shadow-md p-6">
+        <!-- En-tête patient -->
+        <div class="border-b border-gray-200 pb-4 mb-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">{{ consultation.nom }} {{ consultation.postnom }} {{ consultation.prenom }}</h2>
+                    <div class="flex items-center mt-1 space-x-4">
+                        <span class="text-gray-600">{{ consultation.age }} ans</span>
+                        <span class="text-gray-600">{{ consultation.get_gender_display }}</span>
+                        <span class="text-gray-600">{{ consultation.get_etat_civil_display }}</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                            {% if consultation.is_patient_distance %}Téléconsultation{% else %}Présentiel{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">N°: {{ consultation.numero_dossier }}</p>
+                    <p class="text-sm">{{ consultation.date_consultation|date:"d/m/Y" }} 
+                        {% if consultation.heure_debut %}{{ consultation.heure_debut|time:"H:i" }}{% endif %}
+                        {% if consultation.heure_fin %}- {{ consultation.heure_fin|time:"H:i" }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center">
+                    <i class="fas fa-phone text-gray-400 mr-2"></i>
+                    <span>{{ consultation.telephone }}</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-home text-gray-400 mr-2"></i>
+                    <span>{{ consultation.avenue }}, {{ consultation.quartier }}, {{ consultation.commune }}</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-briefcase text-gray-400 mr-2"></i>
+                    <span>{{ consultation.occupation }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signes vitaux et motif -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Signes vitaux -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Signes vitaux</h3>
+                <div class="bg-gray-50 p-4 rounded-lg grid grid-cols-2 gap-4">
+                    <div><span class="text-sm text-gray-500">Température</span><p class="font-medium">{{ consultation.temperature|default:"-" }} °C</p></div>
+                    <div><span class="text-sm text-gray-500">Tension</span><p class="font-medium">{{ consultation.tension_arterielle|default:"-" }}</p></div>
+                    <div><span class="text-sm text-gray-500">Pouls</span><p class="font-medium">{{ consultation.pouls|default:"-" }} /min</p></div>
+                    <div><span class="text-sm text-gray-500">SpO2</span><p class="font-medium">{{ consultation.spo2|default:"-" }}%</p></div>
+                    <div><span class="text-sm text-gray-500">Poids</span><p class="font-medium">{{ consultation.poids|default:"-" }} kg</p></div>
+                    <div><span class="text-sm text-gray-500">FR</span><p class="font-medium">{{ consultation.frequence_respiratoire|default:"-" }} /min</p></div>
+                </div>
+            </div>
+
+            <!-- Motif et symptômes -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Motif de consultation</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="mb-2">{{ consultation.motif_consultation|default:"Non précisé" }}</p>
+                    {% if consultation.histoire_maladie %}
+                    <div class="mt-2">
+                        <h4 class="text-sm font-medium text-gray-700">Histoire de la maladie</h4>
+                        <p>{{ consultation.histoire_maladie }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Anamnèse détaillée -->
+        <div class="mb-6">
+            <h3 class="font-semibold text-gray-800 mb-2">Anamnèse</h3>
+            <div class="bg-gray-50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Symptômes spécifiques -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-1">Symptômes spécifiques</h4>
+                    <ul class="space-y-1">
+                        {% if consultation.cephalees %}<li><span class="font-medium">Céphalées:</span> {{ consultation.cephalees }}</li>{% endif %}
+                        {% if consultation.vertiges %}<li><span class="font-medium">Vertiges:</span> {{ consultation.vertiges }}</li>{% endif %}
+                        {% if consultation.palpitations %}<li><span class="font-medium">Palpitations:</span> {{ consultation.palpitations }}</li>{% endif %}
+                        {% if consultation.troubles_visuels %}<li><span class="font-medium">Troubles visuels:</span> {{ consultation.troubles_visuels }}</li>{% endif %}
+                        {% if consultation.nycturie %}<li><span class="font-medium">Nycturie:</span> {{ consultation.nycturie }}</li>{% endif %}
+                    </ul>
+                </div>
+
+                <!-- Mode de vie -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-1">Mode de vie</h4>
+                    <ul class="space-y-1">
+                        <li><span class="font-medium">Tabac:</span> {{ consultation.get_tabac_display }}</li>
+                        <li><span class="font-medium">Alcool:</span> {{ consultation.get_alcool_display }}</li>
+                        <li><span class="font-medium">Activité physique:</span> {{ consultation.get_activite_physique_display }}</li>
+                        {% if consultation.activite_physique_detail %}
+                        <li><span class="font-medium">Détails:</span> {{ consultation.activite_physique_detail }}</li>
+                        {% endif %}
+                        {% if consultation.alimentation_habituelle %}
+                        <li><span class="font-medium">Alimentation:</span> {{ consultation.alimentation_habituelle }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Antécédents et traitements -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Antécédents personnels -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Antécédents personnels</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        {% if consultation.hypertendu %}<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Hypertension</span>{% endif %}
+                        {% if consultation.diabetique %}<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Diabète</span>{% endif %}
+                        {% if consultation.epileptique %}<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">Épilepsie</span>{% endif %}
+                        {% if consultation.trouble_comportement %}<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Trouble comportement</span>{% endif %}
+                        {% if consultation.gastritique %}<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Gastrite</span>{% endif %}
+                        {% if consultation.allergie_medicamenteuse %}<span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">Allergie médicamenteuse</span>{% endif %}
+                    </div>
+                    
+                    {% if consultation.medicament_allergique %}
+                    <p class="mt-1"><span class="font-medium">Allergique à:</span> {{ consultation.medicament_allergique }}</p>
+                    {% endif %}
+                    
+                    {% if consultation.autres_antecedents %}
+                    <p class="mt-2">{{ consultation.autres_antecedents }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Antécédents familiaux et traitements -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Antécédents familiaux</h3>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <div class="flex flex-wrap gap-1">
+                        {% if consultation.familial_hypertendu %}<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Hypertension</span>{% endif %}
+                        {% if consultation.familial_diabetique %}<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Diabète</span>{% endif %}
+                        {% if consultation.familial_drepanocytaire %}<span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">Drépanocytose</span>{% endif %}
+                        {% if consultation.familial_obese %}<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Obésité</span>{% endif %}
+                        {% if consultation.familial_trouble_comportement %}<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Trouble comportement</span>{% endif %}
+                    </div>
+                </div>
+
+                <h3 class="font-semibold text-gray-800 mb-2">Traitements actuels</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    {% if consultation.details_medicaments %}
+                        <p>{{ consultation.details_medicaments }}</p>
+                    {% else %}
+                        <p>{{ consultation.medications|default:"Aucun traitement actuel" }}</p>
+                    {% endif %}
+                    <p class="mt-1"><span class="font-medium">Lieu de prise:</span> {{ consultation.get_lieu_medicaments_display }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Examen clinique complet -->
+        <div class="mb-6">
+            <h3 class="font-semibold text-gray-800 mb-2">Examen clinique</h3>
+            <div class="bg-gray-50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- État général -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-1">État général</h4>
+                    <ul class="space-y-1">
+                        <li><span class="font-medium">État:</span> {{ consultation.etat }}</li>
+                        {% if consultation.par_quoi %}<li><span class="font-medium">Par quoi:</span> {{ consultation.par_quoi }}</li>{% endif %}
+                        <li><span class="font-medium">Capacité physique:</span> {{ consultation.capacite_physique }} ({{ consultation.capacite_physique_score }})</li>
+                        <li><span class="font-medium">Capacité psychologique:</span> {{ consultation.capacite_psychologique }} ({{ consultation.capacite_psychologique_score }})</li>
+                        <li><span class="font-medium">Febrile:</span> {{ consultation.febrile }}</li>
+                    </ul>
+                </div>
+
+                <!-- Examen par région -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 mb-1">Examen par région</h4>
+                    <ul class="space-y-1">
+                        {% if consultation.tete %}<li><span class="font-medium">Tête:</span> {{ consultation.tete }}</li>{% endif %}
+                        {% if consultation.cou %}<li><span class="font-medium">Cou:</span> {{ consultation.cou }}</li>{% endif %}
+                        {% if consultation.poumons %}<li><span class="font-medium">Poumons:</span> {{ consultation.poumons }}</li>{% endif %}
+                        {% if consultation.paroi_thoracique %}<li><span class="font-medium">Paroi thoracique:</span> {{ consultation.paroi_thoracique }}</li>{% endif %}
+                        {% if consultation.coeur %}<li><span class="font-medium">Cœur:</span> {{ consultation.coeur }}</li>{% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnostic et commentaires -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Diagnostic -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Diagnostic</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    {% if consultation.diagnostic_ia %}
+                        <h4 class="text-sm font-medium text-gray-700 mb-1">Proposition IA</h4>
+                        <p class="mb-3">{{ consultation.diagnostic_ia }}</p>
+                    {% endif %}
+                    {% if consultation.commentaire_medecin %}
+                        <h4 class="text-sm font-medium text-gray-700 mb-1">Commentaire médecin</h4>
+                        <p>{{ consultation.commentaire_medecin }}</p>
+                    {% else %}
+                        <p class="text-gray-500">Aucun diagnostic enregistré</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Personne présente -->
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-2">Personne présente</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p><span class="font-medium">Type:</span> {{ consultation.get_present_display }}</p>
+                    {% if consultation.proche_lien %}<p><span class="font-medium">Lien:</span> {{ consultation.proche_lien }}</p>{% endif %}
+                    {% if consultation.soignant_role %}<p><span class="font-medium">Rôle:</span> {{ consultation.soignant_role }}</p>{% endif %}
+                    {% if consultation.autre_precisions %}<p><span class="font-medium">Précisions:</span> {{ consultation.autre_precisions }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                <i class="fas fa-print mr-2"></i> Imprimer
+            </button>
+            <a href="{% url 'fiche_consultation_update' consultation.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <i class="fas fa-edit mr-2"></i> Modifier
+            </a>
+        </div>
+        
+        <div class="mt-6">
+            <button id="open-response-modal" class="w-full px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <i class="fas fa-reply mr-2"></i> Répondre au patient
+            </button>
+        </div>
+    </div>
+</div>

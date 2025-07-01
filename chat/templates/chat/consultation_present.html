@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Médecin - Télémédecine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .consultation-card {
+            transition: all 0.3s ease;
+        }
+        
+        .consultation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .highlight {
+            background-color: #fef08a;
+            transition: background-color 0.5s ease;
+        }
+        
+        .symptom-tag {
+            transition: all 0.2s ease;
+        }
+        
+        .symptom-tag:hover {
+            transform: scale(1.05);
+        }
+        
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        .notification-item.unread {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .notification-item.unread .notification-time {
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        /* Animation pour le changement de rôle (plus utilisé mais gardé si besoin pour autre chose) */
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .role-option {
+            transition: all 0.3s ease;
+        }
+
+        .role-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .role-option.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .role-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Authentification avec sélection de rôle - SUPPRIMÉ -->
+    <!-- <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"> ... </div> -->
+
+    <!-- Interface principale (visible par défaut) -->
+    <div id="doctor-interface">
+        {% include "chat/header.html" %}
+
+        <!-- Contenu principal -->
+        <main class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Liste des consultations -->
+                <div class="md:w-1/3">
+                    <div class="bg-white rounded-lg shadow-md p-4 sticky top-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold text-gray-800">Consultations en attente</h2>
+                            <span id="pending-count" class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">{{ nombre_en_attente }}</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" id="search-consultations" placeholder="Rechercher un patient..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div id="consultations-list" class="space-y-4 max-h-[calc(100vh-220px)] overflow-y-auto">
+                            {% if consultations_patient %}
+                                {% for consultation in consultations_patient %}
+                                    <div onclick="loadConsultation({{ consultation.id }})"
+                                        class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md cursor-pointer transition duration-200">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-lg font-semibold text-gray-800">
+                                                    {{ consultation.nom }} {{ consultation.postnom }}
+                                                </p>
+                                                <p class="text-sm text-gray-500">
+                                                    N° Dossier : <span class="font-medium">{{ consultation.numero_dossier }}</span>
+                                                </p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-sm text-gray-500">
+                                                    {{ consultation.date_consultation|date:"d/m/Y" }}
+                                                </p>
+                                                <p class="text-xs text-gray-400">En attente</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-gray-500 text-center py-4">Aucune consultation en attente</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Détail de la consultation -->
+                <div id="consultation-detail" class="w-full"></div>            </div>
+        </main>
+    </div>
+
+    <!-- Modal de réponse au patient -->
+    <div id="response-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 fade-in max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Réponse au patient</h3>
+                <button id="close-response-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Votre réponse sera envoyée au patient par email et SMS. Vous pouvez également ajouter des documents joints si nécessaire.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Diagnostic préliminaire</label>
+                    <textarea id="diagnosis-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Décrivez votre diagnostic préliminaire..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Recommandations</label>
+                    <textarea id="recommendations-text" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Indiquez les recommandations pour le patient..."></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Orientation</label>
+                    <select id="orientation-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Sélectionner une orientation</option>
+                        <option value="home_care">Soins à domicile</option>
+                        <option value="pharmacy">Consultation en pharmacie</option>
+                        <option value="general_practitioner">Consultation médecin généraliste</option>
+                        <option value="specialist">Consultation spécialiste</option>
+                        <option value="emergency">Urgence hospitalière</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Pièces jointes</label>
+                    <div class="flex items-center">
+                        <input type="file" id="file-upload" class="hidden">
+                        <button type="button" id="upload-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                            <i class="fas fa-paperclip mr-2"></i> Ajouter un fichier
+                        </button>
+                        <span id="file-name" class="ml-3 text-sm text-gray-500">Aucun fichier sélectionné</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Signature électronique</label>
+                    <div class="signature-pad h-32 flex items-center justify-center cursor-pointer" id="signature-pad">
+                        <p class="text-gray-400">Cliquez pour signer</p>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <button id="clear-signature" class="text-sm text-red-600 hover:text-red-800">
+                            <i class="fas fa-eraser mr-1"></i> Effacer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-response" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">
+                    Annuler
+                </button>
+                <button id="send-response" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-paper-plane mr-2"></i> Envoyer la réponse
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation d'envoi -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 fade-in">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Réponse envoyée</h3>
+                <button id="close-confirmation-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-6">
+                <div class="flex items-center justify-center text-green-500 text-5xl mb-4">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p class="text-gray-700 text-center">Votre réponse a été envoyée avec succès au patient. Un accusé de réception vous sera transmis.</p>
+            </div>
+            <div class="flex justify-center">
+                <button id="confirmation-ok-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-check mr-2"></i> Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        document.getElementById('open-response-modal').addEventListener('click', function() {
+            document.getElementById('response-modal').classList.remove('hidden');
+        });
+
+        // Gestion de la modal de réponse
+        document.getElementById('close-response-modal').addEventListener('click', function() {
+            document.getElementById('response-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('cancel-response').addEventListener('click', function() {
+            document.getElementById('response-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('upload-btn').addEventListener('click', function() {
+            document.getElementById('file-upload').click();
+        });
+        
+        document.getElementById('file-upload').addEventListener('change', function() {
+            const fileName = this.files[0]?.name || 'Aucun fichier sélectionné';
+            document.getElementById('file-name').textContent = fileName;
+        });
+        
+        document.getElementById('clear-signature').addEventListener('click', function() {
+            const signaturePad = document.getElementById('signature-pad');
+            signaturePad.innerHTML = '<p class="text-gray-400">Cliquez pour signer</p>';
+            const canvas = signaturePad.querySelector('canvas');
+            if (canvas) canvas.remove(); // S'assurer que le canvas est retiré
+        });
+        
+        document.getElementById('send-response').addEventListener('click', function() {
+            const diagnosis = document.getElementById('diagnosis-text').value;
+            const recommendations = document.getElementById('recommendations-text').value;
+            const orientation = document.getElementById('orientation-select').value;
+            
+            if (!diagnosis || !recommendations || !orientation) {
+                alert('Veuillez remplir les champs Diagnostic, Recommandations et Orientation.');
+                return;
+            }
+            
+            document.getElementById('response-modal').classList.add('hidden');
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('diagnosis-text').value = '';
+                document.getElementById('recommendations-text').value = '';
+                document.getElementById('orientation-select').value = '';
+                document.getElementById('file-name').textContent = 'Aucun fichier sélectionné';
+                document.getElementById('file-upload').value = ''; // Réinitialise le champ de fichier
+                document.getElementById('signature-pad').innerHTML = '<p class="text-gray-400">Cliquez pour signer</p>';
+                const canvas = document.getElementById('signature-pad').querySelector('canvas');
+                if (canvas) canvas.remove();
+            }, 1000);
+        });
+        
+        document.getElementById('close-confirmation-modal').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('confirmation-ok-btn').addEventListener('click', function() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        });
+
+        // Signature électronique (simplifiée)
+        document.getElementById('signature-pad').addEventListener('click', function(event) {
+            // Ne pas recréer le canvas s'il existe déjà
+            if (this.querySelector('canvas')) return;
+
+            this.innerHTML = ''; // Vider le "Cliquez pour signer"
+            const canvas = document.createElement('canvas');
+            canvas.id = 'signature-canvas';
+            // Ajuster la taille du canvas à son conteneur
+            canvas.width = this.offsetWidth -4; // -4 pour les bordures
+            canvas.height = this.offsetHeight -4;
+            this.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            
+            function getMousePos(canvasDom, mouseEvent) {
+                var rect = canvasDom.getBoundingClientRect();
+                return {
+                    x: mouseEvent.clientX - rect.left,
+                    y: mouseEvent.clientY - rect.top
+                };
+            }
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const pos = getMousePos(canvas, e);
+                [lastX, lastY] = [pos.x, pos.y];
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const pos = getMousePos(canvas, e);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                [lastX, lastY] = [pos.x, pos.y];
+            });
+            
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseout', () => isDrawing = false);
+
+             // Pour écrans tactiles
+            canvas.addEventListener('touchstart', (e) => {
+                isDrawing = true;
+                const touch = e.touches[0];
+                const pos = getMousePos(canvas, touch);
+                [lastX, lastY] = [pos.x, pos.y];
+                e.preventDefault(); // Empêche le défilement
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (!isDrawing) return;
+                const touch = e.touches[0];
+                const pos = getMousePos(canvas, touch);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                [lastX, lastY] = [pos.x, pos.y];
+                e.preventDefault(); // Empêche le défilement
+            });
+
+            canvas.addEventListener('touchend', () => {
+                isDrawing = false;
+            });
+        });
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConsultations();
+            loadNotifications();
+            
+            // Simuler l'arrivée de nouvelles notifications après un délai
+            setTimeout(() => {
+                addNewNotification(); // Cette fonction met à jour les compteurs et affiche un toast
+            }, 3000);
+        });
+
+        async function loadConsultation(consultationId) {
+            try {
+                // Appel AJAX pour récupérer le détail de la consultation
+                const response = await fetch(`/consultation/patient/${consultationId}/details/`);
+                if (!response.ok) {
+                    alert("Erreur lors du chargement de la consultation.");
+                    return;
+                }
+                const html = await response.text();
+                console.log(html)
+                // Affiche le détail dans une div dédiée (par exemple #consultation-detail)
+                document.getElementById('consultation-detail').innerHTML = html;
+                // Optionnel : faire défiler jusqu'au détail
+                document.getElementById('consultation-detail').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert("Erreur réseau.");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECRET_KEY = 'django-insecure-gs#ncc0tx4ai(+$5y&w5&9q@&^(nigk4!t_xe(6mf4*%dc2gjf'
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", get_random_secret_key())
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "OhcmqJJ6ODIGo6Z2TyR£S~:afl2#4~*V")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG_VALUE = os.getenv("DEBUG", "False")
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'chat',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -136,7 +137,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr-fr'
 
 TIME_ZONE = 'UTC'
 
@@ -149,12 +150,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
-LOGIN_URL = '/login/'
+AUTH_USER_MODEL = 'authentication.CustomUser'
+LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+LOGOUT_REDIRECT_URL = '/auth/login/'
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
