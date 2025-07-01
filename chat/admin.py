@@ -3,15 +3,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import Conversation, MessageIA, FicheConsultation
 
-class CustomUserAdmin(UserAdmin):
-    list_display = UserAdmin.list_display + ('display_groups',)
-
-    def display_groups(self, obj):
-        return ", ".join([g.name for g in obj.groups.all()])
-    display_groups.short_description = 'Rôles'
-
-admin.site.unregister(User)
-admin.site.register(User, CustomUserAdmin)
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
@@ -44,3 +35,6 @@ class FicheConsultationAdmin(admin.ModelAdmin):
     def conversations_count(self, obj):
         return obj.conversations.count()
     conversations_count.short_description = "Nb conversations"
+
+
+

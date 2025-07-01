@@ -1,0 +1,379 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modification Fiche de Consultation - Soins avec Patient Partenaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .form-section {
+            transition: all 0.3s ease;
+        }
+        
+        .form-section.collapsed {
+            max-height: 60px;
+            overflow: hidden;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        
+        .animated-checkbox {
+            transform: scale(1.2);
+            transition: transform 0.2s;
+        }
+        
+        .animated-checkbox:active {
+            transform: scale(0.9);
+        }
+        
+        .signature-pad {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9fafb;
+        }
+        
+        .readonly-input {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+<div class="container mx-auto p-4 max-w-5xl">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm mb-8 rounded-t-lg">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center">
+            <!-- Logo et Titre -->
+            <img src="{% static 'chat/assets/images/LOGO-UDBL1.png' %}" class="h-10 w-auto mr-4" alt="Logo">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-blue-700">MODIFICATION FICHE DE CONSULTATION</h1>
+                <p class="text-gray-500 text-sm">Soins avec Patient Partenaire - ID: {{ form.instance.id }}</p>
+                <p class="text-gray-500 text-sm">Créée le: {{ form.instance.created_at|date:"d/m/Y H:i" }}</p>
+                {% if form.instance.updated_at %}
+                <p class="text-gray-500 text-sm">Dernière modification: {{ form.instance.updated_at|date:"d/m/Y H:i" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% url 'fiche_consultation_update' fiche.id %}">
+        {% csrf_token %}
+        
+        <!-- Section 1: Informations Patient (readonly) -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    <span>Renseignements Patient</span>
+                </h3>
+                <span class="text-sm text-gray-500">(Informations non modifiables)</span>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Nom</label>
+                    <input type="text" value="{{ fiche.nom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Postnom</label>
+                    <input type="text" value="{{ fiche.postnom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Prénom</label>
+                    <input type="text" value="{{ fiche.prenom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Date de naissance</label>
+                    <input type="date" value="{{ fiche.date_naissance|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Âge</label>
+                    <input type="number" value="{{ fiche.age }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Téléphone</label>
+                    <input type="text" value="{{ fiche.telephone }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 2: Signes Vitaux -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-heartbeat mr-2"></i>
+                    <span>Signes Vitaux</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Température (°C)</label>
+                    <input type="number" name="temperature" value="{{ fiche.temperature }}" step="0.1" class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">SPO2 (%)</label>
+                    <input type="number" name="spo2" value="{{ fiche.spo2 }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Poids (kg)</label>
+                    <input type="number" name="poids" value="{{ fiche.poids }}" step="0.1" class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Tension Artérielle (mmHg)</label>
+                    <input type="text" name="tension_arterielle" value="{{ fiche.tension_arterielle }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Pouls (/min)</label>
+                    <input type="number" name="pouls" value="{{ fiche.pouls }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">FR (/min)</label>
+                    <input type="number" name="frequence_respiratoire" value="{{ fiche.frequence_respiratoire }}" class="w-full px-3 py-2 border rounded-md">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 3: Anamnèse -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-book-medical mr-2"></i>
+                    <span>Anamnèse</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+            
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Motif de consultation</label>
+                <textarea name="motif_consultation" class="w-full px-3 py-2 border rounded-md">{{ fiche.motif_consultation }}</textarea>
+            </div>
+            
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Histoire de la maladie</label>
+                <textarea name="histoire_maladie" class="w-full px-3 py-2 border rounded-md">{{ fiche.histoire_maladie }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Section 4: Examen Physique -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-stethoscope mr-2"></i>
+                    <span>Examen Physique</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+            
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">État général</label>
+                <textarea name="etat_general" class="w-full px-3 py-2 border rounded-md">{{ fiche.etat_general }}</textarea>
+            </div>
+            
+            <div class="mt-4">
+                <label class="block text-gray-700 font-medium mb-2">Examen par région</label>
+                <textarea name="examen_regional" class="w-full px-3 py-2 border rounded-md">{{ fiche.examen_regional }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Nouvelle Section: Recommandations du Médecin -->
+        <div class="form-section border border-blue-200 rounded-lg p-4 bg-blue-50">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-user-md mr-2"></i>
+                    <span class="required-field">Recommandations Médicales</span>
+                </h3>
+            </div>
+            
+            <div class="mt-4 space-y-6">
+                <!-- Diagnostic -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Diagnostic</label>
+                    <textarea name="diagnostic" class="w-full px-3 py-2 border rounded-md" required>{{ fiche.diagnostic }}</textarea>
+                </div>
+                
+                <!-- Traitement proposé -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Traitement proposé</label>
+                    <textarea name="traitement" class="w-full px-3 py-2 border rounded-md" required>{{ fiche.traitement }}</textarea>
+                </div>
+                
+                <!-- Examens complémentaires -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Examens complémentaires</label>
+                    <textarea name="examens_complementaires" class="w-full px-3 py-2 border rounded-md">{{ fiche.examens_complementaires }}</textarea>
+                </div>
+                
+                <!-- Conseils et recommandations -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Conseils et recommandations</label>
+                    <textarea name="conseils" class="w-full px-3 py-2 border rounded-md">{{ fiche.conseils }}</textarea>
+                </div>
+                
+                <!-- Suivi -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Date de suivi</label>
+                        <input type="date" name="date_suivi" value="{{ fiche.date_suivi|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Type de suivi</label>
+                        <select name="type_suivi" class="w-full px-3 py-2 border rounded-md">
+                            <option value="telephonique" {% if fiche.type_suivi == 'telephonique' %}selected{% endif %}>Téléphonique</option>
+                            <option value="presentiel" {% if fiche.type_suivi == 'presentiel' %}selected{% endif %}>Présentiel</option>
+                            <option value="urgence" {% if fiche.type_suivi == 'urgence' %}selected{% endif %}>Urgence</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Urgence -->
+                <div class="mt-4">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" name="urgence" class="form-checkbox h-5 w-5 text-red-600" {% if fiche.urgence %}checked{% endif %}>
+                        <span class="ml-2 text-gray-700 font-medium">Cas urgent nécessitant une attention immédiate</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Signature -->
+        <div class="mt-8 border-t pt-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div class="mb-4 md:mb-0">
+                    <label class="block text-gray-700 font-medium mb-2">Médecin traitant</label>
+                    <input type="text" value="{{ user.get_full_name }}" class="px-3 py-2 border-b border-gray-300 bg-transparent" readonly>
+                </div>
+                
+                <div class="signature-pad w-full md:w-64 h-32 flex items-center justify-center">
+                    {% if fiche.signature_medecin %}
+                        <img src="{{ fiche.signature_medecin.url }}" alt="Signature médecin" class="max-h-full max-w-full">
+                    {% else %}
+                        <button type="button" onclick="openSignatureModal()" class="text-gray-500 hover:text-blue-600">
+                            <i class="fas fa-signature text-4xl mr-2"></i>
+                            <span>Cliquer pour signer</span>
+                        </button>
+                    {% endif %}
+                    <input type="hidden" name="signature_data" id="signature_data" value="">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex justify-between">
+            {% comment %} <a href="{% url 'consultation_detail' fiche.id %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
+                <i class="fas fa-times mr-2"></i> Annuler
+            </a> {% endcomment %}
+            
+            <div class="space-x-4">
+                <button type="submit" name="save_draft" value="true" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
+                    <i class="fas fa-save mr-2"></i> Enregistrer brouillon
+                </button>
+                
+                <button type="submit" name="save_final" value="true" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
+                    <i class="fas fa-check-circle mr-2"></i> Finaliser la fiche
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Signature Modal -->
+<div id="signatureModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Signature électronique</h3>
+            <button onclick="closeSignatureModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="signature-pad w-full h-40 mb-4" id="signatureCanvas">
+            <!-- Canvas will be inserted here by JS -->
+        </div>
+        
+        <div class="flex justify-between">
+            <button onclick="clearSignature()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded">
+                <i class="fas fa-eraser mr-2"></i> Effacer
+            </button>
+            
+            <button onclick="saveSignature()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
+                <i class="fas fa-check mr-2"></i> Valider
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle section collapse/expand
+    function toggleSection(section) {
+        section.classList.toggle('collapsed');
+        const icon = section.querySelector('.fa-chevron-down');
+        icon.classList.toggle('rotate-180');
+    }
+    
+    // Initialize all sections as collapsed except recommendations
+    document.addEventListener('DOMContentLoaded', function() {
+        const sections = document.querySelectorAll('.form-section');
+        sections.forEach(section => {
+            if (!section.classList.contains('bg-blue-50')) {
+                section.classList.add('collapsed');
+            }
+        });
+    });
+    
+    // Signature Modal Functions
+    let signaturePad = null;
+    
+    function openSignatureModal() {
+        const modal = document.getElementById('signatureModal');
+        modal.classList.remove('hidden');
+        
+        // Initialize signature pad
+        const canvas = document.createElement('canvas');
+        canvas.width = document.getElementById('signatureCanvas').offsetWidth;
+        canvas.height = document.getElementById('signatureCanvas').offsetHeight;
+        canvas.style.border = '1px solid #ddd';
+        document.getElementById('signatureCanvas').innerHTML = '';
+        document.getElementById('signatureCanvas').appendChild(canvas);
+        
+        signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)'
+        });
+    }
+    
+    function closeSignatureModal() {
+        document.getElementById('signatureModal').classList.add('hidden');
+    }
+    
+    function clearSignature() {
+        if (signaturePad) {
+            signaturePad.clear();
+        }
+    }
+    
+    function saveSignature() {
+        if (signaturePad && !signaturePad.isEmpty()) {
+            const signatureData = signaturePad.toDataURL();
+            document.getElementById('signature_data').value = signatureData;
+            
+            // Update the display
+            const signatureDisplay = document.querySelector('.signature-pad');
+            signatureDisplay.innerHTML = `<img src="${signatureData}" alt="Signature" class="max-h-full max-w-full">`;
+            
+            closeSignatureModal();
+        } else {
+            alert('Veuillez fournir une signature');
+        }
+    }
+</script>
+
+<!-- Load SignaturePad library -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User
 from django.utils import timezone
+from authentication.models import CustomUser
 
 
 class FicheConsultation(models.Model):
@@ -182,7 +182,7 @@ class FicheConsultation(models.Model):
     
     commentaire_medecin = models.TextField(blank=True, null=True)
     medecin_validateur = models.ForeignKey(
-        'auth.User', 
+        CustomUser, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
@@ -191,7 +191,7 @@ class FicheConsultation(models.Model):
     date_validation = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     diagnostic_ia = models.TextField(blank=True, null=True)
-
+    
     def save(self, *args, **kwargs):
         if not self.heure_debut:
             self.heure_debut = timezone.localtime().time()
@@ -208,19 +208,25 @@ class FicheConsultation(models.Model):
         return f"Fiche Consultation - {self.nom} {self.postnom} ({self.numero_dossier})"
 
     class Meta:
+        verbose_name = 'Fiche de Consultation'
+        verbose_name_plural = 'Fiches de Consultation'
         ordering = ['-date_consultation']
 
-
 class Conversation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations")
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="conversations")
     fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name="conversations", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         if self.fiche:
             return f"Conversation #{self.id} - {self.user.username} (Fiche {self.fiche.numero_dossier})"
         return f"Conversation #{self.id} - {self.user.username}"
-
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Conversation'
+        verbose_name_plural = 'Conversations'
 
 class MessageIA(models.Model):
     ROLE_CHOICES = [
@@ -239,18 +245,10 @@ class MessageIA(models.Model):
     def __str__(self):
         return f"[{self.get_role_display()}] {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = 'Message IA'
+        verbose_name_plural = 'Messages IA'
 
-class UserProfile(models.Model):
-    ROLE_CHOICES = [
-        ('patient', 'Patient'),
-        ('proche', 'Proche aidant'),
-        ('soignant', 'Soignant'),
-        ('medecin', 'Médecin'),
-        ('autre', 'Autre'),
-    ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    # Ajoute d'autres champs si besoin
 
-    def __str__(self):
-        return f"{self.user.username} ({self.get_role_display()})"
+
