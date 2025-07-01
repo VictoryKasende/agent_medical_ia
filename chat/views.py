@@ -230,9 +230,12 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         fiche = form.save(commit=False)
-        fiche.conversation = Conversation.objects.create(user=self.request.user)
+        conversation = Conversation.objects.create(user=self.request.user)
+        fiche.conversation = conversation
         fiche.status = 'en_attente'
         fiche.save()
+        conversation.fiche = fiche
+        conversation.save()
         # Prépare les arguments pour la tâche
         symptomes = fiche.motif_consultation or ""  # ou adapte selon tes besoins
         user_id = self.request.user.id
@@ -334,10 +337,14 @@ def check_task_status(request, task_id):
     return JsonResponse(response)
 
 def api_consultations_distance(request):
-    fiches = FicheConsultation.objects.filter(status='en_attente').values(
+    fiches = FicheConsultation.objects.filter(status__in=['en_analyse', 'analyse_terminee']).values(
         'id', 'nom', 'prenom', 'date_naissance', 'age', 'numero_dossier', 'created_at', 'status'
     )
-    return JsonResponse(list(fiches), safe=False)
+    data = []
+    for f in fiches:
+        f['status_display'] = FicheConsultation.STATUS_CHOICES_DICT.get(f['status'], f['status'])
+        data.append(f)
+    return JsonResponse(data, safe=False)
 
 def valider_diagnostic_medecin(request, fiche_id):
     """

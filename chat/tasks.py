@@ -73,11 +73,10 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
         cache.set(cache_key, full_response, timeout=3600)
 
         try:
-            fiche = conv.fiche
             if conv.fiche:
-                fiche.diagnostic_ia = full_response
-                fiche.status = 'analyse_terminee'
-                fiche.save()
+                conv.fiche.diagnostic_ia = full_response
+                conv.fiche.status = 'analyse_terminee'
+                conv.fiche.save()
         except FicheConsultation.DoesNotExist:
                 pass
         return full_response

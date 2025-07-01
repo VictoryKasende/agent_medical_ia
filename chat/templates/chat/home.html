@@ -234,8 +234,11 @@
             .then(response => response.json())
             .then(data => {
                 const notificationsList = document.getElementById('notifications-list');
+                const notificationCount = document.getElementById('notification-count');
                 if (!data.length) {
                     notificationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune notification</p>';
+                    notificationCount.classList.add('hidden');
+                    notificationCount.textContent = '0';
                     return;
                 }
                 notificationsList.innerHTML = '';
@@ -252,6 +255,9 @@
                     });
                     notificationsList.appendChild(notif);
                 });
+                // Affiche le nombre
+                notificationCount.textContent = data.length;
+                notificationCount.classList.remove('hidden');
             });
     }
 
