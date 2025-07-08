@@ -24,6 +24,7 @@ urlpatterns = [
     # Consultation du patient présent
     path('consultation/patient/', views.ConsultationPatientView.as_view(), name='consultation_patient_present'),
     path('consultation/patient/<int:fiche_id>/modifier/', views.FicheConsultationUpdateView.as_view(), name='fiche_consultation_update'),
+    path('consultation/patient/<int:fiche_id>/modifier/statut', views.UpdateFicheStatusView.as_view(), name='fiche_consultation_update_status'),
     path('consultation/patient/<int:fiche_id>/details/', views.FicheConsultationDetailView.as_view(), name='fiche_consultation_detail'),
-
+    path('consultation/<int:pk>/print/', views.PrintConsultationView.as_view(), name='consultation_print'),
 ]

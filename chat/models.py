@@ -180,7 +180,11 @@ class FicheConsultation(models.Model):
         ('rejete_medecin', 'Rejeté par médecin'),
     ], default='en_analyse')
     
-    commentaire_medecin = models.TextField(blank=True, null=True)
+    # Recommandations du medecin
+    diagnostic = models.TextField(blank=True, null=True)
+    traitement = models.TextField(blank=True, null=True)
+    examen_complementaire = models.TextField(blank=True, null=True)
+    recommandations = models.TextField(blank=True, null=True)
     medecin_validateur = models.ForeignKey(
         CustomUser, 
         on_delete=models.SET_NULL, 
@@ -191,6 +195,12 @@ class FicheConsultation(models.Model):
     date_validation = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     diagnostic_ia = models.TextField(blank=True, null=True)
+    signature_medecin = models.ImageField(
+        upload_to='signatures/', 
+        blank=True, 
+        null=True, 
+        help_text="Signature du médecin pour valider la consultation"
+    )
     
     def save(self, *args, **kwargs):
         if not self.heure_debut:

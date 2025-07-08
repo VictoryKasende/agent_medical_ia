@@ -41,6 +41,13 @@
             background-color: #f3f4f6;
             cursor: not-allowed;
         }
+        
+        /* Style pour les champs obligatoires */
+        .errorlist {
+            color: red;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -61,87 +68,188 @@
         </div>
     </header>
 
-    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% url 'fiche_consultation_update' fiche.id %}">
+    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% url 'fiche_consultation_update' fiche.id %}" enctype="multipart/form-data">
         {% csrf_token %}
         
-        <!-- Section 1: Informations Patient (readonly) -->
-        <div class="form-section border border-gray-200 rounded-lg p-4 section">
-            <div class="flex justify-between items-center">
-                <h3 class="text-xl font-semibold text-blue-700">
-                    <i class="fas fa-user-circle mr-2"></i>
-                    <span>Renseignements Patient</span>
-                </h3>
-                <span class="text-sm text-gray-500">(Informations non modifiables)</span>
+        <!-- Section 1: Informations Patient -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+               <h3 class="text-xl font-semibold text-blue-700 flex items-center">
+                <i class="fas fa-user-circle mr-2"></i>
+                <span>Renseignements Patient</span>
+            </h3>
+            <i class="fas fa-chevron-down"></i>
             </div>
             
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Nom -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Nom</label>
-                    <input type="text" value="{{ fiche.nom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Nom</label>
+                    {{ form.nom }}
+                    {{ form.nom.errors }}
                 </div>
+                
+                <!-- Postnom -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Postnom</label>
-                    <input type="text" value="{{ fiche.postnom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Postnom</label>
+                    {{ form.postnom }}
+                    {{ form.postnom.errors }}
                 </div>
+                
+                <!-- Prénom -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Prénom</label>
-                    <input type="text" value="{{ fiche.prenom }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Prénom</label>
+                    {{ form.prenom }}
+                    {{ form.prenom.errors }}
                 </div>
+                
+                <!-- Date de naissance -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Date de naissance</label>
-                    <input type="date" value="{{ fiche.date_naissance|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">
+                        {{ form.date_naissance.label }}
+                    </label>
+                    <input type="date"
+                        name="{{ form.date_naissance.name }}"
+                        value="{{ form.date_naissance.value|date:"Y-m-d"|default_if_none:'' }}"
+                        class="w-full px-3 py-2 border rounded-md"
+                        required>
+                    {{ form.date_naissance.errors }}
                 </div>
+                
+                <!-- Âge -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Âge</label>
-                    <input type="number" value="{{ fiche.age }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Âge</label>
+                    {{ form.age }}
+                    {{ form.age.errors }}
                 </div>
+                
+                <!-- Téléphone -->
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Téléphone</label>
-                    <input type="text" value="{{ fiche.telephone }}" class="w-full px-3 py-2 border rounded-md readonly-input" readonly>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Téléphone</label>
+                    {{ form.telephone }}
+                    {{ form.telephone.errors }}
+                </div>
+                
+                <!-- État civil -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">État civil</label>
+                    {{ form.etat_civil }}
+                    {{ form.etat_civil.errors }}
+                </div>
+                
+                <!-- Occupation -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">Occupation</label>
+                    {{ form.occupation }}
+                    {{ form.occupation.errors }}
+                </div>
+                
+                <!-- Adresse -->
+                <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Avenue</label>
+                        {{ form.avenue }}
+                        {{ form.avenue.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Quartier</label>
+                        {{ form.quartier }}
+                        {{ form.quartier.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Commune</label>
+                        {{ form.commune }}
+                        {{ form.commune.errors }}
+                    </div>
+                </div>
+                
+                <!-- Contact d'urgence -->
+                <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Nom du contact</label>
+                        {{ form.contact_nom }}
+                        {{ form.contact_nom.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Téléphone du contact</label>
+                        {{ form.contact_telephone }}
+                        {{ form.contact_telephone.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Adresse du contact</label>
+                        {{ form.contact_adresse }}
+                        {{ form.contact_adresse.errors }}
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Section 2: Signes Vitaux -->
-        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
-            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
-                <h3 class="text-xl font-semibold text-blue-700">
-                    <i class="fas fa-heartbeat mr-2"></i>
-                    <span>Signes Vitaux</span>
-                </h3>
-                <i class="fas fa-chevron-down transform transition-transform"></i>
-            </div>
-            
-            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">Température (°C)</label>
-                    <input type="number" name="temperature" value="{{ fiche.temperature }}" step="0.1" class="w-full px-3 py-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">SPO2 (%)</label>
-                    <input type="number" name="spo2" value="{{ fiche.spo2 }}" class="w-full px-3 py-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">Poids (kg)</label>
-                    <input type="number" name="poids" value="{{ fiche.poids }}" step="0.1" class="w-full px-3 py-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">Tension Artérielle (mmHg)</label>
-                    <input type="text" name="tension_arterielle" value="{{ fiche.tension_arterielle }}" class="w-full px-3 py-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">Pouls (/min)</label>
-                    <input type="number" name="pouls" value="{{ fiche.pouls }}" class="w-full px-3 py-2 border rounded-md">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2">FR (/min)</label>
-                    <input type="number" name="frequence_respiratoire" value="{{ fiche.frequence_respiratoire }}" class="w-full px-3 py-2 border rounded-md">
-                </div>
+        <!-- Section 3: Signes Vitaux -->
+<div class="form-section border border-gray-200 rounded-lg p-4 section collapsed">
+    <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+        <h3 class="text-xl font-semibold text-blue-700 flex items-center">
+            <i class="fas fa-heartbeat mr-2"></i>
+            <span>Signes Vitaux</span>
+        </h3>
+        <i class="fas fa-chevron-down transform transition-transform"></i>
+    </div>
+
+    <!-- Signes vitaux -->
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">Température (°C)</label>
+            {{ form.temperature }}
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">SPO2 (%)</label>
+            {{ form.spo2 }}
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">Poids (kg)</label>
+            {{ form.poids }}
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">Tension Artérielle (mmHg)</label>
+            {{ form.tension_arterielle }}
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">Pouls (/min)</label>
+            {{ form.pouls }}
+        </div>
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">FR (/min)</label>
+            {{ form.frequence_respiratoire }}
+        </div>
+    </div>
+
+    <!-- Présence à la consultation -->
+    <div class="mt-6">
+        <label class="block text-gray-700 font-medium mb-2">Présent à la consultation</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="present-options">
+                {% for radio in form.present %}
+                    <label class="inline-flex items-center">
+                        {{ radio.tag }}
+                        <span class="ml-2">{{ radio.choice_label }}</span>
+                    </label>
+                {% endfor %}
+
+                <!-- Champs cachés selon le choix -->
+                <label class="inline-flex items-center hidden" id="champ-proche">
+                    {{ form.proche_lien }}
+                </label>
+                <label class="inline-flex items-center hidden" id="champ-soignant">
+                    {{ form.soignant_role }}
+                </label>
+                <label class="inline-flex items-center hidden" id="champ-autre">
+                    {{ form.autre_precisions }}
+                </label>
             </div>
         </div>
+    </div>
+
         
-        <!-- Section 3: Anamnèse -->
-        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+        <!-- Section 4: Anamnèse -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed">
             <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
                 <h3 class="text-xl font-semibold text-blue-700">
                     <i class="fas fa-book-medical mr-2"></i>
@@ -150,19 +258,228 @@
                 <i class="fas fa-chevron-down transform transition-transform"></i>
             </div>
             
-            <div class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">Motif de consultation</label>
-                <textarea name="motif_consultation" class="w-full px-3 py-2 border rounded-md">{{ fiche.motif_consultation }}</textarea>
-            </div>
-            
-            <div class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">Histoire de la maladie</label>
-                <textarea name="histoire_maladie" class="w-full px-3 py-2 border rounded-md">{{ fiche.histoire_maladie }}</textarea>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Motif de consultation</label>
+                    {{ form.motif_consultation }}
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Histoire de la maladie</label>
+                    {{ form.histoire_maladie }}
+                </div>
+
+                <!-- Médicaments pris avant consultation -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Médicaments pris avant consultation</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" id="present-options">
+                        {% for radio in form.lieu_medicaments %}
+                            <label class=" inline-flex items-center">
+                                {{ radio.tag }} <span class="inline-flex items-center ml-3">{{ radio.choice_label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-2">
+                        <label class="block text-gray-700 mb-2">Détails des médicaments pris</label>
+                        {{ form.details_medicaments }}
+                    </div>
+                </div>
+                <!-- Symptômes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Céphalées</label>
+                        {{ form.cephalees }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Vertiges</label>
+                        {{ form.vertiges }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Palpitations</label>
+                        {{ form.palpitations }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Troubles visuels</label>
+                        {{ form.troubles_visuels }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Nycturie</label>
+                        {{ form.nycturie }}
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Section 4: Examen Physique -->
-        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed transition-all duration-300">
+        <!-- Section 5: Antécédents médicaux -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed">
+            <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
+                <h3 class="text-xl font-semibold text-blue-700">
+                    <i class="fas fa-history mr-2"></i>
+                    <span>Antécédents médicaux</span>
+                </h3>
+                <i class="fas fa-chevron-down transform transition-transform"></i>
+            </div>
+            
+            <div class="mt-4 space-y-6">
+                <!-- Antécédents personnels -->
+                <div>
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Antécédents personnels</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <label class="inline-flex items-center">
+                            {{ form.hypertendu }}
+                            <span class="ml-2">Hypertendu</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.diabetique }}
+                            <span class="ml-2">Diabétique</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.epileptique }}
+                            <span class="ml-2">Épileptique</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.trouble_comportement }}
+                            <span class="ml-2">Trouble de comportement</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.gastritique }}
+                            <span class="ml-2">Gastritique</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Mode de vie -->
+                <div>
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Mode de vie</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 required-field">Tabac</label>
+                            {{ form.tabac }}
+                            {{ form.tabac.errors }}
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 required-field">Alcool</label>
+                            {{ form.alcool }}
+                            {{ form.alcool.errors }}
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 required-field">Activité physique</label>
+                            {{ form.activite_physique }}
+                            {{ form.activite_physique.errors }}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-gray-700 font-medium mb-2">Détails activité physique</label>
+                        {{ form.activite_physique_detail }}
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-gray-700 font-medium mb-2">Alimentation habituelle</label>
+                        {{ form.alimentation_habituelle }}
+                    </div>
+                </div>
+                
+                <!-- Allergies -->
+                <div>
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Allergies</h4>
+                    <div class="flex items-center">
+                        <label class="inline-flex items-center">
+                            {{ form.allergie_medicamenteuse }}
+                            <span class="ml-2">Allergie médicamenteuse</span>
+                        </label>
+                        <div class="ml-4 flex-grow">
+                            {{ form.medicament_allergique }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Antécédents familiaux -->
+                <div>
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Antécédents familiaux</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <label class="inline-flex items-center">
+                            {{ form.familial_drepanocytaire }}
+                            <span class="ml-2">Drépanocytose</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.familial_diabetique }}
+                            <span class="ml-2">Diabète</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.familial_obese }}
+                            <span class="ml-2">Obésité</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.familial_hypertendu }}
+                            <span class="ml-2">Hypertension</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            {{ form.familial_trouble_comportement }}
+                            <span class="ml-2">Trouble comportement</span>
+                        </label>
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-gray-700 font-medium mb-2">Liens familiaux</label>
+                        <div class="flex space-x-4">
+                            <label class="inline-flex items-center">
+                                {{ form.lien_pere }}
+                                <span class="ml-2">Père</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.lien_mere }}
+                                <span class="ml-2">Mère</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.lien_frere }}
+                                <span class="ml-2">Frère</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.lien_soeur }}
+                                <span class="ml-2">Sœur</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Événement traumatique -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Événement traumatique</label>
+                    {% for radio in form.evenement_traumatique %}
+                        <label class="inline-flex items-center">
+                            {{ radio.tag }} <span class="ml-2">{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                    <div class="mt-2">
+                        <label class="block text-gray-600 mb-1">Nature de l'événement</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <label class="inline-flex items-center">
+                                {{ form.trauma_divorce }} <span class="ml-2">Divorce</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.trauma_perte_parent }} <span class="ml-2">Perte de parent</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.trauma_deces_epoux }} <span class="ml-2">Décès d'un époux</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                {{ form.trauma_deces_enfant }} <span class="ml-2">Décès d'un enfant</span>
+                            </label>
+
+                        </div>
+                        {{ form.etat_general }}
+                    </div>
+                </div>
+                
+                <!-- Autres antécédents -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Autres antécédents</label>
+                    {{ form.autres_antecedents }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 6: Examen Physique -->
+        <div class="form-section border border-gray-200 rounded-lg p-4 section collapsed">
             <div class="flex justify-between items-center cursor-pointer" onclick="toggleSection(this.parentElement)">
                 <h3 class="text-xl font-semibold text-blue-700">
                     <i class="fas fa-stethoscope mr-2"></i>
@@ -171,23 +488,135 @@
                 <i class="fas fa-chevron-down transform transition-transform"></i>
             </div>
             
-            <div class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">État général</label>
-                <textarea name="etat_general" class="w-full px-3 py-2 border rounded-md">{{ fiche.etat_general }}</textarea>
-            </div>
-            
-            <div class="mt-4">
-                <label class="block text-gray-700 font-medium mb-2">Examen par région</label>
-                <textarea name="examen_regional" class="w-full px-3 py-2 border rounded-md">{{ fiche.examen_regional }}</textarea>
+            <div class="mt-4 space-y-6">
+                <!-- État général -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2 required-field">État général</label>
+                    {{ form.etat }}
+                    {{ form.etat.errors }}
+                    <div class="mt-2">
+                        {{ form.par_quoi }}
+                    </div>
+                </div>
+                
+                <!-- Capacités -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Capacité physique</label>
+                        {{ form.capacite_physique }}
+                        {{ form.capacite_physique.errors }}
+                        <div class="mt-2">
+                            {{ form.capacite_physique_score }}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Capacité psychologique</label>
+                        {{ form.capacite_psychologique }}
+                        {{ form.capacite_psychologique.errors }}
+                        <div class="mt-2">
+                            {{ form.capacite_psychologique_score }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Signes physiques -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Fébrile</label>
+                        {{ form.febrile }}
+                        {{ form.febrile.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Coloration bulbaire</label>
+                        {{ form.coloration_bulbaire }}
+                        {{ form.coloration_bulbaire.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Coloration palpébrale</label>
+                        {{ form.coloration_palpebrale }}
+                        {{ form.coloration_palpebrale.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 required-field">Tégument</label>
+                        {{ form.tegument }}
+                        {{ form.tegument.errors }}
+                    </div>
+                </div>
+                
+                <!-- Examen par région -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Tête</label>
+                        {{ form.tete }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Cou</label>
+                        {{ form.cou }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Paroi thoracique</label>
+                        {{ form.paroi_thoracique }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Poumons</label>
+                        {{ form.poumons }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Cœur</label>
+                        {{ form.coeur }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Épigastre/hypochondres</label>
+                        {{ form.epigastre_hypochondres }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Péri-ombilical/flancs</label>
+                        {{ form.peri_ombilical_flancs }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Hypogastre/fosses iliaques</label>
+                        {{ form.hypogastre_fosses_iliaques }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Membres</label>
+                        {{ form.membres }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Colonne/bassin</label>
+                        {{ form.colonne_bassin }}
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Examen gynécologique</label>
+                        {{ form.examen_gynecologique }}
+                    </div>
+                </div>
+                
+                <!-- Évaluation globale -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Préoccupations du patient</label>
+                    {{ form.preoccupations }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Compréhension de la maladie</label>
+                    {{ form.comprehension }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Attentes du patient</label>
+                    {{ form.attentes }}
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Engagement du patient</label>
+                    {{ form.engagement }}
+                </div>
             </div>
         </div>
         
-        <!-- Nouvelle Section: Recommandations du Médecin -->
+        <!-- Section 7: Recommandations du Médecin -->
         <div class="form-section border border-blue-200 rounded-lg p-4 bg-blue-50">
             <div class="flex justify-between items-center">
                 <h3 class="text-xl font-semibold text-blue-700">
                     <i class="fas fa-user-md mr-2"></i>
-                    <span class="required-field">Recommandations Médicales</span>
+                    <span>Recommandations Médicales</span>
                 </h3>
             </div>
             
@@ -195,28 +624,28 @@
                 <!-- Diagnostic -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Diagnostic</label>
-                    <textarea name="diagnostic" class="w-full px-3 py-2 border rounded-md" required>{{ fiche.diagnostic }}</textarea>
+                    <textarea name="diagnostic" class="w-full px-3 py-2 border rounded-md">{{ fiche.diagnostic|default:'' }}</textarea>
                 </div>
                 
                 <!-- Traitement proposé -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Traitement proposé</label>
-                    <textarea name="traitement" class="w-full px-3 py-2 border rounded-md" required>{{ fiche.traitement }}</textarea>
+                    <textarea name="traitement" class="w-full px-3 py-2 border rounded-md">{{ fiche.traitement|default:'' }}</textarea>
                 </div>
                 
                 <!-- Examens complémentaires -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Examens complémentaires</label>
-                    <textarea name="examens_complementaires" class="w-full px-3 py-2 border rounded-md">{{ fiche.examens_complementaires }}</textarea>
+                    <textarea name="examen_complementaire" class="w-full px-3 py-2 border rounded-md">{{ fiche.examen_complementaire|default:'' }}</textarea>
                 </div>
                 
                 <!-- Conseils et recommandations -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Conseils et recommandations</label>
-                    <textarea name="conseils" class="w-full px-3 py-2 border rounded-md">{{ fiche.conseils }}</textarea>
+                    <textarea name="recommandations" class="w-full px-3 py-2 border rounded-md">{{ fiche.recommandations }}</textarea>
                 </div>
                 
-                <!-- Suivi -->
+                {% comment %} <!-- Suivi -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Date de suivi</label>
@@ -239,6 +668,12 @@
                         <span class="ml-2 text-gray-700 font-medium">Cas urgent nécessitant une attention immédiate</span>
                     </label>
                 </div>
+                
+                <!-- Commentaire médecin -->
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Commentaire du médecin</label>
+                    {{ form.commentaire_medecin }}
+                </div> {% endcomment %}
             </div>
         </div>
         
@@ -247,7 +682,7 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div class="mb-4 md:mb-0">
                     <label class="block text-gray-700 font-medium mb-2">Médecin traitant</label>
-                    <input type="text" value="{{ user.get_full_name }}" class="px-3 py-2 border-b border-gray-300 bg-transparent" readonly>
+                    <input type="text" value="{{ user.username }}" class="px-3 py-2 border-b border-gray-300 bg-transparent" readonly>
                 </div>
                 
                 <div class="signature-pad w-full md:w-64 h-32 flex items-center justify-center">
@@ -265,14 +700,11 @@
         </div>
         
         <div class="mt-6 flex justify-between">
-            {% comment %} <a href="{% url 'consultation_detail' fiche.id %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
-                <i class="fas fa-times mr-2"></i> Annuler
-            </a> {% endcomment %}
-            
             <div class="space-x-4">
-                <button type="submit" name="save_draft" value="true" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
-                    <i class="fas fa-save mr-2"></i> Enregistrer brouillon
-                </button>
+                <a href="{% url 'consultation_patient_present' %}"
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                </a>
                 
                 <button type="submit" name="save_final" value="true" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
                     <i class="fas fa-check-circle mr-2"></i> Finaliser la fiche
@@ -316,6 +748,15 @@
         icon.classList.toggle('rotate-180');
     }
     
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const signatureInput = document.getElementById('signature_data');
+        console.log(signatureInput.value);
+        if (!signatureInput.value) {
+            alert("Veuillez fournir une signature avant de soumettre.");
+            e.preventDefault();
+        }
+    });
+
     // Initialize all sections as collapsed except recommendations
     document.addEventListener('DOMContentLoaded', function() {
         const sections = document.querySelectorAll('.form-section');
@@ -324,7 +765,52 @@
                 section.classList.add('collapsed');
             }
         });
+        
+        // Gérer l'affichage des champs conditionnels pour "Qui est présent"
+        const presentField = document.querySelector('[name="present"]');
+        if (presentField) {
+            presentField.addEventListener('change', function() {
+                updatePresentFields(this.value);
+            });
+            
+            // Initialiser les champs
+            if (presentField.value) {
+                updatePresentFields(presentField.value);
+            }
+        }
+        
+        // Gérer l'affichage des détails d'événement traumatique
+        const traumaField = document.querySelector('[name="evenement_traumatique"]');
+        if (traumaField) {
+            traumaField.addEventListener('change', function() {
+                const traumaDetails = document.getElementById('trauma-details');
+                if (this.value === 'oui') {
+                    traumaDetails.classList.remove('hidden');
+                } else {
+                    traumaDetails.classList.add('hidden');
+                }
+            });
+            
+            // Initialiser l'affichage
+            if (traumaField.value === 'oui') {
+                document.getElementById('trauma-details').classList.remove('hidden');
+            }
+        }
     });
+    
+    function updatePresentFields(value) {
+        document.getElementById('proche-lien-field').classList.add('hidden');
+        document.getElementById('soignant-role-field').classList.add('hidden');
+        document.getElementById('autre-precisions-field').classList.add('hidden');
+        
+        if (value === 'proche') {
+            document.getElementById('proche-lien-field').classList.remove('hidden');
+        } else if (value === 'soignant') {
+            document.getElementById('soignant-role-field').classList.remove('hidden');
+        } else if (value === 'autre') {
+            document.getElementById('autre-precisions-field').classList.remove('hidden');
+        }
+    }
     
     // Signature Modal Functions
     let signaturePad = null;
@@ -362,7 +848,7 @@
             const signatureData = signaturePad.toDataURL();
             document.getElementById('signature_data').value = signatureData;
             
-            // Update the display
+             // Update the display
             const signatureDisplay = document.querySelector('.signature-pad');
             signatureDisplay.innerHTML = `<img src="${signatureData}" alt="Signature" class="max-h-full max-w-full">`;
             

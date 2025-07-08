@@ -1,10 +1,12 @@
 import json
 import hashlib
+import base64
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView, View
 from django.views.generic.edit import CreateView
+from django.views.generic import DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect, render, get_object_or_404
@@ -15,6 +17,8 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 from django.contrib.auth.decorators import user_passes_test
 from django.template.loader import render_to_string
+from django.core.files.base import ContentFile
+
 
 from .forms import FicheConsultationForm
 from .models import Conversation, MessageIA, FicheConsultation
@@ -66,7 +70,7 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
                     "messages": messages
                 })
         context = {
-            "symptomes_texte": texte,
+            "symptomes_texte": texte.strip(),
             "chat_items": chat_items
         }
         return render(request, self.template_name, context)
@@ -223,7 +227,7 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         fiche = form.save(commit=False)
         fiche.conversation = Conversation.objects.create(user=self.request.user)
-        fiche.status = 'en_attente'
+        fiche.status = 'en_analyse'
         fiche.save()
         # Prépare les arguments pour la tâche
         symptomes = fiche.motif_consultation or ""  # ou adapte selon tes besoins
@@ -372,13 +376,20 @@ class ConsultationPatientView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        consultations = FicheConsultation.objects.filter(
-            is_patient_distance=False,  
-            status='en_attente' 
+        consultations_en_analyse = FicheConsultation.objects.filter(
+            is_patient_distance=False,
+            status='en_analyse'
         ).order_by('-id')
 
-        context['consultations_patient'] = consultations
-        context['nombre_en_attente'] = consultations.count()  
+        consultations_terminees = FicheConsultation.objects.filter(
+            is_patient_distance=False,
+            status='analyse_terminee'
+        ).order_by('-id')
+
+        context['consultations_en_attente'] = consultations_en_analyse
+        context['consultations_terminees'] = consultations_terminees
+        context['consultations_en_attente_count'] = consultations_en_analyse.count()
+        context['consultations_terminees_count'] = consultations_terminees.count()
         return context
     
 class FicheConsultationUpdateView(LoginRequiredMixin, View):
@@ -389,6 +400,7 @@ class FicheConsultationUpdateView(LoginRequiredMixin, View):
     def get(self, request, fiche_id):
         fiche = get_object_or_404(FicheConsultation, id=fiche_id)
         form = FicheConsultationForm(instance=fiche)
+
         return render(request, 'chat/fiche_update.html', {'form': form, 'fiche': fiche})
     
     def post(self, request, fiche_id):
@@ -397,16 +409,44 @@ class FicheConsultationUpdateView(LoginRequiredMixin, View):
 
         if form.is_valid():
             fiche = form.save(commit=False)
-            fiche.commentaire_medecin = request.POST.get('diagnostic', '')
+            fiche.diagnostic = request.POST.get('diagnostic', '')
+            fiche.traitement = request.POST.get('traitement', '')
+            fiche.examen_complementaire = request.POST.get('examen_complementaire', '')
+            fiche.recommandations = request.POST.get('recommandations', '')
+            fiche.medecin_validateur = request.user 
+            fiche.status = 'analyse_terminee'
+            signature_data = request.POST.get('signature_data')
+            print(f"Signature data reçue : {signature_data}")
+            if signature_data:
+                format, imgstr = signature_data.split(';base64,')
+                ext = format.split('/')[-1]
+                fiche.signature_medecin.save(
+                    f'signature_{fiche.id}.{ext}',
+                    ContentFile(base64.b64decode(imgstr)),
+                    save=False
+                )
             fiche.save()
-            print(f"Fiche mise à jour : {fiche.id}, Diagnostic : {fiche.commentaire_medecin}")
+            print(f"Fiche mise à jour : {fiche.id}, Diagnostic : {fiche.diagnostic}")
             messages.success(request, "Fiche de consultation mise à jour avec succès.")
-            return redirect('consultation_present')
+            return redirect('consultation_patient_present')
         else:
             print(f"Erreur de validation du formulaire : {form.errors}")
             messages.error(request, "Erreur lors de la mise à jour de la fiche.")
             return render(request, 'chat/fiche_update.html', {'form': form, 'fiche': fiche})
         
+class UpdateFicheStatusView(LoginRequiredMixin, View):
+    """
+    Vue pour mettre à jour le statut d'une fiche de consultation.
+    """
+
+    def post(self, request, fiche_id):
+        fiche = get_object_or_404(FicheConsultation, id=fiche_id)
+        new_status = request.POST.get('status', 'en_attente')
+        fiche.status = new_status
+        fiche.save()
+        messages.success(request, f"Statut de la fiche mis à jour : {fiche.get_status_display()}")
+        return redirect('consultation_patient_present') 
+
 class FicheConsultationDetailView(LoginRequiredMixin, View):
     """
     Vue pour afficher les détails d'une fiche de consultation.
@@ -418,3 +458,8 @@ class FicheConsultationDetailView(LoginRequiredMixin, View):
             'consultation': fiche,
         }
         return render(request, 'chat/fiche_detail.html', context)
+    
+class PrintConsultationView(DetailView):
+    model = FicheConsultation
+    template_name = 'chat/consultation_print.html'  
+    context_object_name = 'consultation'
