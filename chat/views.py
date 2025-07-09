@@ -178,16 +178,6 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         fiche = form.save(commit=False)
-<<<<<<< HEAD
-        conversation = Conversation.objects.create(user=self.request.user)
-        fiche.conversation = conversation
-        fiche.status = 'en_attente'
-        fiche.save()
-        conversation.fiche = fiche
-        conversation.save()
-        # Prépare les arguments pour la tâche
-        symptomes = fiche.motif_consultation or ""  # ou adapte selon tes besoins
-=======
         fiche.conversation = Conversation.objects.create(user=self.request.user)
         fiche.status = 'en_analyse'
         fiche.is_patient_distance = True if is_patient(self.request.user) else False
@@ -200,7 +190,6 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
         print("Texte formaté pour l'IA :", texte)
 
         # Lancer la tâche d'analyse
->>>>>>> 2e22ac3836db9be4e8f3431cc8d0d495cce13ad1
         user_id = self.request.user.id
         conversation_id = fiche.conversation.id
 
