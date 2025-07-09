@@ -188,7 +188,11 @@ class FicheConsultation(models.Model):
         ('rejete_medecin', 'Rejeté par médecin'),
     ])
     
-    commentaire_medecin = models.TextField(blank=True, null=True)
+    # Recommandations du medecin
+    diagnostic = models.TextField(blank=True, null=True)
+    traitement = models.TextField(blank=True, null=True)
+    examen_complementaire = models.TextField(blank=True, null=True)
+    recommandations = models.TextField(blank=True, null=True)
     medecin_validateur = models.ForeignKey(
         CustomUser, 
         on_delete=models.SET_NULL, 
@@ -199,6 +203,12 @@ class FicheConsultation(models.Model):
     date_validation = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     diagnostic_ia = models.TextField(blank=True, null=True)
+    signature_medecin = models.ImageField(
+        upload_to='signatures/', 
+        blank=True, 
+        null=True, 
+        help_text="Signature du médecin pour valider la consultation"
+    )
     
     def save(self, *args, **kwargs):
         if not self.heure_debut:
@@ -221,10 +231,18 @@ class FicheConsultation(models.Model):
         ordering = ['-date_consultation']
 
 class Conversation(models.Model):
+    nom = models.CharField(max_length=100, blank=True, null=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="conversations")
     fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name="conversations", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def titre(self):
+        if self.nom:
+            return self.nom
+        msg = self.messageia_set.filter(role='user').first()
+        return msg.content[:30] + '...' if msg else 'Conversation'
 
     def __str__(self):
         if self.fiche:

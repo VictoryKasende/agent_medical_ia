@@ -6,7 +6,7 @@ from .models import Conversation, MessageIA, FicheConsultation
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'fiche', 'created_at')
+    list_display = ('id', 'user', 'fiche', 'created_at', 'titre', 'nom')
     list_filter = ('created_at', 'fiche')
     search_fields = ('user__username', 'fiche__numero_dossier')
     date_hierarchy = 'created_at'

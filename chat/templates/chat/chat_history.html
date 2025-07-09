@@ -3,12 +3,11 @@
         <div onclick="loadConversation({{ item.conversation.id }})"
             class="px-2 py-2 rounded-lg hover:bg-gray-100 cursor-pointer flex items-center justify-between"
             data-conversation-id="{{ item.conversation.id }}">
-            <span class="truncate">
-                <i class="fas fa-comment-medical mr-2 text-blue-500"></i>
-                {% with first_message=item.messages.first %}
-                    {{ first_message.content|truncatechars:30 }}
-                {% endwith %}
-            </span>
+            {% with titre=item.conversation.nom|default:item.messages.first.content|truncatechars:30 %}
+                <span class="truncate">
+                    <i class="fas fa-comment-medical mr-2 text-blue-500"></i> {{ titre }}
+                </span>
+            {% endwith %}
             <i class="fa-solid fa-sliders text-gray-400 hover:text-gray-600"
                onclick="event.stopPropagation(); showConversationOptions(event, {{ item.conversation.id }})"></i>
         </div>
