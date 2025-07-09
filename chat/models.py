@@ -223,10 +223,18 @@ class FicheConsultation(models.Model):
         ordering = ['-date_consultation']
 
 class Conversation(models.Model):
+    nom = models.CharField(max_length=100, blank=True, null=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="conversations")
     fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name="conversations", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def titre(self):
+        if self.nom:
+            return self.nom
+        msg = self.messageia_set.filter(role='user').first()
+        return msg.content[:30] + '...' if msg else 'Conversation'
 
     def __str__(self):
         if self.fiche:

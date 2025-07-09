@@ -453,6 +453,16 @@
         Fiche générée le {% now "d/m/Y à H:i" %} - © Système de Gestion Médicale
     </div>
 
+    {% comment %} Place la signature du docteur {% endcomment %}
+    {% if consultation.doctor_signature %}
+    <div class="section no-print">
+        <div class="section-title">Signature du médecin</div>
+        <div class="box">
+            <img src="{{ consultation.doctor_signature.url }}" alt="Signature du médecin" style="max-width: 100%; height: auto;">
+        </div>
+    </div>
+    {% endif %}
+
     <script>
         window.onload = function() {
             window.print();

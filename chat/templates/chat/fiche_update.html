@@ -67,8 +67,26 @@
             </div>
         </div>
     </header>
-
-    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% url 'fiche_consultation_update' fiche.id %}" enctype="multipart/form-data">
+    {% if messages %}
+        {% for message in messages %}
+        <div
+            class="toast px-4 py-3 rounded shadow-lg mb-2 text-sm font-medium transition-opacity duration-500
+            {% if message.tags == 'success' %}
+            bg-green-100 text-green-800 border border-green-300
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+            bg-red-100 text-red-800 border border-red-300
+            {% else %}
+            bg-blue-100 text-blue-800 border border-blue-300
+            {% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    <form class="bg-white shadow-md rounded-b-lg p-6 space-y-8" method="POST" action="{% if form.is_patient_distance %}
+                {% url 'fiche_consultation_update_distant' fiche.id %}
+              {% else %}
+                 {% url 'fiche_consultation_update' fiche.id %}
+              {% endif %}" enctype="multipart/form-data">
         {% csrf_token %}
         
         <!-- Section 1: Informations Patient -->
@@ -642,7 +660,7 @@
                 <!-- Conseils et recommandations -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Conseils et recommandations</label>
-                    <textarea name="recommandations" class="w-full px-3 py-2 border rounded-md">{{ fiche.recommandations }}</textarea>
+                    <textarea name="recommandations" class="w-full px-3 py-2 border rounded-md">{{ fiche.recommandations|default:'' }}</textarea>
                 </div>
                 
                 {% comment %} <!-- Suivi -->
@@ -701,11 +719,17 @@
         
         <div class="mt-6 flex justify-between">
             <div class="space-x-4">
-                <a href="{% url 'consultation_patient_present' %}"
-                       class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
-                    <i class="fas fa-arrow-left mr-2"></i> Retour
-                </a>
-                
+                {% if fiche.is_patient_distance %}
+                    <a href="{% url 'consultation_patient_distant' %}"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% else %}
+                    <a href="{% url 'consultation_patient_present' %}"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-10 rounded-lg shadow-md transition duration-300 text-lg mr-4">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour
+                    </a>
+                {% endif%}
                 <button type="submit" name="save_final" value="true" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300">
                     <i class="fas fa-check-circle mr-2"></i> Finaliser la fiche
                 </button>
