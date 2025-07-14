@@ -1,5 +1,72 @@
+<!-- filepath: c:\Devs\python\agent_medical_ia\chat\templates\chat\fiche_detail.html -->
+<!-- SCRIPT ULTRA-SIMPLE - DÉFINITION IMMÉDIATE -->
+<script>
+// 🚀 DÉFINITION ULTRA-SIMPLE ET IMMÉDIATE
+window.openWhatsAppModal = function() {
+    console.log('🔍 Ouverture modal WhatsApp - Version Simple');
+    const modal = document.getElementById('whatsapp-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        console.log('✅ Modal WhatsApp ouvert avec succès');
+        
+        // Focus sur le textarea
+        setTimeout(() => {
+            const textarea = document.getElementById('whatsapp-message');
+            if (textarea) {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+        }, 100);
+    } else {
+        console.error('❌ Modal WhatsApp non trouvé');
+    }
+};
+
+window.closeWhatsAppModal = function() {
+    console.log('🔍 Fermeture modal WhatsApp');
+    const modal = document.getElementById('whatsapp-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log('✅ Modal WhatsApp fermé');
+    }
+};
+
+window.openStatusModal = function() {
+    console.log('🔍 Ouverture modal statut');
+    const modal = document.getElementById('status-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        console.log('✅ Modal statut ouvert');
+    }
+};
+
+window.closeStatusModal = function() {
+    console.log('🔍 Fermeture modal statut');
+    const modal = document.getElementById('status-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log('✅ Modal statut fermé');
+    }
+};
+
+console.log('✅ Fonctions ultra-simples définies');
+</script>
+
+<!-- TEST DIAGNOSTIQUE SIMPLE -->
+<script>
+console.log('🧪 DÉMARRAGE DU TEST DIAGNOSTIQUE');
+
+// Test 1: Définir une fonction test ultra-simple
+window.testSimple = function() {
+    alert('TEST RÉUSSI ! La fonction marche !');
+    console.log('✅ TEST SIMPLE RÉUSSI');
+};
+
+console.log('✅ Fonction testSimple définie:', typeof window.testSimple);
+</script>
+
 <!-- Détails de la consultation sélectionnée -->
-<div class="container mx-auto " id="fiche-a-imprimer">
+<div class="container mx-auto" id="fiche-a-imprimer">
     <div id="consultation-details" class="bg-white rounded-lg shadow-md p-6">
         <!-- En-tête patient -->
         <div class="border-b border-gray-200 pb-4 mb-4">
@@ -234,24 +301,30 @@
                     </a>
                 {% else %}
                     <a href="{% url 'consultation_print' consultation.id %}" class="px-4 py-2 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition">
-                        <i class="fas fa-edit mr-2"></i> Imprimer
+                        <i class="fas fa-print mr-2"></i> Imprimer
                     </a>
                     <button type="button"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            onclick="openStatusModal()">
+                            onclick="document.getElementById('status-modal').classList.remove('hidden');">
                         <i class="fas fa-edit mr-2"></i> Modifier
                     </button>
                 {% endif %}
             </div>
-            <!-- Groupe droite -->
-            <button id="open-response-modal" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                <i class="fas fa-reply mr-2"></i> Répondre au patient
+            
+            <!-- BOUTON WHATSAPP ULTRA-SIMPLE -->
+            <button type="button" 
+                    onclick="document.getElementById('whatsapp-modal').classList.remove('hidden'); console.log('Modal ouvert via onclick direct');" 
+                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                    style="border: 3px solid #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);">
+                <i class="fab fa-whatsapp mr-2"></i> 🚀 Répondre au patient
             </button>
         </div>
     </div>
 </div>
+
+<!-- Modal Statut -->
 <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+    <div class="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
         <h3 class="text-lg font-semibold mb-4">Modifier le statut de la fiche</h3>
         <form id="status-form" action="{% url 'fiche_consultation_update_status' consultation.id %}" method="post">
             {% csrf_token %}
@@ -261,10 +334,113 @@
                 <option value="analyse_terminee">Analyse terminée</option>
             </select>
             <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeStatusModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Annuler</button>
+                <button type="button" onclick="document.getElementById('status-modal').classList.add('hidden');" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Annuler</button>
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Modal WhatsApp UNIQUE -->
+<div id="whatsapp-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">📱 Envoyer un message WhatsApp</h3>
+            <button type="button" onclick="document.getElementById('whatsapp-modal').classList.add('hidden');" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form action="{% url 'send_whatsapp_message' consultation.id %}" method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">📞 Destinataire</label>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <p class="font-medium">{{ consultation.nom }} {{ consultation.prenom }}</p>
+                    <p class="text-sm text-gray-600">{{ consultation.telephone }}</p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="whatsapp-message" class="block text-sm font-medium text-gray-700 mb-2">💬 Message</label>
+                <textarea name="message" 
+                          id="whatsapp-message" 
+                          rows="8" 
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                          placeholder="Saisissez votre message...">Bonjour {{ consultation.nom }},
+
+Voici le résumé de votre consultation du {{ consultation.date_consultation|date:"d/m/Y" }} :
+
+{% if consultation.diagnostic %}🔍 Diagnostic : {{ consultation.diagnostic }}{% endif %}
+
+{% if consultation.traitement %}💊 Traitement : {{ consultation.traitement }}{% endif %}
+
+{% if consultation.recommandations %}📋 Recommandations : {{ consultation.recommandations }}{% endif %}
+
+Centre Médical - Dr. {{ request.user.username }}</textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" 
+                        onclick="document.getElementById('whatsapp-modal').classList.add('hidden');" 
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                    ❌ Annuler
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                    <i class="fab fa-whatsapp mr-2"></i>📤 Envoyer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SCRIPT ULTRA-MINIMAL -->
+<script>
+console.log('✅ Script ultra-minimal chargé');
+
+// Fermer avec Escape
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.getElementById('whatsapp-modal').classList.add('hidden');
+        document.getElementById('status-modal').classList.add('hidden');
+        console.log('🔍 Modals fermés avec Escape');
+    }
+});
+
+// Fermer en cliquant en dehors
+document.addEventListener('click', function(event) {
+    if (event.target.id === 'whatsapp-modal') {
+        event.target.classList.add('hidden');
+        console.log('🔍 Modal WhatsApp fermé en cliquant dehors');
+    }
+    if (event.target.id === 'status-modal') {
+        event.target.classList.add('hidden');
+        console.log('🔍 Modal statut fermé en cliquant dehors');
+    }
+});
+
+console.log('✅ Événements configurés');
+</script>
+
+<style>
+.hidden {
+    display: none !important;
+}
+
+#whatsapp-modal:not(.hidden),
+#status-modal:not(.hidden) {
+    display: flex !important;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+</style>
 

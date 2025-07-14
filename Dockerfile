@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -7,13 +7,17 @@ ENV PYTHONUNBUFFERED 1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (en une seule fois pour éviter les doublons)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         postgresql-client \
         build-essential \
         libpq-dev \
         netcat-traditional \
+        dnsutils \
+        iputils-ping \
+        curl \
+        wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

@@ -1,6 +1,10 @@
+import os
 import json
 import hashlib
 import base64
+import requests
+import dotenv
+from twilio.rest import Client
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -24,6 +28,8 @@ from .forms import FicheConsultationForm
 from .models import Conversation, MessageIA, FicheConsultation
 from .tasks import analyse_symptomes_task
 
+dotenv.load_dotenv()
+
 PATIENT = 'patient'
 MEDECIN = 'medecin'
 
@@ -34,6 +40,112 @@ def is_patient(user):
 def is_medecin(user):
     """Vérifie si l'utilisateur est un médecin."""
     return user.is_authenticated and user.role == MEDECIN
+
+def send_whatsapp_api(phone_number, message, fiche=None):
+    """
+    Envoie un message WhatsApp via l'API Twilio UNIQUEMENT avec des templates.
+    """
+    TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+    TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+    TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')
+    
+    print(f"🔍 Debug Twilio Config:")
+    print(f"   ACCOUNT_SID: {TWILIO_ACCOUNT_SID[:8]}...{TWILIO_ACCOUNT_SID[-4:] if TWILIO_ACCOUNT_SID else 'None'}")
+    print(f"   AUTH_TOKEN: {'✅ Configuré' if TWILIO_AUTH_TOKEN else '❌ Manquant'}")
+    print(f"   WHATSAPP_NUMBER: {TWILIO_WHATSAPP_NUMBER}")
+    print(f"   PHONE_TO: {phone_number}")
+    
+    # MODE DÉVELOPPEMENT - SIMULATION
+    DEVELOPMENT_MODE = False
+    
+    if DEVELOPMENT_MODE:
+        print('🧪 MODE DÉVELOPPEMENT - Simulation envoi WhatsApp API')
+        print(f'📱 Destinataire: {phone_number}')
+        print(f'💬 Type: {"Template" if fiche else "Hello World"}')
+        return True, "Message simulé envoyé avec succès"
+    
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
+        return False, "Configuration Twilio manquante"
+
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        
+        # Format correct pour WhatsApp
+        to_number = f'whatsapp:{phone_number}' if not phone_number.startswith('whatsapp:') else phone_number
+        
+        # ✅ NOUVEAU : FORCER TEMPLATES TOUJOURS
+        if fiche:
+            print(f"📤 ENVOI TEMPLATE PERSONNALISÉ:")
+            print(f"   From: {TWILIO_WHATSAPP_NUMBER}")
+            print(f"   To: {to_number}")
+            print(f"   Template: agent_medi_ai")
+            print(f"   Content SID: HX06c3193b55d1c2adb84a86274462cd69")
+            
+            try:
+                # ✅ TEMPLATE PERSONNALISÉ AVEC VARIABLES
+                message_instance = client.messages.create(
+                    from_=TWILIO_WHATSAPP_NUMBER,
+                    to=to_number,
+                    content_sid="HX06c3193b55d1c2adb84a86274462cd69",
+                    content_variables=json.dumps({
+                        "1": f"{fiche.nom} {fiche.prenom}",
+                        "2": fiche.date_consultation.strftime('%d/%m/%Y'),
+                        "3": fiche.diagnostic or 'À définir',
+                        "4": fiche.traitement or 'À définir',
+                        "5": fiche.recommandations or 'Suivre les conseils du médecin',
+                        "6": fiche.medecin_validateur.username if fiche.medecin_validateur else 'Équipe médicale'
+                    })
+                )
+                
+                print(f"📨 Template personnalisé envoyé:")
+                print(f"   Message SID: {message_instance.sid}")
+                print(f"   Status: {message_instance.status}")
+                
+                return True, f"Template consultation envoyé (SID: {message_instance.sid})"
+                
+            except Exception as template_error:
+                print(f"⚠️  Erreur template personnalisé: {template_error}")
+                
+                # Fallback vers template hello_world
+                try:
+                    print(f"🔄 Fallback vers hello_world...")
+                    message_instance = client.messages.create(
+                        from_=TWILIO_WHATSAPP_NUMBER,
+                        to=to_number,
+                        content_sid="HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8"
+                    )
+                    
+                    return True, f"Template hello_world envoyé (SID: {message_instance.sid})"
+                except Exception as hello_error:
+                    print(f"❌ Erreur hello_world: {hello_error}")
+                    return False, f"Erreur templates: {hello_error}"
+        else:
+            # ✅ TEMPLATE HELLO_WORLD PAR DÉFAUT (JAMAIS DE MESSAGE LIBRE)
+            print(f"📤 ENVOI TEMPLATE HELLO_WORLD:")
+            print(f"   From: {TWILIO_WHATSAPP_NUMBER}")
+            print(f"   To: {to_number}")
+            print(f"   Content SID: HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8")
+            
+            try:
+                message_instance = client.messages.create(
+                    from_=TWILIO_WHATSAPP_NUMBER,
+                    to=to_number,
+                    content_sid="HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8"
+                )
+                
+                print(f"📨 Template hello_world envoyé:")
+                print(f"   Message SID: {message_instance.sid}")
+                print(f"   Status: {message_instance.status}")
+                
+                return True, f"Template hello_world envoyé (SID: {message_instance.sid})"
+                
+            except Exception as hello_error:
+                print(f"❌ Erreur hello_world: {hello_error}")
+                return False, f"Erreur hello_world: {hello_error}"
+        
+    except Exception as e:
+        print(f"❌ Erreur Twilio SDK: {e}")
+        return False, f"Erreur Twilio: {str(e)}"
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
@@ -274,7 +386,7 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
         texte += f"- Divorce : {'Oui' if fiche.trauma_divorce else 'Non'}\n"
         texte += f"- Perte de parent : {'Oui' if fiche.trauma_perte_parent else 'Non'}\n"
         texte += f"- Décès d'époux(se) : {'Oui' if fiche.trauma_deces_epoux else 'Non'}\n"
-        texte += f"- Décès d’enfant : {'Oui' if fiche.trauma_deces_enfant else 'Non'}\n"
+        texte += f"- Décès d'enfant : {'Oui' if fiche.trauma_deces_enfant else 'Non'}\n"
         texte += f"- État général : {fiche.etat_general or 'Non renseigné'}\n"
 
         texte += "\nCapacités :\n"
@@ -359,7 +471,7 @@ class ConsultationsDistanceView(LoginRequiredMixin, TemplateView):
                 "pouls": f.pouls,
                 "spo2": f.spo2,
                 "histoire_maladie": f.histoire_maladie,
-                "diagnostic_ia": f.diagnostic_ia,  # <-- pour affichage IA
+                "diagnostic_ia": f.diagnostic_ia,
             }
             for f in fiches
         ])
@@ -370,7 +482,7 @@ def check_task_status(request, task_id):
     Vue simple pour vérifier le statut d'une tâche Celery.
     """
     from celery.result import AsyncResult
-    from agent_medical_ia.celery import app  # adapte ce chemin si besoin
+    from agent_medical_ia.celery import app
 
     result = AsyncResult(task_id, app=app)
     response = {
@@ -397,11 +509,8 @@ def valider_diagnostic_medecin(request, fiche_id):
     Tu peux adapter la logique selon ton besoin.
     """
     fiche = get_object_or_404(FicheConsultation, id=fiche_id)
-    # Ici, tu peux ajouter la logique de validation (ex : fiche.validated = True)
-    # fiche.validated = True
-    # fiche.save()
     messages.success(request, "Diagnostic validé pour ce dossier.")
-    return redirect('consultation')  # adapte la redirection selon ton projet
+    return redirect('consultation')
 
 @login_required
 def redirection_dashboard(request):
@@ -474,7 +583,6 @@ class FicheConsultationUpdateView(LoginRequiredMixin, View):
     def get(self, request, fiche_id):
         fiche = get_object_or_404(FicheConsultation, id=fiche_id)
         form = FicheConsultationForm(instance=fiche)
-
         return render(request, 'chat/fiche_update.html', {'form': form, 'fiche': fiche})
     
     def post(self, request, fiche_id):
@@ -490,7 +598,7 @@ class FicheConsultationUpdateView(LoginRequiredMixin, View):
             fiche.medecin_validateur = request.user 
             fiche.status = 'analyse_terminee'
             signature_data = request.POST.get('signature_data')
-            print(f"Signature data reçue : {signature_data}")
+            
             if signature_data:
                 format, imgstr = signature_data.split(';base64,')
                 ext = format.split('/')[-1]
@@ -500,8 +608,14 @@ class FicheConsultationUpdateView(LoginRequiredMixin, View):
                     save=False
                 )
             fiche.save()
-            messages.success(request, "Fiche de consultation mise à jour avec succès.")
-            
+
+            # --- ENVOI WHATSAPP AUTOMATIQUE AVEC TEMPLATE ---
+            success, result = send_whatsapp_api(fiche.telephone, None, fiche=fiche)
+            if success:
+                messages.success(request, f"Fiche mise à jour et message WhatsApp envoyé à {fiche.nom}")
+            else:
+                messages.warning(request, f"Fiche mise à jour mais erreur WhatsApp : {result}")
+
             if fiche.is_patient_distance:
                 return redirect('consultation_patient_distant')
             return redirect('consultation_patient_present')
@@ -568,5 +682,50 @@ class ConsultationPatientDistantView(LoginRequiredMixin, TemplateView):
         context['consultations_en_attente_count'] = consultations_en_analyse.count()
         context['consultations_terminees_count'] = consultations_terminees.count()
         return context
-    
+
+class SendWhatsAppMessageView(LoginRequiredMixin, View):
+    """
+    Vue pour envoyer un message WhatsApp au patient - TEMPLATES UNIQUEMENT.
+    """
+    def post(self, request, fiche_id):
+        fiche = get_object_or_404(FicheConsultation, id=fiche_id)
         
+        print(f"🎯 SendWhatsAppMessageView pour {fiche.nom}")
+        print(f"   Status: {fiche.status}")
+        print(f"   → TEMPLATE OBLIGATOIRE")
+        
+        # ✅ TOUJOURS UTILISER TEMPLATE
+        success, result = send_whatsapp_api(fiche.telephone, None, fiche=fiche)
+        
+        if success:
+            messages.success(request, f"Template WhatsApp envoyé avec succès à {fiche.nom}")
+        else:
+            messages.error(request, f"Erreur lors de l'envoi : {result}")
+        
+        return redirect('fiche_consultation_detail', fiche_id=fiche.id)
+
+def send_whatsapp_message_view(request, consultation_id):
+    if request.method == 'POST':
+        try:
+            consultation = get_object_or_404(FicheConsultation, id=consultation_id)
+            
+            print(f"🔍 send_whatsapp_message_view pour {consultation.nom}")
+            print(f"   Status: {consultation.status}")
+            print(f"   → TEMPLATE OBLIGATOIRE")
+            
+            # ✅ TOUJOURS TEMPLATE
+            success, result = send_whatsapp_api(consultation.telephone, None, fiche=consultation)
+            
+            if success:
+                messages.success(request, f'✅ Template WhatsApp envoyé à {consultation.nom}')
+            else:
+                messages.error(request, f'❌ Erreur: {result}')
+                
+            return redirect('fiche_consultation_detail', fiche_id=consultation_id)
+            
+        except Exception as e:
+            print(f'❌ Erreur: {str(e)}')
+            messages.error(request, f'Erreur: {str(e)}')
+            return redirect('fiche_consultation_detail', fiche_id=consultation_id)
+    
+    return redirect('fiche_consultation_detail', fiche_id=consultation_id)
