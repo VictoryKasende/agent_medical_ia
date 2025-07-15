@@ -147,51 +147,53 @@
                             <label class="block text-gray-700 font-medium mb-2">Nom d'utilisateur <span class="text-red-500">*</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-at"></i>
-                                <input type="text" id="username" name="username" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Choisissez un nom d'utilisateur" required>
+                                <input type="text" id="username" name="username" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: Julie" required>
                             </div>
+                            <p class="text-xs text-gray-500 mt-1">Utilisez des lettres, chiffres et tirets bas uniquement</p>
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Prénom <span class="text-red-500">*</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-user"></i>
-                                <input type="text" id="first-name" name="first_name" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre prénom" required>
+                                <input type="text" id="first-name" name="first_name" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: Marie" required>
                             </div>
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Nom <span class="text-red-500">*</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-user"></i>
-                                <input type="text" id="last-name" name="last_name" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre nom" required>
+                                <input type="text" id="last-name" name="last_name" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: Mujinga" required>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Email <span class="text-red-500">*</span></label>
+                            <label class="block text-gray-700 font-medium mb-2">Email <span class="text-gray-500">(optionnel)</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-envelope"></i>
-                                <input type="email" id="email" name="email" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre email" required>
+                                <input type="email" id="email" name="email" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="tegra@gmail.com">
                             </div>
+                            <p class="text-xs text-blue-600 mt-1">Vous pouvez passer cette étape si vous n'avez pas d'email</p>
                         </div>
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Téléphone</label>
+                            <label class="block text-gray-700 font-medium mb-2">Téléphone <span class="text-gray-500">(optionnel)</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-phone"></i>
-                                <input type="tel" id="phone" name="phone" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Votre numéro">
+                                <input type="tel" id="phone" name="phone" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: 0998447723">
                             </div>
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Mot de passe <span class="text-red-500">*</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-lock"></i>
-                                <input type="password" id="password" name="password1" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Créez un mot de passe" required>
+                                <input type="password" id="password" name="password1" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: 1234" required>
                                 <i class="fas fa-eye password-toggle" onclick="togglePassword('password')"></i>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">8 caractères minimum, avec majuscule et chiffre (conseillé)</p>
+                            <p class="text-xs text-gray-500 mt-1">Au moins 4 caractères</p>
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Confirmation du mot de passe <span class="text-red-500">*</span></label>
                             <div class="input-with-icon">
                                 <i class="fas fa-lock"></i>
-                                <input type="password" id="confirm-password" name="password2" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Confirmez le mot de passe" required>
+                                <input type="password" id="confirm-password" name="password2" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Saisissez le même mot de passe" required>
                                 <i class="fas fa-eye password-toggle" onclick="togglePassword('confirm-password')"></i>
                             </div>
                         </div>
@@ -278,21 +280,34 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Date de naissance <span class="text-red-500">*</span></label>
-                            <div class="input-with-icon"><i class="fas fa-calendar"></i><input type="date" id="birth-date" name="birth_date" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required></div>
+                            <div class="input-with-icon">
+                                <i class="fas fa-calendar"></i>
+                                <input type="date" id="birth-date" name="birth_date" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Sexe <span class="text-red-500">*</span></label>
                             <select id="gender" name="gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                                <option value="">Sélectionner</option><option value="M">Masculin</option><option value="F">Féminin</option><option value="O">Autre</option>
+                                <option value="">Sélectionner</option>
+                                <option value="M">Masculin</option>
+                                <option value="F">Féminin</option>
+                                <option value="O">Autre</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Numéro de sécurité sociale</label>
-                            <input type="text" id="social-security" name="social_security" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: 1 85 08 75 123 456 78">
+                            <label class="block text-gray-700 font-medium mb-2">Code postal <span class="text-gray-500">(optionnel)</span></label>
+                            <input type="text" id="postal-code" name="postal_code" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: 75001">
+                            <p class="text-xs text-blue-600 mt-1">Vous pouvez passer cette étape si vous ne connaissez pas votre code postal</p>
                         </div>
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Médecin traitant</label>
-                            <input type="text" id="main-doctor" name="main_doctor" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Nom de votre médecin">
+                            <label class="block text-gray-700 font-medium mb-2">Numéro de sécurité sociale <span class="text-gray-500">(optionnel)</span></label>
+                            <input type="text" id="social-security" name="social_security" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: 1 85 08 75 123 456 78">
+                            <p class="text-xs text-blue-600 mt-1">Vous pouvez passer cette étape si vous n'avez pas ce numéro</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 font-medium mb-2">Médecin traitant <span class="text-gray-500">(optionnel)</span></label>
+                            <input type="text" id="main-doctor" name="main_doctor" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="ex: Dr. Martin Durand - Cabinet médical du centre">
+                            <p class="text-xs text-blue-600 mt-1">Vous pouvez passer cette étape si vous n'avez pas de médecin traitant ou ne vous en souvenez pas</p>
                         </div>
                     </div>
                 </div>`
@@ -307,6 +322,10 @@
                 <div>
                     <p class="text-sm text-gray-500">Sexe</p>
                     <p id="summary-gender" class="font-medium">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Code postal</p>
+                    <p id="summary-postal-code" class="font-medium">-</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">N° sécurité sociale</p>
@@ -371,7 +390,7 @@
             document.getElementById('summary-role').textContent = "Patient";
             document.getElementById('summary-username').textContent = document.getElementById('username').value || '-';
             document.getElementById('summary-name').textContent = `${document.getElementById('first-name').value} ${document.getElementById('last-name').value}`;
-            document.getElementById('summary-email').textContent = document.getElementById('email').value;
+            document.getElementById('summary-email').textContent = document.getElementById('email').value || 'Non renseigné';
             document.getElementById('summary-phone').textContent = document.getElementById('phone').value || '-';
             
             const summarySpecificContainer = document.getElementById('summary-specific-fields');
@@ -383,8 +402,9 @@
             if(document.getElementById('summary-gender') && genderEl) {
                  document.getElementById('summary-gender').textContent = genderEl.options[genderEl.selectedIndex]?.text || '-';
             }
-            if(document.getElementById('summary-social-security')) document.getElementById('summary-social-security').textContent = document.getElementById('social-security')?.value || '-';
-            if(document.getElementById('summary-main-doctor')) document.getElementById('summary-main-doctor').textContent = document.getElementById('main-doctor')?.value || '-';
+            if(document.getElementById('summary-postal-code')) document.getElementById('summary-postal-code').textContent = document.getElementById('postal-code')?.value || 'Non renseigné';
+            if(document.getElementById('summary-social-security')) document.getElementById('summary-social-security').textContent = document.getElementById('social-security')?.value || 'Non renseigné';
+            if(document.getElementById('summary-main-doctor')) document.getElementById('summary-main-doctor').textContent = document.getElementById('main-doctor')?.value || 'Non renseigné';
         }
 
         function togglePassword(fieldId) {
@@ -406,7 +426,7 @@
         }
 
         function validateStep2() {
-            const requiredCommonFields = ['username', 'first-name', 'last-name', 'email', 'password', 'confirm-password'];
+            const requiredCommonFields = ['username', 'first-name', 'last-name', 'password', 'confirm-password'];
             for (const fieldId of requiredCommonFields) {
                 const field = document.getElementById(fieldId);
                 if (!field.value) {
@@ -418,8 +438,18 @@
                 field.classList.remove('border-red-500');
             }
 
+            // Validation simple du mot de passe
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
+            
+            // Vérifier seulement la longueur minimale
+            if (password.length < 4) {
+                alert('Le mot de passe doit contenir au moins 4 caractères.');
+                document.getElementById('password').classList.add('border-red-500');
+                document.getElementById('password').focus();
+                return false;
+            }
+            
             if (password !== confirmPassword) {
                 alert('Les mots de passe ne correspondent pas.');
                 document.getElementById('password').classList.add('border-red-500');
@@ -466,45 +496,6 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             goToStep(1);
-        });
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    // Vérifie si ce cookie commence par le nom recherché
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        // Exemple de données à envoyer
-        const data = {
-            username: 'exemple',
-            email: 'exemple@domain.com'
-            // Ajoutez d'autres champs si nécessaire
-        };
-
-        // Envoi des données au serveur
-        fetch("{% url 'register' %}", {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Succès:', data);
-        })
-        .catch((error) => {
-            console.error('Erreur:', error);
         });
     </script>
 </body>

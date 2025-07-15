@@ -25,6 +25,14 @@ class RegisterView(FormView):
         return redirect('patient_dashboard' if user.role == CustomUser.PATIENT_ROLE else 'analyse')
 
     def form_invalid(self, form):
+        print(form.errors)
+        if form.errors:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    print(f"Error in {field}: {error}")
+                    messages.error(self.request, f"Erreur dans le champ {field}: {error}")
+        else:
+            print("Form is invalid but no specific errors found.")
         messages.error(self.request, "Une erreur est survenue lors de l'inscription. Veuillez vérifier vos informations.")
         return super().form_invalid(form)
 

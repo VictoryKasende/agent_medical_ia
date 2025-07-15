@@ -24,12 +24,13 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
         message = HumanMessage(content=f"""
             Symptômes du patient : {symptomes}
             Veuillez préciser :
-            1. Analyses nécessaires
-            2. Diagnostic(s)
-            3. Traitement(s) avec posologie
-            4. Éducation thérapeutique
-            5. Références scientifiques fiables
-            6. Répondre ensuite comme assistant médical rigoureux et bienveillant.
+            1. Decryptage du dossier médical et conduite a tenir
+            2. Analyses nécessaires
+            3. Diagnostic(s) et argumentation et justification des avis avec référence
+            4. Traitement(s) avec posologie
+            5. Éducation thérapeutique
+            6. Références scientifiques fiables en style APA
+            7. Répondre ensuite comme assistant médical rigoureux et bienveillant.
         """)
 
         def gpt4_call():

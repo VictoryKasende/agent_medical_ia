@@ -172,7 +172,7 @@
             <div class="patient-name">{{ consultation.nom }} {{ consultation.postnom }} {{ consultation.prenom }}</div>
             <div class="patient-meta">
                 <span>{{ consultation.age }} ans</span>
-                <span>{{ consultation.get_gender_display }}</span>
+                <span>{{ consultation.sexe }}</span>
                 <span>{{ consultation.get_etat_civil_display }}</span>
                 <span class="badge">
                     {% if consultation.is_patient_distance %}Téléconsultation{% else %}Présentiel{% endif %}
@@ -439,7 +439,13 @@
         <div class="section">
             <div class="section-title">Personne présente</div>
             <div class="box">
-                <p><span style="font-weight: 500;">Type:</span> {{ consultation.get_present_display }}</p>
+                <p><span style="font-weight: 500;">Type:</span> 
+                    {% if consultation.patient %}Patient{% endif %}
+                    {% if consultation.proche %}Proche aidant{% endif %}
+                    {% if consultation.soignant %}Soignant{% endif %}
+                    {% if consultation.medecin %}Médecin{% endif %}
+                    {% if consultation.autre %}Autre{% endif %}
+                </p>
                 {% if consultation.proche_lien %}<p><span style="font-weight: 500;">Lien:</span> {{ consultation.proche_lien }}</p>{% endif %}
                 {% if consultation.soignant_role %}<p><span style="font-weight: 500;">Rôle:</span> {{ consultation.soignant_role }}</p>{% endif %}
                 {% if consultation.autre_precisions %}<p><span style="font-weight: 500;">Précisions:</span> {{ consultation.autre_precisions }}</p>{% endif %}

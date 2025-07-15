@@ -8,7 +8,7 @@
                     <h2 class="text-xl font-bold text-gray-800">{{ consultation.nom }} {{ consultation.postnom }} {{ consultation.prenom }}</h2>
                     <div class="flex items-center mt-1 space-x-4">
                         <span class="text-gray-600">{{ consultation.age }} ans</span>
-                        <span class="text-gray-600">{{ consultation.get_gender_display }}</span>
+                        <span class="text-gray-600">{{ consultation.sexe }}</span>
                         <span class="text-gray-600">{{ consultation.get_etat_civil_display }}</span>
                         <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
                             {% if consultation.is_patient_distance %}Téléconsultation{% else %}Présentiel{% endif %}
@@ -216,7 +216,13 @@
             <div>
                 <h3 class="font-semibold text-gray-800 mb-2">Personne présente</h3>
                 <div class="bg-gray-50 p-4 rounded-lg">
-                    <p><span class="font-medium">Type:</span> {{ consultation.get_present_display }}</p>
+                    <p><span class="font-medium">Type:</span> 
+                        {% if consultation.patient %}Patient{% endif %}
+                        {% if consultation.proche %}Proche aidant{% endif %}
+                        {% if consultation.soignant %}Soignant{% endif %}
+                        {% if consultation.medecin %}Médecin{% endif %}
+                        {% if consultation.autre %}Autre{% endif %}
+                    </p>
                     {% if consultation.proche_lien %}<p><span class="font-medium">Lien:</span> {{ consultation.proche_lien }}</p>{% endif %}
                     {% if consultation.soignant_role %}<p><span class="font-medium">Rôle:</span> {{ consultation.soignant_role }}</p>{% endif %}
                     {% if consultation.autre_precisions %}<p><span class="font-medium">Précisions:</span> {{ consultation.autre_precisions }}</p>{% endif %}

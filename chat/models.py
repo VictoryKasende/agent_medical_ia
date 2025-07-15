@@ -22,6 +22,7 @@ class FicheConsultation(models.Model):
     prenom = models.CharField(max_length=100)
     date_naissance = models.DateField()
     age = models.IntegerField()
+    sexe = models.CharField(max_length=10, choices=[('M', 'Masculin'), ('F', 'Féminin')], null=True)
     telephone = models.CharField(max_length=30)
 
     etat_civil = models.CharField(
@@ -54,15 +55,12 @@ class FicheConsultation(models.Model):
     pouls = models.IntegerField(help_text="Pouls (battements/minute)", null=True, blank=True)
     frequence_respiratoire = models.IntegerField(help_text="FR (mouvements/minute)", null=True, blank=True)
 
-    # Présence
-    PRESENT_CHOICES = [
-        ('patient', 'Patient'),
-        ('proche', 'Proche aidant'),
-        ('soignant', 'Soignant'),
-        ('medecin', 'Médecin'),
-        ('autre', 'Autre'),
-    ]
-    present = models.CharField(max_length=20, choices=PRESENT_CHOICES, default='patient')
+    patient = models.BooleanField(default=True, help_text="Le patient est-il présent ?")
+    proche = models.BooleanField(default=False, help_text="Un proche est-il présent ?")
+    soignant = models.BooleanField(default=False, help_text="Un soignant est-il présent ?")
+    medecin = models.BooleanField(default=False, help_text="Un médecin est-il présent ?")
+    autre = models.BooleanField(default=False, help_text="Un autre intervenant est-il présent ?")
+
     proche_lien = models.CharField(max_length=100, blank=True, null=True)
     soignant_role = models.CharField(max_length=100, blank=True, null=True)
     autre_precisions = models.CharField(max_length=100, blank=True, null=True)
@@ -70,26 +68,19 @@ class FicheConsultation(models.Model):
     # Anamnèse
     motif_consultation = models.TextField(blank=True, null=True)
     histoire_maladie = models.TextField(blank=True, null=True)
-    lieu_medicaments = models.CharField(
-        max_length=20,
-        choices=[
-            ('maison', 'À la maison'),
-            ('pharmacie', 'Pharmacie'),
-            ('centre', 'Centre de santé'),
-            ('hopital', 'Hôpital'),
-            ('ici', 'Ici'),
-            ('rien', 'Rien pris'),
-        ],
-        blank=True,
-        null=True,
-        default='maison'
-    )
+    
+    maison_medicaments = models.BooleanField(default=False, help_text="Des médicaments sont-ils pris à la maison ?")
+    pharmacie_medicaments = models.BooleanField(default=False, help_text="Des médicaments sont-ils pris à la pharmacie ?")
+    centre_sante_medicaments = models.BooleanField(default=False, help_text="Des médicaments sont-ils pris au centre de santé ?")
+    hopital_medicaments = models.BooleanField(default=False, help_text="Des médicaments sont-ils pris à l'hôpital ?")
+    medicaments_non_pris = models.BooleanField(default=False, help_text="Des médicaments n'ont-ils pas été pris ?")
     details_medicaments = models.TextField(blank=True, null=True)
-    cephalees = models.TextField(blank=True, null=True)
-    vertiges = models.TextField(blank=True, null=True)
-    palpitations = models.TextField(blank=True, null=True)
-    troubles_visuels = models.TextField(blank=True, null=True)
-    nycturie = models.TextField(blank=True, null=True)
+
+    cephalees = models.BooleanField(default=False, blank=True, null=True, help_text="Le patient a-t-il des céphalées ?")
+    vertiges = models.BooleanField(default=False, blank=True, null=True, help_text="Le patient a-t-il des vertiges ?")
+    palpitations = models.BooleanField(default=False, blank=True, null=True, help_text="Le patient a-t-il des palpitations ?")
+    troubles_visuels = models.BooleanField(default=False, blank=True, null=True, help_text="Le patient a-t-il des troubles visuels ?")
+    nycturie = models.BooleanField(default=False, blank=True, null=True, help_text="Le patient a-t-il des nycturies ?")
 
     # Antécédents
     hypertendu = models.BooleanField(default=False)

@@ -16,16 +16,16 @@ class FicheConsultationForm(forms.ModelForm):
         fields = [
             # Patient
             "nom", "postnom", "prenom", "date_naissance", "age", "telephone", "etat_civil",
-            "occupation", "avenue", "quartier", "commune",
+            "occupation", "sexe", "avenue", "quartier", "commune",
             "contact_nom", "contact_telephone", "contact_adresse",
 
             # Signes Vitaux
             "temperature", "spo2", "poids", "tension_arterielle", "pouls", "frequence_respiratoire",
-            "present", "proche_lien", "soignant_role", "autre_precisions",
+            "patient", "proche", "soignant", "medecin", "autre", "proche_lien", "soignant_role", "autre_precisions",
 
             # Anamnèse
             'motif_consultation', 'histoire_maladie',
-            'lieu_medicaments',
+            "maison_medicaments", "pharmacie_medicaments", "centre_sante_medicaments", "hopital_medicaments", "medicaments_non_pris",
             'details_medicaments', 'cephalees', 'vertiges', 'palpitations', 'troubles_visuels', 'nycturie',
 
             # Antécédents médicaux
@@ -70,6 +70,9 @@ class FicheConsultationForm(forms.ModelForm):
                 attrs={"class": "w-full px-4 py-2 border rounded-lg bg-gray-50", "id": "etat-civil"}),
             "occupation": forms.TextInput(
                 attrs={"class": "w-full px-4 py-2 border rounded-lg bg-gray-50", "id": "occupation"}),
+            "sexe": forms.Select(
+                choices=[('M', 'Masculin'), ('F', 'Féminin')],
+                attrs={"class": "w-full px-4 py-2 border rounded-lg bg-gray-50", "id": "sexe"}),
             "avenue": forms.TextInput(
                 attrs={"class": "px-4 py-2 border rounded-lg bg-gray-50", "placeholder": "Avenue", "id": "avenue"}),
             "quartier": forms.TextInput(
@@ -130,7 +133,19 @@ class FicheConsultationForm(forms.ModelForm):
             ),
 
             # Présence à la consultation
-            "present": forms.RadioSelect(
+            "patient": forms.CheckboxInput(
+                attrs={"class": "h-5 w-5 text-blue-600"}
+            ),
+            "proche": forms.CheckboxInput(
+                attrs={"class": "h-5 w-5 text-blue-600"}
+            ),
+            "soignant": forms.CheckboxInput(
+                attrs={"class": "h-5 w-5 text-blue-600"}
+            ),
+            "medecin": forms.CheckboxInput(
+                attrs={"class": "h-5 w-5 text-blue-600"}
+            ),
+            "autre": forms.CheckboxInput(
                 attrs={"class": "h-5 w-5 text-blue-600"}
             ),
             "proche_lien": forms.TextInput(
@@ -161,27 +176,39 @@ class FicheConsultationForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50',
                 'rows': 5
             }),
-            'lieu_medicaments': forms.RadioSelect(
-                attrs={"class": "h-5 w-5 text-blue-600"}
-            ),
+            "maison_medicaments": forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
+            }),
+            "pharmacie_medicaments": forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
+            }),
+            "centre_sante_medicaments": forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
+            }),
+            "hopital_medicaments": forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
+            }),
+            "medicaments_non_pris": forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
+            }),
             'details_medicaments': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50',
                 'rows': 2
             }),
-            'cephalees': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50'
+            'cephalees': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
             }),
-            'vertiges': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50'
+            'vertiges': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
             }),
-            'palpitations': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50'
+            'palpitations': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
             }),
-            'troubles_visuels': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50'
+            'troubles_visuels': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
             }),
-            'nycturie': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-2 border rounded-lg bg-gray-50'
+            'nycturie': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-blue-600'
             }),
 
             # Antécédents médicaux

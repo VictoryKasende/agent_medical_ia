@@ -90,7 +90,9 @@
                 <div>
                     {{ form.occupation.label_tag }} {{ form.occupation }}
                 </div>
-
+                <div>
+                    {{ form.sexe.label_tag }} {{ form.sexe }}
+                </div>
                 <div class="md:col-span-3">
                     <label class="block text-gray-700 font-medium mb-2">Adresse</label>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -155,13 +157,27 @@
             <div class="mt-6">
                 <label class="block text-gray-700 font-medium mb-2">Présent à la consultation</label>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="present-options">
-                    {% for radio in form.present %}
-                        <label class="inline-flex items-center">
-                            {{ radio.tag }}
-                            <span class="ml-2">{{ radio.choice_label }}</span>
-                        </label>
-                    {% endfor %}
-
+                    <!-- Checkbox pour chaque option -->
+                    <label class="inline-flex items-center">
+                        {{ form.patient }}
+                        <span class="ml-2">Patient</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.proche }}
+                        <span class="ml-2">Proche</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.soignant }}
+                        <span class="ml-2">Soignant</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.medecin }}
+                        <span class="ml-2">Médecin</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.autre }}
+                        <span class="ml-2">Autre</span>
+                    </label>
                     <!-- Champs cachés au départ -->
                     <label class="inline-flex items-center hidden" id="champ-proche">
                         {{ form.proche_lien }}
@@ -206,11 +222,27 @@
             <div class="mt-4">
                 <label class="block text-gray-700 font-medium mb-2">Médicaments pris avant consultation</label>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" id="present-options">
-                    {% for radio in form.lieu_medicaments %}
-                        <label class=" inline-flex items-center">
-                            {{ radio.tag }} <span class="inline-flex items-center ml-3">{{ radio.choice_label }}</span>
-                        </label>
-                    {% endfor %}
+                    <!-- Checkbox pour chaque option -->
+                    <label class="inline-flex items-center">
+                        {{ form.maison_medicaments }}
+                        <span class="ml-2">Maison</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.pharmacie_medicaments }}
+                        <span class="ml-2">Pharmacie</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.centre_sante_medicaments }}
+                        <span class="ml-2">Centre de santé</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.hopital_medicaments }}
+                        <span class="ml-2">Hôpital</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        {{ form.medicaments_non_pris }}
+                        <span class="ml-2">Non pris</span>
+                    </label>
                 </div>
 
                 <div class="mt-2">
@@ -222,27 +254,28 @@
             <!-- Plaintes principales -->
             <div class="mt-4">
                 <label class="block text-gray-700 font-medium mb-2">Description des plaintes principales</label>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-gray-600">Céphalées</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- Checkbox pour chaque plainte -->
+                    <label class="inline-flex items-center">
                         {{ form.cephalees }}
-                    </div>
-                    <div>
-                        <label class="block text-gray-600">Vertiges</label>
+                        <span class="ml-2">Céphalées</span>
+                    </label>
+                    <label class="inline-flex items-center">
                         {{ form.vertiges }}
-                    </div>
-                    <div>
-                        <label class="block text-gray-600">Palpitations</label>
+                        <span class="ml-2">Vertiges</span>
+                    </label>
+                    <label class="inline-flex items-center">
                         {{ form.palpitations }}
-                    </div>
-                    <div>
-                        <label class="block text-gray-600">Troubles visuels</label>
+                        <span class="ml-2">Palpitations</span>
+                    </label>
+                    <label class="inline-flex items-center">
                         {{ form.troubles_visuels }}
-                    </div>
-                    <div>
-                        <label class="block text-gray-600">Nycturie</label>
+                        <span class="ml-2">Troubles visuels</span>
+                    </label>
+                    <label class="inline-flex items-center">
                         {{ form.nycturie }}
-                    </div>
+                        <span class="ml-2">Nycturie</span>
+                    </label>
                 </div>
             </div>
         </div>
