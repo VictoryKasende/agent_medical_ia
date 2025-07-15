@@ -18,7 +18,12 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
     phone = models.CharField(max_length=20, blank=True, null=True)
 
-    # Corrige les conflits de noms
+    email = models.EmailField(blank=True, null=True)
+
+    REQUIRED_FIELDS = ['role']
+
+
+    """  # Corrige les conflits de noms
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -34,7 +39,7 @@ class CustomUser(AbstractUser):
         help_text='Specific permissions for this user.',
         related_name='customuser_set',  # Change le nom
         related_query_name='customuser',
-    )
+    ) """
 
     def __str__(self):
         return self.username
