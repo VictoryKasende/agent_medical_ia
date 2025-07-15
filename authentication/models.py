@@ -16,9 +16,25 @@ class CustomUser(AbstractUser):
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
-    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
 
-    REQUIRED_FIELDS = ['role']
+    # Corrige les conflits de noms
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='groups',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        related_name='customuser_set',  # Change le nom
+        related_query_name='customuser',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='user permissions',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        related_name='customuser_set',  # Change le nom
+        related_query_name='customuser',
+    )
 
     def __str__(self):
         return self.username
@@ -27,15 +43,15 @@ class CustomUser(AbstractUser):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         """
-        Override save method to ensure the user is always in the 'patients' group.
+        Override save method to ensure the user is always in the correct group.
         """
         if self.role == self.PATIENT_ROLE:
             patients_group, created = Group.objects.get_or_create(name='patients')
             self.groups.add(patients_group)
-        elif self.role == self.MEDECIN_ROLE:   
+        elif self.role == self.MEDECIN_ROLE:
             medecins_group, created = Group.objects.get_or_create(name='medecins')
             self.groups.add(medecins_group)
-        
+
 
 class UserProfilePatient(models.Model):
     """
@@ -48,7 +64,7 @@ class UserProfilePatient(models.Model):
 
     def __str__(self):
         return f"Profile of {self.user.username}"
-    
+
 class UserProfileMedecin(models.Model):
     """
     Profile model for doctors, linked to CustomUser.
@@ -78,9 +94,9 @@ def delete_user_profile(sender, instance, **kwargs):
     """
     Delete the user profile when a CustomUser is deleted.
     """
-    if instance.role == CustomUser.PATIENT_ROLE:
+    if instance.role == CustomUser.PATIENT_ROLE and hasattr(instance, 'patient_profile'):
         instance.patient_profile.delete()
-    elif instance.role == CustomUser.MEDECIN_ROLE:
+    elif instance.role == CustomUser.MEDECIN_ROLE and hasattr(instance, 'medecin_profile'):
         instance.medecin_profile.delete()
 
 pre_delete.connect(delete_user_profile, sender=CustomUser)

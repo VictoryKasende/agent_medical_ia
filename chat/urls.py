@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import SendWhatsAppMessageView
 
 urlpatterns = [
     path('', views.AnalyseSymptomesView.as_view(), name='analyse'),
@@ -32,4 +33,8 @@ urlpatterns = [
     # Consultation du patient distant
     path('consultation/patient-distant/', views.ConsultationPatientDistantView.as_view(), name='consultation_patient_distant'),
     path('consultation/patient-distant/<int:fiche_id>/modifier/', views.FicheConsultationUpdateView.as_view(), name='fiche_consultation_update_distant'),
+
+
+    # Envoyer un message WhatsApp
+    path('send-whatsapp/<int:consultation_id>/', views.send_whatsapp_message_view, name='send_whatsapp_message'),  # ← CHANGÉ
 ]

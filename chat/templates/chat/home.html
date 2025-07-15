@@ -273,14 +273,17 @@
 </div>
 <script>
     // Notifications AJAX
-    let consultationsDistance = {{ consultations_en_attente|default:"[]"|safe }};
+    {% comment %} let consultationsDistance = {{ consultations_en_attente|default:"[]"|safe }};
     function loadNotifications() {
         fetch('/api/consultations-distance/')
             .then(response => response.json())
             .then(data => {
                 const notificationsList = document.getElementById('notifications-list');
+                const notificationCount = document.getElementById('notification-count');
                 if (!data.length) {
                     notificationsList.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune notification</p>';
+                    notificationCount.classList.add('hidden');
+                    notificationCount.textContent = '0';
                     return;
                 }
                 notificationsList.innerHTML = '';
@@ -297,6 +300,9 @@
                     });
                     notificationsList.appendChild(notif);
                 });
+                // Affiche le nombre
+                notificationCount.textContent = data.length;
+                notificationCount.classList.remove('hidden');
             });
     }
 
@@ -348,7 +354,7 @@
     document.getElementById('mark-all-read').addEventListener('click', function(e) {
         e.stopPropagation();
         window.location.href = '{% url "consultations_distance" %}';
-    });
+    }); {% endcomment %}
 
     // Gestion dynamique des conversations (création, chargement, suppression, renommage, recherche)
     let activeConversationId = null;

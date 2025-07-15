@@ -170,6 +170,14 @@ class FicheConsultation(models.Model):
         ('valide_medecin', 'Validé par médecin'),
         ('rejete_medecin', 'Rejeté par médecin'),
     ], default='en_analyse')
+
+        # Ajoute ce dictionnaire juste ici
+    STATUS_CHOICES_DICT = dict([
+        ('en_analyse', 'En cours d\'analyse'),
+        ('analyse_terminee', 'Analyse terminée'),
+        ('valide_medecin', 'Validé par médecin'),
+        ('rejete_medecin', 'Rejeté par médecin'),
+    ])
     
     # Recommandations du medecin
     diagnostic = models.TextField(blank=True, null=True)
