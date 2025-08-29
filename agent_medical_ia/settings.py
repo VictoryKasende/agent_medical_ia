@@ -14,6 +14,11 @@ import dj_database_url
 
 dotenv.load_dotenv()
 
+# Provisional definition to avoid NameError in environments loading a cached/older
+# version of this file before the dynamic detection block executes (e.g. Docker layer
+# with outdated ordering). It will be overwritten later by the real detection.
+RUNNING_TESTS = False
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
