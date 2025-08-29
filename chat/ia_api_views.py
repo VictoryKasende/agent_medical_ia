@@ -23,6 +23,9 @@ class StartAnalyseAPIView(APIView):
     permission_classes = [IsAuthenticated, IsMedecin]
     throttle_scope = 'ia-analyse'
     throttle_classes = [ScopedRateThrottle]
+    # Pour drf-spectacular: requête / réponse principales
+    request_serializer = AnalyseSymptomesRequestSerializer
+    response_serializer = AnalyseResultSerializer  # réponse initiale (pending)
 
     def post(self, request):
         serializer = AnalyseSymptomesRequestSerializer(data=request.data)
@@ -65,6 +68,7 @@ class TaskStatusAPIView(APIView):
     permission_classes = [IsAuthenticated, IsMedecin]
     throttle_scope = 'ia-status'
     throttle_classes = [ScopedRateThrottle]
+    response_serializer = TaskStatusSerializer
 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
@@ -83,6 +87,7 @@ class AnalyseResultAPIView(APIView):
     permission_classes = [IsAuthenticated, IsMedecin]
     throttle_scope = 'ia-result'
     throttle_classes = [ScopedRateThrottle]
+    response_serializer = AnalyseResultSerializer
 
     def get(self, request):
         cache_key = request.query_params.get('cache_key')

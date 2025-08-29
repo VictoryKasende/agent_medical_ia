@@ -1,0 +1,13 @@
+## Development and test dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Base application requirements
+-r requirements.txt
+
+# Testing stack
+pytest==8.3.3
+pytest-django==4.9.0
+
+# (Optional) utilities for future tests/fixtures - commented out for now
+# factory_boy==3.3.0
+# pytest-cov==5.0.0

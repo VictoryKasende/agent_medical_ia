@@ -79,14 +79,35 @@ MEDIAI est une plateforme de gestion des consultations médicales intégrant l�
 
 ### 3.8 Dashboards
 
-- Redirection: `dashboard/` (selon rôle/groupe)
-- Patient: `dashboard/patient/`
-- Médecin: `dashboard/medecin/`
-- Proche aidant: `dashboard/proche/`
-- Vues dédiées présentiel/distanciel:
   - Présentiel: `consultation/patient/`
   - Distant: `consultation/patient-distant/`, `consultations-distance/`, `api/consultations-distance/`
 
+
+### Dépréciation : `consultations-distance`
+
+L'endpoint legacy `/api/v1/consultations-distance/` est désormais FUSIONNÉ dans
+`/api/v1/fiche-consultation/` via le paramètre de requête `?is_patient_distance=true`.
+
+Changements clés :
+- Serializer léger : sous-ensemble des champs + champ dérivé `febrile_bool`.
+- Filtrage supplémentaire possible avec `?status=...` (liste de statuts séparés par virgule).
+- L'alias `/api/v1/consultations-distance/` reste temporairement disponible (lecture seule) et sera retiré lors du prochain cycle de cleanup.
+
+Action recommandée côté client :
+1. Remplacer tous les appels GET vers `/api/v1/consultations-distance/` par `/api/v1/fiche-consultation/?is_patient_distance=true`.
+2. Mettre à jour la logique d'affichage de la fièvre : utiliser `febrile_bool` (bool) plutôt que tester la chaîne `febrile == 'Oui'`.
+3. Pour obtenir le détail complet d'une fiche : appeler `/api/v1/fiche-consultation/{id}/` (serializer complet).
+
+Statuts disponibles (centralisés dans `chat/constants.py`) :
+`en_analyse`, `analyse_terminee`, `valide_medecin`, `rejete_medecin`.
+
+Nouvelles actions :
+- `POST /api/v1/fiche-consultation/{id}/validate/`
+- `POST /api/v1/fiche-consultation/{id}/reject/` (payload: `{ "commentaire": "..." }`)
+- `POST /api/v1/fiche-consultation/{id}/relancer/`
+- `POST /api/v1/fiche-consultation/{id}/send-whatsapp/` (placeholder)
+
+Cette section sera déplacée dans un CHANGELOG lors du commit de cleanup final.
 ### 3.9 Asynchrone, Cache & Utilitaires
 
 - Tâches Celery: `analyse_symptomes_task` (+ relance)

@@ -10,7 +10,6 @@ urlpatterns = [
     path('diagnostic-result/', views.diagnostic_result, name='diagnostic_result'),
     path('consultations-distance/', views.ConsultationsDistanceView.as_view(), name='consultations_distance'),
     path('api/consultations-distance/', views.api_consultations_distance, name='api_consultations_distance'),
-    path('valider-diagnostic/<int:fiche_id>/', views.valider_diagnostic_medecin, name='valider_diagnostic'),
     path('chat-history-partial/', views.chat_history_partial, name='chat_history_partial'),
 
     path('dashboard/patient/', views.PatientDashboardView.as_view(), name='patient_dashboard'),

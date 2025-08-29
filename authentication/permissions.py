@@ -1,108 +1,64 @@
-from rest_framework import permissions
+"""Centralisation des permissions custom pour l'API.
 
-class IsPatient(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'patient')
+Nettoyage post-refonte: suppression de nombreuses duplications issues de merges.
+Seules les classes nécessaires sont conservées avec messages explicites.
+"""
 
-class IsMedecin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'medecin')
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-class IsAdmin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser))
 
-class IsAdminOrMedecin(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser or getattr(request.user, 'role', None) == 'medecin'))
 
-class IsOwnerOrAdmin(permissions.BasePermission):
-    """Object-level permission: owner or admin."""
-    def has_object_permission(self, request, view, obj):
-        if request.user.is_staff or request.user.is_superuser:
+class IsAuthenticatedAndRole(BasePermission):
+    required_role: str | None = None
+    message = "Rôle requis."
+
+    def has_permission(self, request, view):  # pragma: no cover (simple)
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if self.required_role is None:
             return True
-        return getattr(obj, 'id', None) == request.user.id or getattr(obj, 'user_id', None) == request.user.id
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+        return getattr(request.user, 'role', None) == self.required_role
 
 
-class IsPatient(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'patient')
+class IsPatient(IsAuthenticatedAndRole):
+    required_role = 'patient'
+    message = "Accès réservé aux patients."
 
 
-class IsMedecin(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'medecin')
-
-
-class IsAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
-
-
-class IsOwnerOrAdmin(BasePermission):
-    """Object-level: owner (user fk) or staff."""
-    def has_object_permission(self, request, view, obj):
-        if request.user and request.user.is_staff:
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-
-
-class IsMedecin(BasePermission):
-    message = "Accès réservé aux médecins." 
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'medecin')
-
-
-class IsPatient(BasePermission):
-    message = "Accès réservé aux patients." 
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'patient')
+class IsMedecin(IsAuthenticatedAndRole):
+    required_role = 'medecin'
+    message = "Accès réservé aux médecins."
 
 
 class IsMedecinOrAdmin(BasePermission):
-    message = "Accès réservé aux médecins ou administrateurs." 
-    def has_permission(self, request, view):
+    message = "Accès réservé aux médecins ou administrateurs."
+
+    def has_permission(self, request, view):  # pragma: no cover (simple)
         u = request.user
         return bool(u and u.is_authenticated and (getattr(u, 'role', None) == 'medecin' or u.is_staff))
 
 
-class IsOwnerOrMedecin(BasePermission):
-    message = "Seul le propriétaire ou un médecin peut accéder à cette ressource." 
-    def has_object_permission(self, request, view, obj):
-        # Suppose futur lien fiche.user si ajouté; fallback accepte seulement médecins sinon
-        if request.user.is_staff or getattr(request.user, 'role', None) == 'medecin':
-            return True
-        owner = getattr(obj, 'user', None)
-        return owner == request.user
+class IsOwnerOrAdmin(BasePermission):
+    """Permission objet: propriétaire (user fk) ou staff/superuser."""
+    message = "Accès réservé au propriétaire ou administrateur."
 
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-
-class IsMedecin(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'medecin')
-
-class IsMedecinOrAdmin(BasePermission):
-    def has_permission(self, request, view):
+    def has_object_permission(self, request, view, obj):  # pragma: no cover (simple)
         if not (request.user and request.user.is_authenticated):
             return False
-        return request.user.is_superuser or getattr(request.user, 'role', None) == 'medecin'
+        if request.user.is_staff or getattr(request.user, 'is_superuser', False):
+            return True
+        owner = getattr(obj, 'user', None)
+        if owner is not None:
+            return owner == request.user
+        # fallback id/user_id
+        return getattr(obj, 'user_id', None) == request.user.id or getattr(obj, 'id', None) == request.user.id
+
 
 class ReadOnly(BasePermission):
-    def has_permission(self, request, view):
+    def has_permission(self, request, view):  # pragma: no cover (simple)
         return request.method in SAFE_METHODS
-<<<<<<< HEAD
 
 
-class IsMedecinOrAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and (request.user.role == 'medecin' or request.user.is_staff))
-from rest_framework.permissions import BasePermission
-
-
-class IsMedecin(BasePermission):
-    message = "Accès réservé aux médecins."
-
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'medecin')
-=======
->>>>>>> api-docs-tests
+__all__ = [
+    'IsPatient', 'IsMedecin', 'IsMedecinOrAdmin', 'IsOwnerOrAdmin', 'ReadOnly'
+]

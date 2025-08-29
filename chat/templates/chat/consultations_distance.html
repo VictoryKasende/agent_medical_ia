@@ -276,7 +276,7 @@
 
         async function fetchConsultationsFromAPI() {
             try {
-                const resp = await fetch('/api/v1/consultations-distance/'); // SessionAuthentication -> cookie
+                const resp = await fetch('/api/v1/fiche-consultation/?is_patient_distance=true'); // unified endpoint (legacy alias planned removal)
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const apiData = await resp.json();
                 // Harmoniser champs attendus côté front
@@ -288,7 +288,8 @@
                     created_at: raw.created_at,
                     motif_consultation: raw.motif_consultation,
                     cephalees: raw.cephalees, // pourra être ajouté plus tard dans le serializer
-                    febrile: raw.febrile,     // idem
+                    febrile: raw.febrile,     // legacy string ('Oui'/'Non')
+                    febrile_bool: raw.febrile_bool === true || raw.febrile === 'Oui',
                     status: raw.status,
                     status_display: raw.status_display,
                     telephone: raw.telephone,
@@ -438,31 +439,56 @@
             document.getElementById('validation-modal').classList.add('hidden');
         });
         
-        // Gestion du formulaire de validation
-        document.getElementById('validation-form').addEventListener('submit', function(e) {
+        // Gestion du formulaire de validation (nouveaux endpoints DRF actions)
+        document.getElementById('validation-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const formData = new FormData(this);
             const consultationId = formData.get('consultation_id');
-            
-            fetch(`/valider-diagnostic/${consultationId}/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            const actionType = formData.get('action'); // 'valider' ou 'rejeter'
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            let endpoint = '';
+            let payload = {};
+            if (actionType === 'valider') {
+                endpoint = `/api/v1/fiche-consultation/${consultationId}/validate/`;
+            } else if (actionType === 'rejeter') {
+                endpoint = `/api/v1/fiche-consultation/${consultationId}/reject/`;
+                payload = { commentaire: formData.get('commentaire') };
+            } else {
+                alert('Action inconnue');
+                return;
+            }
+
+            try {
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': csrf
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(()=>({detail:'Erreur'}));
+                    alert(`Erreur: ${err.detail || resp.status}`);
+                    return;
                 }
-            })
-            .then(response => {
-                if (response.ok) {
-                    location.reload(); // Recharger la page pour voir les changements
-                } else {
-                    alert('Erreur lors de la validation');
+                const updated = await resp.json();
+                // Mettre à jour localement la fiche
+                const idx = consultationsData.findIndex(c => c.id === updated.id);
+                if (idx !== -1) {
+                    consultationsData[idx].status = updated.status;
+                    consultationsData[idx].status_display = updated.status_display || updated.status;
+                    consultationsData[idx].commentaire_rejet = updated.commentaire_rejet;
                 }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la validation');
-            });
+                rebuildConsultationsList();
+                showConsultationDetails(updated.id);
+                document.getElementById('validation-modal').classList.add('hidden');
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau');
+            }
         });
         
         // Recherche

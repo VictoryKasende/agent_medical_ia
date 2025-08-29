@@ -513,14 +513,6 @@ def api_consultations_distance(request):
     ]
     return JsonResponse(data, safe=False, status=200)
 
-def valider_diagnostic_medecin(request, fiche_id):
-    """
-    Exemple de validation d'un diagnostic par le médecin.
-    Tu peux adapter la logique selon ton besoin.
-    """
-    fiche = get_object_or_404(FicheConsultation, id=fiche_id)
-    messages.success(request, "Diagnostic validé pour ce dossier.")
-    return redirect('consultation')
 
 @login_required
 def redirection_dashboard(request):

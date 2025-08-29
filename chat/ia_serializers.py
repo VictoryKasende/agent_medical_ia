@@ -7,12 +7,12 @@ class AnalyseSymptomesRequestSerializer(serializers.Serializer):
 
 
 class AnalyseResultSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=['pending', 'done'])
-    response = serializers.CharField(allow_blank=True, required=False)
-    cache_key = serializers.CharField()
+    status = serializers.ChoiceField(choices=['pending', 'done'], help_text="État de l'analyse")
+    response = serializers.CharField(allow_blank=True, required=False, help_text="Résultat de l'analyse IA")
+    cache_key = serializers.CharField(help_text="Clé de cache utilisée pour récupérer le résultat")
 
 
 class TaskStatusSerializer(serializers.Serializer):
-    task_id = serializers.CharField()
-    state = serializers.CharField()
-    info = serializers.CharField(allow_blank=True, required=False)
+    task_id = serializers.CharField(help_text="ID de la tâche Celery")
+    state = serializers.CharField(help_text="État de la tâche")
+    info = serializers.CharField(allow_blank=True, required=False, help_text="Information ou erreur de la tâche")

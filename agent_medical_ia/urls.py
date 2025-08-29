@@ -16,84 +16,67 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from django.conf.urls.static import static
 from django.conf import settings
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from chat.ia_api_views import StartAnalyseAPIView, TaskStatusAPIView, AnalyseResultAPIView
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from chat.distance_api_urls import urlpatterns as distance_api_urls
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from chat.models import FicheConsultation
+from chat.serializers import FicheConsultationDistanceSerializer
+
+
+class DeprecatedConsultationsDistanceAPIView(APIView):
+        """Deprecated list-only endpoint kept for backward compatibility.
+
+        NOTE: Will be removed in a future release. Use
+            /api/v1/fiche-consultation/?is_patient_distance=true
+        instead. A deprecation header is added to responses.
+        """
+        permission_classes = [IsAuthenticated]
+
+        def get(self, request):  # list only
+                qs = FicheConsultation.objects.filter(is_patient_distance=True).order_by('-created_at')
+                serializer = FicheConsultationDistanceSerializer(qs, many=True)
+                return Response(serializer.data, headers={
+                        'X-Deprecated': 'true',
+                        'Link': '</api/v1/fiche-consultation/?is_patient_distance=true>; rel="successor-version"'
+                })
 
 urlpatterns = [
+    # Legacy HTML (progressive migration). Keep only one include.
     path('', include('chat.urls')),
-    path('', include('chat.urls')),  # Legacy HTML
+
+    # Admin & classic auth (HTML forms)
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
-    # API v1
+
+    # Core API v1
     path('api/v1/', include('chat.api_urls')),
     path('api/v1/auth/', include('authentication.api_urls')),
-    # OpenAPI / Docs (unique)
-    path('api/v1/', include('authentication.api_urls')),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path('api/v1/', include('chat.api_urls')),
-    # API: schema & documentation
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    # JWT auth
+    # Alias déprécié (sera retiré) pour ancienne route consultations-distance
+    path('api/v1/consultations-distance/', DeprecatedConsultationsDistanceAPIView.as_view(), name='consultations_distance_deprecated'),
+
+    # JWT convenience (non-versioned) – optional; could be deprecated later
     path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # API schema & docs
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    # JWT
-    path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # IA async
+
+    # IA async endpoints (kept outside versioning for now; consider moving under v1/ia/)
     path('api/ia/analyse/', StartAnalyseAPIView.as_view(), name='ia_start'),
     path('api/ia/status/<str:task_id>/', TaskStatusAPIView.as_view(), name='ia_status'),
     path('api/ia/result/', AnalyseResultAPIView.as_view(), name='ia_result'),
-    path('admin/', admin.site.urls),
-    path('auth/', include('authentication.urls')),
-    path('', include('chat.urls')),
 
-    # JWT
-    path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
-    # Schema & Docs
+    # OpenAPI / Swagger / Redoc
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-
-    # API v1
-    path('api/v1/', include(distance_api_urls)),
 ]
-
-if getattr(settings, 'API_COHAB_ENABLED', False):
-    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-    from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-    try:
-        from chat.distance_api_urls import urlpatterns as distance_api_urls
-    except Exception:
-        distance_api_urls = []
-
-    urlpatterns += [
-        path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-        path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-        path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-        path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-        path('api/v1/', include(distance_api_urls)),
-    ]
 
 if settings.DEBUG:
     urlpatterns += static(

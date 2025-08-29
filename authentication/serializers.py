@@ -71,7 +71,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if password:
             user.set_password(password)
             "id","is_active","is_staff","is_superuser","date_joined","last_login","patient_profile","medecin_profile"
-        ]
+        
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=4)

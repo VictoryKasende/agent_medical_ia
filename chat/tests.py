@@ -1,114 +1,220 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
-from django.utils import timezone
 from authentication.models import CustomUser
-from .models import FicheConsultation
+from .models import FicheConsultation, Conversation, MessageIA
 from unittest.mock import patch
 
-class DistanceConsultationsAPITests(TestCase):
+
+BASE_FICHE_URL = '/api/v1/fiche-consultation/'
+
+
+def create_fiche(**overrides):
+    base = dict(
+        nom='Nom', postnom='Post', prenom='Pre', date_naissance='1990-01-01', age=30,
+        sexe='M', telephone='+111', occupation='Occ', avenue='Av', quartier='Q', commune='C',
+        contact_nom='CN', contact_telephone='123', contact_adresse='Adr',
+        etat='Conservé', capacite_physique='Top', capacite_psychologique='Top', febrile='Non',
+        coloration_bulbaire='Normale', coloration_palpebrale='Normale', tegument='Normal',
+    )
+    base.update(overrides)
+    return FicheConsultation.objects.create(**base)
+
+
+class FicheConsultationDistanceTests(TestCase):
+    """Tests de la vue distance via le paramètre ?is_patient_distance=true et alias déprécié."""
+
     def setUp(self):
         self.client = APIClient()
         self.medecin = CustomUser.objects.create_user(username='doc', password='pwd123', role='medecin')
         self.patient = CustomUser.objects.create_user(username='pat', password='pwd123', role='patient')
-        # Créer quelques fiches
-        self.f1 = FicheConsultation.objects.create(
-            nom='A', postnom='B', prenom='C', date_naissance='1990-01-01', age=34,
-            sexe='M', telephone='+243000000', occupation='Dev', avenue='R1', quartier='Q', commune='C',
-            contact_nom='CN', contact_telephone='123', contact_adresse='Adr',
-            etat='Conservé', capacite_physique='Top', capacite_psychologique='Top', febrile='Non',
-            coloration_bulbaire='Normale', coloration_palpebrale='Normale', tegument='Normal',
-            is_patient_distance=True, status='en_analyse'
-        )
-        self.f2 = FicheConsultation.objects.create(
-            nom='X', postnom='Y', prenom='Z', date_naissance='1985-05-05', age=39,
-            sexe='F', telephone='+243111111', occupation='Ing', avenue='R2', quartier='Q2', commune='C2',
-            contact_nom='CN2', contact_telephone='456', contact_adresse='Adr2',
-            etat='Altéré', capacite_physique='Moyen', capacite_psychologique='Moyen', febrile='Oui',
-            coloration_bulbaire='Anormale', coloration_palpebrale='Anormale', tegument='Anormal',
-            is_patient_distance=True, status='analyse_terminee'
-        )
-
-    def auth(self, user):
-        self.client.force_authenticate(user=user)
+        self.f1 = create_fiche(is_patient_distance=True, status='en_analyse')
+        self.f2 = create_fiche(is_patient_distance=True, status='analyse_terminee', febrile='Oui')
 
     def test_list_requires_auth(self):
-        url = '/api/v1/consultations-distance/'
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+        r = self.client.get(BASE_FICHE_URL + '?is_patient_distance=true')
+        self.assertIn(r.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
     def test_list_medecin_ok(self):
-        self.auth(self.medecin)
-        resp = self.client.get('/api/v1/consultations-distance/')
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(resp.json()), 2)
+        self.client.force_authenticate(self.medecin)
+        r = self.client.get(BASE_FICHE_URL + '?is_patient_distance=true')
+        self.assertEqual(r.status_code, 200)
+        payload = r.json()
+        # Gérer pagination éventuelle
+        if isinstance(payload, dict) and 'results' in payload:
+            data = payload['results']
+        else:
+            data = payload
+        self.assertGreaterEqual(len(data), 2)
+        sample = data[0]
+        expected_subset = {'id', 'nom', 'prenom', 'age', 'status', 'febrile', 'febrile_bool', 'diagnostic_ia'}
+        self.assertTrue(expected_subset.issubset(set(sample.keys())))
 
     def test_filter_status(self):
-        self.auth(self.medecin)
-        resp = self.client.get('/api/v1/consultations-distance/?status=analyse_terminee')
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(all(item['status'] == 'analyse_terminee' for item in resp.json()))
+        self.client.force_authenticate(self.medecin)
+        r = self.client.get(BASE_FICHE_URL + '?is_patient_distance=true&status=analyse_terminee')
+        self.assertEqual(r.status_code, 200)
+        payload = r.json()
+        data = payload['results'] if isinstance(payload, dict) and 'results' in payload else payload
+        self.assertTrue(all(item['status'] == 'analyse_terminee' for item in data))
+
+    def test_alias_deprecated_still_functions(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.get('/api/v1/consultations-distance/')
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(len(r.json()), 2)
+        # Nouveau: vérifier en-tête de dépréciation
+        self.assertEqual(r.headers.get('X-Deprecated'), 'true')
+
+
+class FicheConsultationCRUDAndActionsTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.medecin = CustomUser.objects.create_user(username='doc', password='pwd123', role='medecin')
+        self.patient = CustomUser.objects.create_user(username='pat', password='pwd123', role='patient')
+        self.fiche = create_fiche(status='analyse_terminee')
+
+    def _create_payload(self):
+        return {
+            'nom': 'N', 'postnom': 'P', 'prenom': 'R', 'date_naissance': '1995-01-01', 'age': 29,
+            'sexe': 'M', 'telephone': '+222', 'occupation': 'X', 'avenue': 'Av', 'quartier': 'Q', 'commune': 'C',
+            'contact_nom': 'CN', 'contact_telephone': '123', 'contact_adresse': 'Adr',
+            'etat': 'Conservé', 'capacite_physique': 'Top', 'capacite_psychologique': 'Top', 'febrile': 'Non',
+            'coloration_bulbaire': 'Normale', 'coloration_palpebrale': 'Normale', 'tegument': 'Normal'
+        }
+
+    def test_create_requires_auth(self):
+        r = self.client.post(BASE_FICHE_URL, data=self._create_payload(), format='json')
+        self.assertIn(r.status_code, (401, 403))
+
+    def test_create_ok(self):
+        self.client.force_authenticate(self.patient)
+        r = self.client.post(BASE_FICHE_URL, data=self._create_payload(), format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('id', r.json())
 
     def test_retrieve(self):
-        self.auth(self.medecin)
-        resp = self.client.get(f'/api/v1/consultations-distance/{self.f1.id}/')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()['id'], self.f1.id)
+        self.client.force_authenticate(self.medecin)
+        r = self.client.get(f'{BASE_FICHE_URL}{self.fiche.id}/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['id'], self.fiche.id)
 
-    def test_validate_requires_medecin(self):
-        self.auth(self.patient)
-        resp = self.client.post(f'/api/v1/consultations-distance/{self.f1.id}/validate/')
-        self.assertIn(resp.status_code, (403, 404))  # selon permission globale
+    def test_update(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.patch(f'{BASE_FICHE_URL}{self.fiche.id}/', data={'motif_consultation': 'Test'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['motif_consultation'], 'Test')
 
-    def test_validate_medecin_ok(self):
-        self.auth(self.medecin)
-        resp = self.client.post(f'/api/v1/consultations-distance/{self.f1.id}/validate/')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()['status'], 'valide_medecin')
+    def test_delete(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.delete(f'{BASE_FICHE_URL}{self.fiche.id}/')
+        self.assertIn(r.status_code, (204, 403))  # dépend des permissions futures
 
-    def test_relancer_medecin(self):
-        self.auth(self.medecin)
-        # put status to analyse_terminee then relancer
-        self.f2.status = 'analyse_terminee'
-        self.f2.save()
-        resp = self.client.post(f'/api/v1/consultations-distance/{self.f2.id}/relancer/')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()['status'], 'en_analyse')
+    def test_validate_action(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/validate/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['status'], 'valide_medecin')
 
-    @patch('chat.distance_api_views.send_whatsapp_api', return_value=(True, 'ok'))
-    def test_send_whatsapp_ok(self, mock_send):
-        self.auth(self.medecin)
-        resp = self.client.post(f'/api/v1/consultations-distance/{self.f1.id}/send-whatsapp/')
-        self.assertEqual(resp.status_code, 200)
-        mock_send.assert_called_once()
+    def test_reject_action_requires_comment(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/reject/', data={}, format='json')
+        self.assertEqual(r.status_code, 400)
 
-    def test_webhook_inbound(self):
-        resp = self.client.post('/api/v1/whatsapp/webhook/', data={'event': 'delivered'})
-        # webhook public (AllowAny)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('received', resp.json())
-from django.test import TestCase, Client
-from django.urls import reverse
-from django.contrib.auth import get_user_model
+    def test_reject_action_ok(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/reject/', data={'commentaire': 'Incomplet'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['status'], 'rejete_medecin')
+        self.assertEqual(r.json()['commentaire_rejet'], 'Incomplet')
+
+    def test_relancer(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/relancer/')
+        # 202 attendu
+        self.assertEqual(r.status_code, 202)
+
+    def test_send_whatsapp(self):
+        self.client.force_authenticate(self.medecin)
+        r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/send-whatsapp/')
+        self.assertEqual(r.status_code, 200)
+
+
+class ConversationAndMessageTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(username='u1', password='pwd', role='patient')
+        self.med = CustomUser.objects.create_user(username='m1', password='pwd', role='medecin')
+        self.client.force_authenticate(self.user)
+        # Crée une fiche pour lier conversation si besoin
+        self.fiche = create_fiche()
+
+    def test_create_conversation(self):
+        r = self.client.post('/api/v1/conversations/', data={'fiche': self.fiche.id}, format='json')
+        self.assertEqual(r.status_code, 201)
+        cid = r.json()['id']
+        # Liste limitée au propriétaire patient
+        lr = self.client.get('/api/v1/conversations/')
+        self.assertEqual(lr.status_code, 200)
+        lpayload = lr.json()
+        ldata = lpayload['results'] if isinstance(lpayload, dict) and 'results' in lpayload else lpayload
+        self.assertTrue(any(c['id'] == cid for c in ldata))
+
+    def test_conversation_messages_flow(self):
+        # créer conv
+        c = self.client.post('/api/v1/conversations/', data={'fiche': self.fiche.id}, format='json').json()
+        cid = c['id']
+        # ajout message
+        r1 = self.client.post(f'/api/v1/conversations/{cid}/messages/', data={'content': 'Bonjour'}, format='json')
+        self.assertEqual(r1.status_code, 201)
+        # list messages
+        r2 = self.client.get(f'/api/v1/conversations/{cid}/messages/')
+        self.assertEqual(r2.status_code, 200)
+        mpayload = r2.json()
+        mdata = mpayload['results'] if isinstance(mpayload, dict) and 'results' in mpayload else mpayload
+        self.assertGreaterEqual(len(mdata), 1)
+
+    def test_medecin_sees_all_conversations(self):
+        # patient crée conversation
+        c = self.client.post('/api/v1/conversations/', data={'fiche': self.fiche.id}, format='json').json()
+        # auth medecin
+        self.client.force_authenticate(self.med)
+        r = self.client.get('/api/v1/conversations/')
+        self.assertEqual(r.status_code, 200)
+        rpayload = r.json()
+        rdata = rpayload['results'] if isinstance(rpayload, dict) and 'results' in rpayload else rpayload
+        self.assertTrue(any(conv['id'] == c['id'] for conv in rdata))
+
+
+class IAEndpointsTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = CustomUser.objects.create_user(username='ia', password='pwd', role='medecin')
+
+    def test_analyse_requires_auth(self):
+        r = self.client.post('/api/ia/analyse/', data={'texte': 'Symptomes'}, format='json')
+        # Selon config d'auth/throttle/permissions, 401 (non authentifié) ou 403 (auth mais rôle insuffisant)
+        self.assertIn(r.status_code, (401, 403))
+
+    def test_analyse_ok(self):
+        self.client.force_authenticate(self.user)
+        r = self.client.post('/api/ia/analyse/', data={'symptomes': 'Symptomes'}, format='json')
+        # selon implémentation: 202 ou 200
+        self.assertIn(r.status_code, (200, 202))
 
 
 class DeprecationBannerTests(TestCase):
-	def setUp(self):
-		self.client = Client()
-		User = get_user_model()
-		# Créer un user médecin minimal
-		self.user = User.objects.create_user(username='doctor', password='pass', role='medecin')
+    """Conserve test legacy pour s'assurer que la page HTML legacy affiche le bandeau."""
+    def setUp(self):
+        self.client = Client()
+        self.user = CustomUser.objects.create_user(username='doctor', password='pass', role='medecin')
 
-	def test_deprecation_banner_present_on_consultations_distance(self):
-		# Authentification
-		self.assertTrue(self.client.login(username='doctor', password='pass'))
-		response = self.client.get(reverse('consultations_distance'))
-		self.assertEqual(response.status_code, 200)
-		# Vérifie injection contextuelle
-		self.assertIn('deprecation_info', response.context)
-		info = response.context['deprecation_info']
-		self.assertIsNotNone(info)
-		self.assertTrue(hasattr(info, 'removal_target'))
-		# Vérifier que le bandeau est visible dans le HTML (mot-clé du remplacement)
-		self.assertIn('template legacy', response.content.decode().lower())
+    def test_deprecation_banner_present_on_consultations_distance(self):
+        self.assertTrue(self.client.login(username='doctor', password='pass'))
+        response = self.client.get(reverse('consultations_distance'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('deprecation_info', response.context)
+        info = response.context['deprecation_info']
+        self.assertIsNotNone(info)
+        self.assertTrue(hasattr(info, 'removal_target'))

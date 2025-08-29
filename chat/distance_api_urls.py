@@ -1,34 +1,21 @@
-from rest_framework.routers import DefaultRouter
-from django.urls import path
-from .distance_api_views import RemoteConsultationViewSet, WhatsAppInboundWebhookView
-from .distance_api_views import RemoteConsultationViewSet
-from django.urls import path
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from drf_spectacular.utils import extend_schema
+"""(Deprecated) Legacy distance consultations API routes.
 
-class WhatsAppInboundWebhookView(APIView):
-    permission_classes = [AllowAny]
+Historique:
+ - Ce fichier contenait des doublons de router/register et une tentative d'ajout de webhook WhatsApp.
+ - La version refonte expose désormais les consultations distance via `/api/v1/consultations-distance/`
+     (voir `DistanceConsultationViewSet` dans `distance_api_views.py`).
+ - Ce module n'est plus inclus dans `agent_medical_ia/urls.py` et est conservé uniquement comme repère
+     jusqu'à suppression définitive (plan de dépréciation MIGRATION_DEPRECATION.md).
 
-    @extend_schema(tags=['WhatsApp'], summary='Webhook inbound WhatsApp')
-    def post(self, request, *args, **kwargs):
-        payload = request.data if isinstance(request.data, dict) else {}
-        return Response({'received': True, 'payload_keys': list(payload.keys())})
+Action future:
+ - Supprimer ce fichier après confirmation que plus aucun import externe ne l'utilise.
+"""
 
-router = DefaultRouter()
-router.register(r'consultations-distance', RemoteConsultationViewSet, basename='consultation-distance')
-
-urlpatterns = router.urls + [
-    path('whatsapp/webhook/', WhatsAppInboundWebhookView.as_view(), name='whatsapp-inbound-webhook'),
-]
-from .distance_api_views import DistanceConsultationViewSet
+from rest_framework.routers import DefaultRouter  # pragma: no cover - legacy
+from .distance_api_views import DistanceConsultationViewSet  # pragma: no cover - legacy
 
 router = DefaultRouter()
 router.register(r'consultations-distance', DistanceConsultationViewSet, basename='consultations-distance')
 
-urlpatterns = router.urls
-
-# Exemple futur: webhook / whatsapp
-# from .distance_api_views import WhatsAppInboundWebhookView
-# urlpatterns += [ path('whatsapp/webhook/', WhatsAppInboundWebhookView.as_view()) ]
+# Expose variable attendue par Django même si non utilisée.
+urlpatterns = router.urls  # pragma: no cover

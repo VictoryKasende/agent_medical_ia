@@ -1,84 +1,57 @@
 from rest_framework import serializers
-
-from .models import FicheConsultation
+from authentication.models import CustomUser
+from .models import FicheConsultation, Conversation, MessageIA
 
 
 class FicheConsultationSerializer(serializers.ModelSerializer):
-    """Serializer principal pour le modèle FicheConsultation.
+    """Serializer principal unifié pour FicheConsultation (version API refonte).
 
-    Remarques:
-    - La majorité des champs sont exposés pour création / mise à jour.
-    - Certains champs sont en lecture seule car gérés automatiquement côté serveur:
-        * numero_dossier (généré dans save())
-        * date_consultation, created_at, diagnostic_ia
-        * medecin_validateur, date_validation, signature_medecin
-    - Le champ `status` est en lecture seule ici; les transitions seront gérées via
-      des actions dédiées (ex: validate, relancer-analyse) dans le ViewSet.
-    - Ajout d'un champ dérivé `status_display` pour l'UI / clients.
+    - Expose tous les champs (create/update) sauf ceux générés serveur.
+    - `status` est en lecture seule; transitions via actions custom du ViewSet.
+    - Ajoute `status_display` pour éviter logique côté client.
     """
 
     status_display = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = FicheConsultation
-        fields = [
-            # Identifiants & métadonnées
-            'id', 'numero_dossier', 'date_consultation', 'created_at',
-            # Patient identité
-            'nom', 'postnom', 'prenom', 'date_naissance', 'age', 'sexe', 'telephone',
-            'etat_civil', 'occupation',
-            # Adresse
-            'avenue', 'quartier', 'commune',
-            # Personne à contacter
-            'contact_nom', 'contact_telephone', 'contact_adresse',
-            # Timings
-            'heure_debut', 'heure_fin',
-            # Signes vitaux
-            'temperature', 'spo2', 'poids', 'tension_arterielle', 'pouls', 'frequence_respiratoire',
-            # Présences
-            'patient', 'proche', 'soignant', 'medecin', 'autre',
-            'proche_lien', 'soignant_role', 'autre_precisions',
-            # Anamnèse / symptômes
-            'motif_consultation', 'histoire_maladie',
-            'maison_medicaments', 'pharmacie_medicaments', 'centre_sante_medicaments', 'hopital_medicaments', 'medicaments_non_pris', 'details_medicaments',
-            'cephalees', 'vertiges', 'palpitations', 'troubles_visuels', 'nycturie',
-            # Antécédents
-            'hypertendu', 'diabetique', 'epileptique', 'trouble_comportement', 'gastritique',
-            'tabac', 'alcool', 'activite_physique', 'activite_physique_detail', 'alimentation_habituelle',
-            'allergie_medicamenteuse', 'medicament_allergique',
-            'familial_drepanocytaire', 'familial_diabetique', 'familial_obese', 'familial_hypertendu', 'familial_trouble_comportement',
-            'lien_pere', 'lien_mere', 'lien_frere', 'lien_soeur',
-            'evenement_traumatique', 'trauma_divorce', 'trauma_perte_parent', 'trauma_deces_epoux', 'trauma_deces_enfant',
-            'etat_general', 'autres_antecedents',
-            # Examen clinique
-            'etat', 'par_quoi', 'capacite_physique', 'capacite_physique_score', 'capacite_psychologique', 'capacite_psychologique_score',
-            'febrile', 'coloration_bulbaire', 'coloration_palpebrale', 'tegument',
-            'tete', 'cou', 'paroi_thoracique', 'poumons', 'coeur', 'epigastre_hypochondres', 'peri_ombilical_flancs', 'hypogastre_fosses_iliaques', 'membres', 'colonne_bassin', 'examen_gynecologique',
-            # Expériences patient
-            'preoccupations', 'comprehension', 'attentes', 'engagement',
-            # Consultation distante
-            'is_patient_distance', 'status', 'status_display',
-            # Résultats & validation
-            'diagnostic', 'traitement', 'examen_complementaire', 'recommandations', 'diagnostic_ia',
-            'medecin_validateur', 'date_validation', 'signature_medecin',
-            'signature_medecin',
-        ]
+        fields = '__all__'
         read_only_fields = [
-            'id', 'numero_dossier', 'date_consultation', 'created_at',
+            'id', 'numero_dossier', 'date_consultation', 'heure_debut', 'heure_fin', 'created_at',
             'status', 'status_display', 'diagnostic_ia', 'medecin_validateur', 'date_validation', 'signature_medecin'
         ]
 
-    def get_status_display(self, obj):
+    def get_status_display(self, obj):  # pragma: no cover - simple mapping
         return obj.get_status_display()
 
-    def validate(self, attrs):
-        # Place pour logique de validation transversale future (ex: cohérence âge/date_naissance)
-        return super().validate(attrs)
 
-from rest_framework import serializers
-from .models import Conversation, MessageIA, FicheConsultation
-from authentication.models import CustomUser
-from .models import FicheConsultation, Conversation, MessageIA
+class FicheConsultationDistanceSerializer(serializers.ModelSerializer):
+    """Serializer léger pour les consultations distance (liste/lecture).
+
+    Utilisé quand le paramètre de requête `is_patient_distance=true` est fourni
+    sur l'endpoint principal `fiche-consultation`. Fournit un sous-ensemble
+    des champs pertinents pour la vue remote + un bool dérivé.
+    """
+
+    status_display = serializers.SerializerMethodField(read_only=True)
+    febrile_bool = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = FicheConsultation
+        fields = [
+            'id', 'nom', 'prenom', 'age', 'telephone',
+            'created_at', 'status', 'status_display',
+            'motif_consultation', 'histoire_maladie', 'cephalees', 'febrile', 'febrile_bool',
+            'temperature', 'tension_arterielle', 'pouls', 'spo2',
+            'diagnostic_ia'
+        ]
+        read_only_fields = fields
+
+    def get_status_display(self, obj):  # pragma: no cover simple mapping
+        return obj.get_status_display()
+
+    def get_febrile_bool(self, obj):  # pragma: no cover simple mapping
+        return True if getattr(obj, 'febrile', None) == 'Oui' else False
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -90,50 +63,43 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_staff']
 
 
-class FicheConsultationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FicheConsultation
-        fields = '__all__'
-        read_only_fields = [
-            'numero_dossier', 'date_consultation', 'heure_debut', 'heure_fin', 'created_at',
-            'medecin_validateur', 'date_validation'
-        ]
-
-
-class ConversationSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-
-    class Meta:
-        model = Conversation
-        fields = ['id', 'nom', 'user', 'fiche', 'created_at', 'updated_at', 'titre']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'titre', 'user']
-
-
 class MessageIASerializer(serializers.ModelSerializer):
     class Meta:
         model = MessageIA
         fields = ['id', 'conversation', 'role', 'content', 'timestamp']
         read_only_fields = ['id', 'timestamp', 'conversation']
 
+
 class ConversationSerializer(serializers.ModelSerializer):
-    messages_count = serializers.IntegerField(source='messageia_set.count', read_only=True)
+    user = UserSerializer(read_only=True)
+    # Utiliser SerializerMethodField car source 'messageia_set.count' ne déclenche pas la fonction d'agrégation souhaitée.
+    messages_count = serializers.SerializerMethodField()
     first_message = serializers.SerializerMethodField()
     fiche_numero = serializers.CharField(source='fiche.numero_dossier', read_only=True)
 
     class Meta:
         model = Conversation
-        fields = ['id', 'nom', 'titre', 'user', 'fiche', 'fiche_numero', 'created_at', 'updated_at', 'messages_count', 'first_message']
-        read_only_fields = ['id', 'titre', 'user', 'created_at', 'updated_at', 'messages_count', 'first_message', 'fiche_numero']
+        fields = [
+            'id', 'nom', 'titre', 'user', 'fiche', 'fiche_numero',
+            'created_at', 'updated_at', 'messages_count', 'first_message'
+        ]
+        read_only_fields = [
+            'id', 'titre', 'user', 'created_at', 'updated_at', 'messages_count', 'first_message', 'fiche_numero'
+        ]
 
-    def get_first_message(self, obj):
+    def get_first_message(self, obj):  # pragma: no cover - simple mapping
         msg = obj.messageia_set.order_by('timestamp').first()
         return msg.content if msg else None
 
-    def create(self, validated_data):
+    def get_messages_count(self, obj):  # pragma: no cover - simple mapping
+        return obj.messageia_set.count()
+
+    def create(self, validated_data):  # pragma: no cover - simple override
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             validated_data['user'] = request.user
         return super().create(validated_data)
+
 
 class ConversationDetailSerializer(ConversationSerializer):
     messages = MessageIASerializer(source='messageia_set', many=True, read_only=True)
@@ -141,4 +107,3 @@ class ConversationDetailSerializer(ConversationSerializer):
     class Meta(ConversationSerializer.Meta):
         fields = ConversationSerializer.Meta.fields + ['messages']
         read_only_fields = ConversationSerializer.Meta.read_only_fields + ['messages']
-        read_only_fields = ['id', 'timestamp']

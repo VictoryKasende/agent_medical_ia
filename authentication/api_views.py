@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes
 from django.contrib.auth import get_user_model
 from .serializers import CustomUserSerializer, UserRegisterSerializer
-from .permissions import IsAdmin, IsOwnerOrAdmin
+from rest_framework.permissions import IsAdminUser
+from .permissions import IsOwnerOrAdmin
 
 User = get_user_model()
 
@@ -27,13 +28,21 @@ class UserRegisterAPIView(generics.CreateAPIView):
         return response
 
 class UserViewSet(viewsets.ModelViewSet):
+    """CRUD Users.
+
+    Règles:
+    - list/destroy : admin only (IsAdminUser)
+    - retrieve/update/partial_update : owner ou admin
+    - me (GET/PATCH) : utilisateur courant (géré directement)
+    """
+
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = CustomUserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_permissions(self):
+    def get_permissions(self):  # pragma: no cover simple branching
         if self.action in ['list', 'destroy']:
-            return [IsAdmin()]
+            return [IsAdminUser()]
         if self.action in ['retrieve', 'update', 'partial_update']:
             return [permissions.IsAuthenticated(), IsOwnerOrAdmin()]
         return super().get_permissions()

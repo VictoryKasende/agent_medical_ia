@@ -1,6 +1,14 @@
 from django.db import models
 from django.utils import timezone
 from authentication.models import CustomUser
+from .constants import (
+    STATUS_CHOICES,
+    STATUS_EN_ANALYSE,
+    STATUS_ANALYSE_TERMINEE,
+    STATUS_VALIDE_MEDECIN,
+    STATUS_REJETE_MEDECIN,
+    STATUS_CHOICES_DICT,
+)
 
 
 class FicheConsultation(models.Model):
@@ -164,20 +172,8 @@ class FicheConsultation(models.Model):
 
     # Nouveaux champs pour la consultation à distance
     is_patient_distance = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=[
-        ('en_analyse', 'En cours d\'analyse'),
-        ('analyse_terminee', 'Analyse terminée'),
-        ('valide_medecin', 'Validé par médecin'),
-        ('rejete_medecin', 'Rejeté par médecin'),
-    ], default='en_analyse')
-
-        # Ajoute ce dictionnaire juste ici
-    STATUS_CHOICES_DICT = dict([
-        ('en_analyse', 'En cours d\'analyse'),
-        ('analyse_terminee', 'Analyse terminée'),
-        ('valide_medecin', 'Validé par médecin'),
-        ('rejete_medecin', 'Rejeté par médecin'),
-    ])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_EN_ANALYSE)
+    commentaire_rejet = models.TextField(blank=True, null=True, help_text="Motif détaillé en cas de rejet")
     
     # Recommandations du medecin
     diagnostic = models.TextField(blank=True, null=True)

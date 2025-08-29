@@ -5,11 +5,25 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import CustomUserSerializer
+from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
+
+class EmptySerializer(serializers.Serializer):
+    """Serializer neutre pour endpoints sans payload structuré."""
+    pass
 
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = EmptySerializer  # entrée (refresh string) non structurée -> doc minimal
 
+    @extend_schema(
+        request=EmptySerializer,
+        responses={205: OpenApiResponse(response=EmptySerializer, description='Token invalidé')},
+        summary="Déconnexion (blacklist refresh)",
+        tags=['Auth']
+    )
     def post(self, request):
         refresh_token = request.data.get('refresh')
         if not refresh_token:
@@ -25,7 +39,13 @@ class LogoutView(APIView):
 class MeView(APIView):
     """Retourne le profil de l'utilisateur courant."""
     permission_classes = [IsAuthenticated]
+    serializer_class = CustomUserSerializer
 
+    @extend_schema(
+        responses={200: CustomUserSerializer},
+        summary="Profil utilisateur courant",
+        tags=['Auth']
+    )
     def get(self, request):
         serializer = CustomUserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
