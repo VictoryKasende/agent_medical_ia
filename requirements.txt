@@ -21,6 +21,7 @@ distro==1.9.0
 dj-database-url==2.3.0
 Django<5.0,>=4.2
 <<<<<<< HEAD
+<<<<<<< HEAD
  djangorestframework>=3.15.0
  djangorestframework-simplejwt>=5.3.0
  drf-spectacular>=0.27.0
@@ -29,6 +30,11 @@ djangorestframework>=3.15.0
 djangorestframework-simplejwt>=5.3.0
 drf-spectacular>=0.27.0
 >>>>>>> api-ia-async
+=======
+djangorestframework>=3.15.0
+djangorestframework-simplejwt>=5.3.0
+drf-spectacular>=0.27.0
+>>>>>>> api-consultations-distance
 django-cors-headers>=4.0.0
 django-markdown-deux==1.0.6
 django-redis==5.4.0

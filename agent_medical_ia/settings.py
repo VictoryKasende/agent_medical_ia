@@ -195,6 +195,7 @@ CSRF_USE_SESSIONS = False
 # =============================
 # DRF & API Configuration
 # DRF Base Config (Étape 4 IA)
+# DRF Config (Consultations Distance)
 # =============================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -221,6 +222,9 @@ REST_FRAMEWORK = {
         'ia-analyse': '10/hour',
         'ia-status': '120/min',
         'ia-result': '60/min',
+        'anon': '30/min',
+        'user': '300/min',
+        'remote-consultation-send': '20/hour',
     }
 }
 
@@ -317,4 +321,15 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+    'TITLE': 'Agent Medical IA - Consultations Distance',
+    'DESCRIPTION': 'Endpoints REST pour consultations à distance, validation médicale et envoi WhatsApp.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'TAGS': [
+        {'name': 'Consultations Distance', 'description': 'Opérations de listing et actions médicales sur les consultations à distance.'},
+        {'name': 'WhatsApp', 'description': 'Envoi et réception (webhook) de messages template via Twilio WhatsApp.'},
+    ],
+}
+
 

@@ -25,6 +25,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from chat.ia_api_views import StartAnalyseAPIView, TaskStatusAPIView, AnalyseResultAPIView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from chat.distance_api_urls import urlpatterns as distance_api_urls
 
 urlpatterns = [
     path('', include('chat.urls')),
@@ -57,6 +60,7 @@ urlpatterns = [
     path('api/ia/analyse/', StartAnalyseAPIView.as_view(), name='ia_start'),
     path('api/ia/status/<str:task_id>/', TaskStatusAPIView.as_view(), name='ia_status'),
     path('api/ia/result/', AnalyseResultAPIView.as_view(), name='ia_result'),
+    path('api/v1/', include(distance_api_urls)),
 ]
 
 if settings.DEBUG:
