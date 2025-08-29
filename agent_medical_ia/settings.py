@@ -208,6 +208,7 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Agent Medical IA API',
     'DESCRIPTION': 'API REST pour consultations, conversations IA et gestion utilisateurs.',
+    'DESCRIPTION': 'API gestion utilisateurs, consultations et conversations IA.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

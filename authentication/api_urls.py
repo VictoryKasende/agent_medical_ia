@@ -14,6 +14,16 @@ urlpatterns = [
     path('verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', MeView.as_view(), name='me'),
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .api_views import UserRegisterAPIView, UserViewSet
+
+router = DefaultRouter()
+router.register('users', UserViewSet, basename='user')
+
+urlpatterns = [
+    path('users/register/', UserRegisterAPIView.as_view(), name='user-register'),
+    path('', include(router.urls)),
 ]
 
 
