@@ -50,6 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'drf_spectacular',
     'authentication',
     'chat',
 ]
@@ -173,4 +176,39 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_SECURE = False  # True en production avec HTTPS
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
+
+# =============================
+# DRF Config (Consultations Distance)
+# =============================
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/min',
+        'user': '300/min',
+        'remote-consultation-send': '20/hour',
+    }
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Agent Medical IA - Consultations Distance',
+    'DESCRIPTION': 'Endpoints REST pour consultations à distance, validation médicale et envoi WhatsApp.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'TAGS': [
+        {'name': 'Consultations Distance', 'description': 'Opérations de listing et actions médicales sur les consultations à distance.'},
+        {'name': 'WhatsApp', 'description': 'Envoi et réception (webhook) de messages template via Twilio WhatsApp.'},
+    ],
+}
+
 
