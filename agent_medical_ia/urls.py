@@ -18,12 +18,26 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from chat.ia_api_views import StartAnalyseAPIView, TaskStatusAPIView, AnalyseResultAPIView
 
 urlpatterns = [
     
     path('', include('chat.urls')),
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
+    # API schema & docs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    # JWT
+    path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # IA async
+    path('api/ia/analyse/', StartAnalyseAPIView.as_view(), name='ia_start'),
+    path('api/ia/status/<str:task_id>/', TaskStatusAPIView.as_view(), name='ia_status'),
+    path('api/ia/result/', AnalyseResultAPIView.as_view(), name='ia_result'),
 ]
 
 if settings.DEBUG:

@@ -50,6 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'drf_spectacular',
     'authentication',
     'chat',
 ]
@@ -173,4 +176,38 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_SECURE = False  # True en production avec HTTPS
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
+
+# =============================
+# DRF Base Config (Étape 4 IA)
+# =============================
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/min',
+        'user': '300/min',
+        # Scopes IA (seront utilisés plus tard)
+        'ia-analyse': '10/hour',
+        'ia-status': '120/min',
+        'ia-result': '60/min',
+    }
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Agent Medical IA API (Async IA)',
+    'DESCRIPTION': 'API Async pour analyses IA médicales multi-modèles (GPT-4, Claude, Gemini) via Celery.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
 
