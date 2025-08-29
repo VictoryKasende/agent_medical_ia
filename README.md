@@ -80,34 +80,24 @@ MEDIAI est une plateforme de gestion des consultations médicales intégrant l�
 ### 3.8 Dashboards
 
   - Présentiel: `consultation/patient/`
-  - Distant: `consultation/patient-distant/`, `consultations-distance/`, `api/consultations-distance/`
+  - Distant: `consultation/patient-distant/` (listing HTML conservé pour usage interne). L'ancien couple `consultations-distance/` + `api/consultations-distance/` a été supprimé (fusion via API DRF).
 
 
-### Dépréciation : `consultations-distance`
+### Nettoyage final API (Étape 8)
 
-L'endpoint legacy `/api/v1/consultations-distance/` est désormais FUSIONNÉ dans
-`/api/v1/fiche-consultation/` via le paramètre de requête `?is_patient_distance=true`.
+Les routes HTML et alias legacy liés à `consultations-distance` ont été retirés.
+La source unique pour les consultations à distance côté API est:
+`GET /api/v1/fiche-consultation/?is_patient_distance=true`
 
-Changements clés :
-- Serializer léger : sous-ensemble des champs + champ dérivé `febrile_bool`.
-- Filtrage supplémentaire possible avec `?status=...` (liste de statuts séparés par virgule).
-- L'alias `/api/v1/consultations-distance/` reste temporairement disponible (lecture seule) et sera retiré lors du prochain cycle de cleanup.
-
-Action recommandée côté client :
-1. Remplacer tous les appels GET vers `/api/v1/consultations-distance/` par `/api/v1/fiche-consultation/?is_patient_distance=true`.
-2. Mettre à jour la logique d'affichage de la fièvre : utiliser `febrile_bool` (bool) plutôt que tester la chaîne `febrile == 'Oui'`.
-3. Pour obtenir le détail complet d'une fiche : appeler `/api/v1/fiche-consultation/{id}/` (serializer complet).
-
-Statuts disponibles (centralisés dans `chat/constants.py`) :
-`en_analyse`, `analyse_terminee`, `valide_medecin`, `rejete_medecin`.
-
-Nouvelles actions :
+Actions disponibles sur une fiche (récap):
 - `POST /api/v1/fiche-consultation/{id}/validate/`
 - `POST /api/v1/fiche-consultation/{id}/reject/` (payload: `{ "commentaire": "..." }`)
 - `POST /api/v1/fiche-consultation/{id}/relancer/`
-- `POST /api/v1/fiche-consultation/{id}/send-whatsapp/` (placeholder)
+- `POST /api/v1/fiche-consultation/{id}/send-whatsapp/`
 
-Cette section sera déplacée dans un CHANGELOG lors du commit de cleanup final.
+Statuts (`chat/constants.py`): `en_analyse`, `analyse_terminee`, `valide_medecin`, `rejete_medecin`.
+
+Pagination: standard DRF (PageNumberPagination), paramètres `page` & `page_size`.
 ### 3.9 Asynchrone, Cache & Utilitaires
 
 - Tâches Celery: `analyse_symptomes_task` (+ relance)

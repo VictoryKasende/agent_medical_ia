@@ -446,36 +446,6 @@ class MedecinDashboardView(TemplateView):
 class ProcheDashboardView(TemplateView):
     template_name = "chat/dashboard_proche.html"
 
-class ConsultationsDistanceView(LoginRequiredMixin, TemplateView):
-    template_name = "chat/consultations_distance.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        fiches = FicheConsultation.objects.all().order_by('-created_at')
-        context['fiches'] = fiches
-        context['consultations_json'] = json.dumps([
-            {
-                "id": f.id,
-                "nom": f.nom,
-                "prenom": f.prenom,
-                "age": f.age,
-                "created_at": f.created_at.isoformat(),
-                "motif_consultation": f.motif_consultation,
-                "cephalees": f.cephalees,
-                "febrile": f.febrile,
-                "status": f.status,
-                "status_display": f.get_status_display(),
-                "telephone": f.telephone,
-                "temperature": f.temperature,
-                "tension_arterielle": f.tension_arterielle,
-                "pouls": f.pouls,
-                "spo2": f.spo2,
-                "histoire_maladie": f.histoire_maladie,
-                "diagnostic_ia": f.diagnostic_ia,
-            }
-            for f in fiches
-        ])
-        return context
 
 def check_task_status(request, task_id):
     """
@@ -493,25 +463,6 @@ def check_task_status(request, task_id):
     }
     return JsonResponse(response)
 
-def api_consultations_distance(request):
-    # Legacy endpoint conservé temporairement pour compat compat; rediriger côté client vers /api/v1/fiche-consultation/
-    fiches = FicheConsultation.objects.filter(status__in=['en_analyse', 'analyse_terminee'])
-    # Minimal payload (deprecated) – invite clients to migrate
-    data = [
-        {
-            'id': f.id,
-            'nom': f.nom,
-            'prenom': f.prenom,
-            'age': f.age,
-            'created_at': f.created_at.isoformat(),
-            'status': f.status,
-            'status_display': f.get_status_display(),
-            'deprecated': True,
-            'next': '/api/v1/fiche-consultation/'
-        }
-        for f in fiches
-    ]
-    return JsonResponse(data, safe=False, status=200)
 
 
 @login_required

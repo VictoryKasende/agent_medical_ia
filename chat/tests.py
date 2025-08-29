@@ -204,17 +204,3 @@ class IAEndpointsTests(TestCase):
         self.assertIn(r.status_code, (200, 202))
 
 
-class DeprecationBannerTests(TestCase):
-    """Conserve test legacy pour s'assurer que la page HTML legacy affiche le bandeau."""
-    def setUp(self):
-        self.client = Client()
-        self.user = CustomUser.objects.create_user(username='doctor', password='pass', role='medecin')
-
-    def test_deprecation_banner_present_on_consultations_distance(self):
-        self.assertTrue(self.client.login(username='doctor', password='pass'))
-        response = self.client.get(reverse('consultations_distance'))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('deprecation_info', response.context)
-        info = response.context['deprecation_info']
-        self.assertIsNotNone(info)
-        self.assertTrue(hasattr(info, 'removal_target'))

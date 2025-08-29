@@ -84,7 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'chat.context_processors.deprecation_banner',  # Ajout bannière de dépréciation
+                # Legacy deprecation banner removed (HTML routes cleaned)
             ],
         },
     },
@@ -200,6 +200,10 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Paris'
+
+# Hard/soft time limits to prevent runaway tasks (safe defaults; adjust prod if needed)
+CELERY_TASK_TIME_LIMIT = int(os.getenv('CELERY_TASK_TIME_LIMIT', '300'))  # hard limit 5 min
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv('CELERY_TASK_SOFT_TIME_LIMIT', '240'))  # soft 4 min
 
 # Exécution synchrone des tâches Celery pendant les tests
 if RUNNING_TESTS:
