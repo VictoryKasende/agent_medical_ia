@@ -494,14 +494,24 @@ def check_task_status(request, task_id):
     return JsonResponse(response)
 
 def api_consultations_distance(request):
-    fiches = FicheConsultation.objects.filter(status__in=['en_analyse', 'analyse_terminee']).values(
-        'id', 'nom', 'prenom', 'date_naissance', 'age', 'numero_dossier', 'created_at', 'status'
-    )
-    data = []
-    for f in fiches:
-        f['status_display'] = FicheConsultation.STATUS_CHOICES_DICT.get(f['status'], f['status'])
-        data.append(f)
-    return JsonResponse(data, safe=False)
+    # Legacy endpoint conservé temporairement pour compat compat; rediriger côté client vers /api/v1/fiche-consultation/
+    fiches = FicheConsultation.objects.filter(status__in=['en_analyse', 'analyse_terminee'])
+    # Minimal payload (deprecated) – invite clients to migrate
+    data = [
+        {
+            'id': f.id,
+            'nom': f.nom,
+            'prenom': f.prenom,
+            'age': f.age,
+            'created_at': f.created_at.isoformat(),
+            'status': f.status,
+            'status_display': f.get_status_display(),
+            'deprecated': True,
+            'next': '/api/v1/fiche-consultation/'
+        }
+        for f in fiches
+    ]
+    return JsonResponse(data, safe=False, status=200)
 
 def valider_diagnostic_medecin(request, fiche_id):
     """

@@ -275,7 +275,7 @@
     // Notifications AJAX
     {% comment %} let consultationsDistance = {{ consultations_en_attente|default:"[]"|safe }};
     function loadNotifications() {
-        fetch('/api/consultations-distance/')
+    fetch('/api/v1/fiche-consultation/?status=analyse_terminee')
             .then(response => response.json())
             .then(data => {
                 const notificationsList = document.getElementById('notifications-list');

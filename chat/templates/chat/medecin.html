@@ -309,7 +309,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     // Données pour les notifications (récupérées via Django context ou AJAX)
-    let consultationsDistance = {{ consultations_en_attente|default:"[]"|safe }};
+    let consultationsDistance = JSON.parse('{{ consultations_en_attente|default:"[]"|escapejs }}');
     let notifications = [];
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -328,7 +328,7 @@
 
     // Fonction pour charger les notifications
     function loadNotifications() {
-        fetch('/api/consultations-distance/')
+    fetch('/api/v1/fiche-consultation/?status=analyse_terminee')
             .then(response => response.json())
             .then(data => {
                 consultationsDistance = data;

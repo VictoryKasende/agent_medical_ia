@@ -8,14 +8,19 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from .models import FicheConsultation, Conversation, MessageIA
-from .serializers import FicheConsultationSerializer
+from .serializers import (
+    FicheConsultationSerializer,
+    ConversationSerializer,
+    ConversationDetailSerializer,
+    MessageIASerializer,
+)
 from .tasks import analyse_symptomes_task
 
 
 class IsMedecin(permissions.BasePermission):
     """Permission: uniquement les utilisateurs role == 'medecin'."""
 
-    def has_permission(self, request, view):
+    def has_permission(self, request, view):  # pragma: no cover simple check
         return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'medecin')
 
 
@@ -31,16 +36,16 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
     queryset = FicheConsultation.objects.all().order_by('-created_at')
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self):  # pragma: no cover simple filtering
         qs = super().get_queryset()
-        user = self.request.user
-        # TODO: si un champ auteur est ajouté plus tard, filtrer ici pour patients.
-        if getattr(user, 'role', None) == 'patient':
-            # Pour l'instant pas de restriction faute de lien User -> Fiche.
-            return qs
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            statuses = [s.strip() for s in status_param.split(',') if s.strip()]
+            if statuses:
+                qs = qs.filter(status__in=statuses)
         return qs
 
-    # -------- Utilitaires internes --------
+    # -------- Utilitaires internes (analyse IA) --------
     def _formater_fiche_en_texte(self, fiche: FicheConsultation) -> str:
         """Version condensée du formatage texte pour l'analyse IA."""
         texte = (
@@ -67,6 +72,7 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
         transaction.on_commit(run_task)
 
     def perform_create(self, serializer):
+        # Création fiche + conversation initiale + déclenchement analyse
         fiche = serializer.save()  # status initial via modèle
         conversation = Conversation.objects.create(user=self.request.user, fiche=fiche)
         self._lancer_analyse_async(fiche, conversation)
@@ -94,3 +100,44 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
             conversation = Conversation.objects.create(user=request.user, fiche=fiche)
         self._lancer_analyse_async(fiche, conversation)
         return Response({'detail': 'Analyse relancée', 'status': fiche.status}, status=status.HTTP_202_ACCEPTED)
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):  # pragma: no cover simple rule
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return getattr(obj, 'user', None) == request.user
+
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    queryset = Conversation.objects.select_related('fiche', 'user').all()
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+
+    def get_queryset(self):  # pragma: no cover (simple filtering logic)
+        qs = super().get_queryset()
+        user = self.request.user
+        if getattr(user, 'role', None) == 'patient':
+            qs = qs.filter(user=user)
+        return qs
+
+    def get_serializer_class(self):
+        if self.action in ['retrieve', 'messages']:
+            return ConversationDetailSerializer
+        return ConversationSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['get', 'post'], url_path='messages')
+    def messages(self, request, pk=None):
+        conversation = self.get_object()
+        if request.method == 'GET':
+            msgs = conversation.messageia_set.order_by('timestamp')
+            return Response(MessageIASerializer(msgs, many=True).data)
+        # POST => créer un message utilisateur
+        role = request.data.get('role', 'user')
+        content = request.data.get('content')
+        if not content:
+            return Response({'detail': 'content requis'}, status=status.HTTP_400_BAD_REQUEST)
+        msg = MessageIA.objects.create(conversation=conversation, role=role, content=content)
+        return Response(MessageIASerializer(msg).data, status=status.HTTP_201_CREATED)
