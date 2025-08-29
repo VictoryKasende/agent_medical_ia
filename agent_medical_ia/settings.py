@@ -203,12 +203,25 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/min',
+        'user': '200/min',
+        'validate-consultation': '30/hour',
+        'relancer-analyse': '10/hour',
+        'conversation-messages': '120/min',
+    }
 }
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Agent Medical IA API',
     'DESCRIPTION': 'API REST pour consultations, conversations IA et gestion utilisateurs.',
     'DESCRIPTION': 'API gestion utilisateurs, consultations et conversations IA.',
+    'DESCRIPTION': 'API sécurisée avec rôles (patient, médecin, admin), throttling et actions médicales.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
