@@ -194,6 +194,7 @@ CSRF_USE_SESSIONS = False
 
 # =============================
 # DRF & API Configuration
+# DRF Base Config (Étape 4 IA)
 # =============================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -214,6 +215,12 @@ REST_FRAMEWORK = {
         'validate-consultation': '30/hour',
         'relancer-analyse': '10/hour',
         'conversation-messages': '120/min',
+        'anon': '30/min',
+        'user': '300/min',
+        # Scopes IA (seront utilisés plus tard)
+        'ia-analyse': '10/hour',
+        'ia-status': '120/min',
+        'ia-result': '60/min',
     }
 }
 
@@ -222,6 +229,8 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API REST pour consultations, conversations IA et gestion utilisateurs.',
     'DESCRIPTION': 'API gestion utilisateurs, consultations et conversations IA.',
     'DESCRIPTION': 'API sécurisée avec rôles (patient, médecin, admin), throttling et actions médicales.',
+    'TITLE': 'Agent Medical IA API (Async IA)',
+    'DESCRIPTION': 'API Async pour analyses IA médicales multi-modèles (GPT-4, Claude, Gemini) via Celery.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
