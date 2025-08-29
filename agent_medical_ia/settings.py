@@ -196,6 +196,7 @@ CSRF_USE_SESSIONS = False
 # DRF & API Configuration
 # DRF Base Config (Étape 4 IA)
 # DRF Config (Consultations Distance)
+# DRF & API Documentation
 # =============================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -332,4 +333,14 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
+
+    'DESCRIPTION': 'API REST: Auth, Consultations distance, IA, WhatsApp.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'TAGS': [
+        {'name': 'Consultations Distance', 'description': 'Opérations sur les consultations à distance.'},
+        {'name': 'WhatsApp', 'description': 'Envoi / réception via Twilio.'},
+        {'name': 'Auth', 'description': 'Authentification JWT.'},
+    ],
+}
 

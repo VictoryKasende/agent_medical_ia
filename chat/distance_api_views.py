@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +20,9 @@ import json
 
 class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
     """Consultations à distance: list / retrieve + actions médicales."""
+from .views import send_whatsapp_api
+
+class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = FicheConsultationDistanceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -30,6 +34,9 @@ class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
             OpenApiParameter(name='status', location=OpenApiParameter.QUERY, required=False, description='Filtrer par statut interne', type=str)
         ],
         responses={200: OpenApiResponse(response=FicheConsultationDistanceSerializer, description='Liste de consultations')}
+        summary='Lister les consultations distance',
+        parameters=[OpenApiParameter(name='status', location=OpenApiParameter.QUERY, required=False, description='Filtrer par statut', type=str)],
+        responses={200: OpenApiResponse(response=FicheConsultationDistanceSerializer, description='Liste')}
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -52,6 +59,7 @@ class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
         description='Valide médicalement une fiche et enregistre la date + médecin validateur.',
         responses={200: FicheConsultationDistanceSerializer}
     )
+    @extend_schema(tags=['Consultations Distance'], summary='Valider consultation')
     @action(detail=True, methods=['post'], url_path='validate')
     def validate(self, request, pk=None):
         fiche = self.get_object()
@@ -69,6 +77,7 @@ class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
         description='Replace la fiche en statut en_analyse pour relancer une analyse IA externe.',
         responses={200: OpenApiResponse(description='Analyse relancée')}
     )
+    @extend_schema(tags=['Consultations Distance'], summary='Relancer analyse')
     @action(detail=True, methods=['post'], url_path='relancer')
     def relancer(self, request, pk=None):
         fiche = self.get_object()
@@ -82,6 +91,7 @@ class RemoteConsultationViewSet(viewsets.ReadOnlyModelViewSet):
         description='Envoie un template WhatsApp (Twilio) au patient lié à la fiche. Throttling appliqué.',
         responses={200: OpenApiResponse(description='Message envoyé'), 500: OpenApiResponse(description='Erreur envoi')}
     )
+    @extend_schema(tags=['WhatsApp'], summary='Envoyer template WhatsApp')
     @action(detail=True, methods=['post'], url_path='send-whatsapp')
     def send_whatsapp(self, request, pk=None):
         fiche = self.get_object()
@@ -103,3 +113,4 @@ class WhatsAppInboundWebhookView(APIView):
         # TODO: vérifier signature X-Twilio-Signature (sécurité) avant traitement
         # Log minimal / future persistance
         return Response({'received': True, 'payload_keys': list(payload.keys())})
+    send_whatsapp.throttle_scope = 'remote-consultation-send'

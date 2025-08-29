@@ -60,6 +60,20 @@ urlpatterns = [
     path('api/ia/analyse/', StartAnalyseAPIView.as_view(), name='ia_start'),
     path('api/ia/status/<str:task_id>/', TaskStatusAPIView.as_view(), name='ia_status'),
     path('api/ia/result/', AnalyseResultAPIView.as_view(), name='ia_result'),
+    path('admin/', admin.site.urls),
+    path('auth/', include('authentication.urls')),
+    path('', include('chat.urls')),
+
+    # JWT
+    path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Schema & Docs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # API v1
     path('api/v1/', include(distance_api_urls)),
 ]
 
