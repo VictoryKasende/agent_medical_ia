@@ -12,10 +12,10 @@ Exposed endpoints base path: /api/v1/auth/
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
+from .jwt_views import (
+    PublicTokenObtainPairView as TokenObtainPairView,
+    PublicTokenRefreshView as TokenRefreshView,
+    PublicTokenVerifyView as TokenVerifyView,
 )
 
 from .views_api import LogoutView, MeView  # legacy style views (logout, me) if still used
