@@ -8,7 +8,7 @@ MEDIAI est une plateforme de gestion des consultations médicales intégrant l�
   - Automatiser et assister le processus de consultation médicale à l’aide de LLMs
   - Améliorer la qualité et la rapidité des diagnostics
   - Faciliter la communication patient ↔ personnel médical
-  - Offrir une solution accessible à distance pour les consultations
+  - Offrir une solution accessible à distance pour les consultations.
 
 ## 2) Architecture & Organisation du projet
 
