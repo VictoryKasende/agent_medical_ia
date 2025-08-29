@@ -270,8 +270,70 @@
     </div>
 
     <script>
-        // Données des consultations (passées depuis Django)
-        const consultationsData = {{ consultations_json|safe }};
+        // Données initiales (fallback SSR) + conteneur dynamique
+    // Utiliser JSON.parse pour éviter conflit avec le lint et assurer validité JS
+    let consultationsData = JSON.parse('{{ consultations_json|escapejs }}');
+
+        async function fetchConsultationsFromAPI() {
+            try {
+                const resp = await fetch('/api/v1/consultations-distance/'); // SessionAuthentication -> cookie
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const apiData = await resp.json();
+                // Harmoniser champs attendus côté front
+                consultationsData = apiData.map(raw => ({
+                    id: raw.id,
+                    nom: raw.nom,
+                    prenom: raw.prenom,
+                    age: raw.age,
+                    created_at: raw.created_at,
+                    motif_consultation: raw.motif_consultation,
+                    cephalees: raw.cephalees, // pourra être ajouté plus tard dans le serializer
+                    febrile: raw.febrile,     // idem
+                    status: raw.status,
+                    status_display: raw.status_display,
+                    telephone: raw.telephone,
+                    temperature: raw.temperature,
+                    tension_arterielle: raw.tension_arterielle,
+                    pouls: raw.pouls,
+                    spo2: raw.spo2,
+                    histoire_maladie: raw.histoire_maladie,
+                    diagnostic_ia: raw.diagnostic_ia,
+                }));
+                rebuildConsultationsList();
+            } catch (e) {
+                console.warn('API distance indisponible, fallback SSR utilisé.', e);
+            }
+        }
+
+        function rebuildConsultationsList() {
+            const listEl = document.getElementById('consultations-list');
+            if (!listEl) return;
+            if (!consultationsData.length) {
+                listEl.innerHTML = '<p class="text-gray-500 text-center py-4">Aucune consultation à distance</p>';
+                return;
+            }
+            listEl.innerHTML = consultationsData.map(fiche => `
+                <div class="consultation-card bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300" 
+                     data-consultation-id="${fiche.id}" onclick="showConsultationDetails(${fiche.id})">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">${fiche.nom} ${fiche.prenom}</h3>
+                            <p class="text-sm text-gray-600">${fiche.age} ans</p>
+                        </div>
+                        <span class="text-xs text-gray-500">${new Date(fiche.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="mt-2">
+                        ${fiche.motif_consultation ? `<span class=\"inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-1 mb-1\">${(fiche.motif_consultation||'').split(' ').slice(0,3).join(' ')}...</span>` : ''}
+                        ${fiche.cephalees ? '<span class="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Céphalées</span>' : ''}
+                        ${fiche.febrile ? '<span class="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full mr-1 mb-1">Fièvre</span>' : ''}
+                    </div>
+                    <div class="mt-2">
+                        <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">${fiche.status_display}</span>
+                    </div>
+                </div>`).join('');
+
+            document.getElementById('pending-count').textContent = consultationsData.length;
+        }
         
         function showConsultationDetails(consultationId) {
             const consultation = consultationsData.find(c => c.id === consultationId);
@@ -418,21 +480,16 @@
             });
         });
         
-        function reloadConsultations() {
-            fetch(window.location.href, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(response => response.text())
-                .then(html => {
-                    // Parse le HTML et remplace la liste et les détails
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    document.getElementById('consultations-list').innerHTML =
-                        doc.getElementById('consultations-list').innerHTML;
-                    // Optionnel: recharge aussi les détails si besoin
-                });
+        async function reloadConsultations() {
+            await fetchConsultationsFromAPI();
         }
 
-        // Rafraîchit toutes les 30 secondes
-        setInterval(reloadConsultations, 30000);
+        // Première tentative d'appel API après chargement (progressive enhancement)
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchConsultationsFromAPI();
+            // Rafraîchit toutes les 30 secondes
+            setInterval(reloadConsultations, 30000);
+        });
     </script>
 
 </body>

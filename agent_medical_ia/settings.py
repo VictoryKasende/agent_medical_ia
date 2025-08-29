@@ -50,9 +50,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',  # API cohabitation
+    'rest_framework_simplejwt',  # JWT
+    'drf_spectacular',  # OpenAPI
     'authentication',
     'chat',
 ]
+
+API_COHAB_ENABLED = os.getenv('API_COHAB_ENABLED', 'true').lower() in ['1','true','yes','on']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -77,6 +82,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'chat.context_processors.deprecation_banner',  # Ajout bannière de dépréciation
             ],
         },
     },
@@ -173,4 +179,39 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_SECURE = False  # True en production avec HTTPS
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
+
+if API_COHAB_ENABLED:
+    REST_FRAMEWORK = {
+        # Cohabitation: autoriser la session Django pour les vues HTML qui consomment l'API
+        'DEFAULT_AUTHENTICATION_CLASSES': (
+            'rest_framework.authentication.SessionAuthentication',
+            'rest_framework_simplejwt.authentication.JWTAuthentication',
+        ),
+        'DEFAULT_PERMISSION_CLASSES': (
+            'rest_framework.permissions.IsAuthenticated',
+        ),
+        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+        'DEFAULT_THROTTLE_CLASSES': [
+            'rest_framework.throttling.AnonRateThrottle',
+            'rest_framework.throttling.UserRateThrottle',
+            'rest_framework.throttling.ScopedRateThrottle',
+        ],
+        'DEFAULT_THROTTLE_RATES': {
+            'anon': '30/min',
+            'user': '300/min',
+            'remote-consultation-send': '20/hour',
+        }
+    }
+
+    SPECTACULAR_SETTINGS = {
+        'TITLE': 'Agent Medical IA API (Cohabitation)',
+        'DESCRIPTION': 'Cohabitation API REST + vues HTML legacy. Migration progressive.',
+        'VERSION': '1.0.0',
+        'SERVE_INCLUDE_SCHEMA': False,
+        'TAGS': [
+            {'name': 'Consultations Distance', 'description': 'Opérations sur les consultations à distance.'},
+            {'name': 'WhatsApp', 'description': 'Envoi / réception Twilio.'},
+            {'name': 'Auth', 'description': 'Authentification & JWT.'},
+        ],
+    }
 

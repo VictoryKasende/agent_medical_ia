@@ -20,11 +20,27 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 urlpatterns = [
-    
-    path('', include('chat.urls')),
+    path('', include('chat.urls')),  # Legacy HTML
     path('admin/', admin.site.urls),
     path('auth/', include('authentication.urls')),
 ]
+
+if getattr(settings, 'API_COHAB_ENABLED', False):
+    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+    from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+    try:
+        from chat.distance_api_urls import urlpatterns as distance_api_urls
+    except Exception:
+        distance_api_urls = []
+
+    urlpatterns += [
+        path('api/auth/jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('api/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+        path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+        path('api/v1/', include(distance_api_urls)),
+    ]
 
 if settings.DEBUG:
     urlpatterns += static(

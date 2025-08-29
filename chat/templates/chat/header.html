@@ -29,3 +29,18 @@
         </nav>
     </div>
 </header>
+{% if deprecation_info %}
+<div class="bg-amber-50 border-b border-amber-300 text-amber-900 text-sm">
+    <div class="max-w-6xl mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div>
+            <strong>Template legacy :</strong> {{ deprecation_info.name }}<br class="md:hidden" />
+            Retrait cible : <span class="font-medium">{{ deprecation_info.removal_target }}</span>
+            {% if deprecation_info.replacement %} – Remplacement : <code class="bg-amber-100 px-1 rounded">{{ deprecation_info.replacement }}</code>{% endif %}
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="inline-block bg-amber-200 text-amber-900 px-2 py-0.5 rounded text-xs uppercase tracking-wide">{{ deprecation_info.status }}</span>
+            {% if deprecation_info.notes %}<span class="text-xs italic hidden md:inline">{{ deprecation_info.notes }}</span>{% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
