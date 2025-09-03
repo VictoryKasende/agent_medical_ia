@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
     'chat',
 ]
 
+
 API_COHAB_ENABLED = os.getenv('API_COHAB_ENABLED', 'true').lower() in ['1','true','yes','on']
 
 # Middleware
@@ -43,6 +45,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -135,8 +138,14 @@ if RUNNING_TESTS:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
-# CSRF pour tests / Docker
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://0.0.0.0:8000']
+# CSRF pour tests / Docker / Frontend
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000', 
+    'http://127.0.0.1:8000', 
+    'http://0.0.0.0:8000',
+    'http://localhost:5173',  # Frontend Vite/React/Vue
+    'http://127.0.0.1:5173',
+]
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
@@ -198,3 +207,12 @@ SPECTACULAR_SETTINGS = {
     ],
     'COMPONENT_SPLIT_REQUEST': True,
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Configuration CORS supplémentaire pour le développement
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Autorise toutes les origines en mode DEBUG
