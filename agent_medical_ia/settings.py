@@ -208,8 +208,7 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
 }
 
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
-# Configuration CORS supplémentaire pour le développement
-#CORS_ALLOW_CREDENTIALS = True
-#CORS_ALLOW_ALL_ORIGINS = DEBUG  # Autorise toutes les origines en mode DEBUG
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Autorise toutes les origines en mode DEBUG
