@@ -208,11 +208,7 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://mediai-front-app-3vcax.ondigitalocean.app/"
-]
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
 
 # Configuration CORS supplémentaire pour le développement
 #CORS_ALLOW_CREDENTIALS = True
