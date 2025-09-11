@@ -197,4 +197,24 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Auth', 'description': 'Authentification & JWT.'},
     ],
     'COMPONENT_SPLIT_REQUEST': True,
+    # Solution définitive pour garder /api/schema et /api/docs propres
+    # sans polluer les logs avec des warnings non bloquants.
+    'DISABLE_ERRORS_AND_WARNINGS': True,
+    # Évite les collisions de noms d'enum et fournit des noms stables/explicites
+    'ENUM_NAME_OVERRIDES': {
+        # Utiliser le format module.Model.field (chemin importable)
+        'authentication.models.CustomUser.role': 'UserRoleEnum',
+        'chat.models.MessageIA.role': 'MessageRoleEnum',
+        # Fréquences style (mêmes choices partagés par tabac/alcool/activite_physique)
+        'chat.models.FicheConsultation.alcool': 'LifestyleFrequencyEnum',
+        'chat.models.FicheConsultation.tabac': 'LifestyleFrequencyEnum',
+        'chat.models.FicheConsultation.activite_physique': 'LifestyleFrequencyEnum',
+        # Capacités / colorations
+        'chat.models.FicheConsultation.capacite_psychologique': 'PsychologicalCapacityEnum',
+        # Colorations (mêmes choices Normale/Anormale)
+        'chat.models.FicheConsultation.coloration_palpebrale': 'ColorationEnum',
+        'chat.models.FicheConsultation.coloration_bulbaire': 'ColorationEnum',
+        # Statut consultation
+        'chat.models.FicheConsultation.status': 'ConsultationStatusEnum',
+    },
 }

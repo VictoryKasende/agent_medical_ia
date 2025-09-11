@@ -12,17 +12,11 @@ from .constants import (
 
 
 class FicheConsultation(models.Model):
-    CELIBATAIRE = 'Célibataire'
-    MARIE = 'Marié(e)'
-    DIVORCE = 'Divorcé(e)'
-    VEUF = 'Veuf(ve)'
-
-    ETAT_CIVIL_CHOICES = [
-        (CELIBATAIRE, 'Célibataire'),
-        (MARIE, 'Marié(e)'),
-        (DIVORCE, 'Divorcé(e)'),
-        (VEUF, 'Veuf(ve)'),
-    ]
+    class EtatCivil(models.TextChoices):
+        CELIBATAIRE = 'Célibataire', 'Célibataire'
+        MARIE = 'Marié(e)', 'Marié(e)'
+        DIVORCE = 'Divorcé(e)', 'Divorcé(e)'
+        VEUF = 'Veuf(ve)', 'Veuf(ve)'
 
     # Informations Patient
     nom = models.CharField(max_length=100)
@@ -33,11 +27,7 @@ class FicheConsultation(models.Model):
     sexe = models.CharField(max_length=10, choices=[('M', 'Masculin'), ('F', 'Féminin')], null=True)
     telephone = models.CharField(max_length=30)
 
-    etat_civil = models.CharField(
-        max_length=30,
-        choices=ETAT_CIVIL_CHOICES,
-        default=CELIBATAIRE,
-    )
+    etat_civil = models.CharField(max_length=30, choices=EtatCivil.choices, default=EtatCivil.CELIBATAIRE)
     occupation = models.CharField(max_length=100)
 
     # Adresse
@@ -97,15 +87,15 @@ class FicheConsultation(models.Model):
     trouble_comportement = models.BooleanField(default=False)
     gastritique = models.BooleanField(default=False)
 
-    FREQUENCE = [
-        ('non', 'Non'),
-        ('rarement', 'Rarement'),
-        ('souvent', 'Souvent'),
-        ('tres_souvent', 'Très souvent'),
-    ]
-    tabac = models.CharField(max_length=20, choices=FREQUENCE, default='non')
-    alcool = models.CharField(max_length=20, choices=FREQUENCE, default='non')
-    activite_physique = models.CharField(max_length=20, choices=FREQUENCE, default='rarement')
+    class Frequence(models.TextChoices):
+        NON = 'non', 'Non'
+        RAREMENT = 'rarement', 'Rarement'
+        SOUVENT = 'souvent', 'Souvent'
+        TRES_SOUVENT = 'tres_souvent', 'Très souvent'
+
+    tabac = models.CharField(max_length=20, choices=Frequence.choices, default=Frequence.NON)
+    alcool = models.CharField(max_length=20, choices=Frequence.choices, default=Frequence.NON)
+    activite_physique = models.CharField(max_length=20, choices=Frequence.choices, default=Frequence.RAREMENT)
     activite_physique_detail = models.TextField(blank=True, null=True)
     alimentation_habituelle = models.TextField(blank=True, null=True)
 
@@ -123,11 +113,12 @@ class FicheConsultation(models.Model):
     lien_frere = models.BooleanField(default=False)
     lien_soeur = models.BooleanField(default=False)
 
-    evenement_traumatique = models.CharField(
-        max_length=10,
-        choices=[('oui', 'Oui'), ('non', 'Non'), ('inconnu', 'Je ne sais pas')],
-        default='non'
-    )
+    class OuiNonInconnu(models.TextChoices):
+        OUI = 'oui', 'Oui'
+        NON = 'non', 'Non'
+        INCONNU = 'inconnu', 'Je ne sais pas'
+
+    evenement_traumatique = models.CharField(max_length=10, choices=OuiNonInconnu.choices, default=OuiNonInconnu.NON)
     trauma_divorce = models.BooleanField(default=False)
     trauma_perte_parent = models.BooleanField(default=False)
     trauma_deces_epoux = models.BooleanField(default=False)
@@ -137,19 +128,40 @@ class FicheConsultation(models.Model):
     autres_antecedents = models.TextField(max_length=255, blank=True, null=True)
 
     # Examen clinique
-    etat = models.CharField(max_length=20, choices=[('Conservé', 'Conservé'), ('Altéré', 'Altéré')])
+    class Etat(models.TextChoices):
+        CONSERVE = 'Conservé', 'Conservé'
+        ALTERE = 'Altéré', 'Altéré'
+
+    etat = models.CharField(max_length=20, choices=Etat.choices)
     par_quoi = models.TextField(max_length=255, blank=True, null=True)
-    capacite_physique = models.CharField(max_length=20, choices=[('Top', 'Top'), ('Moyen', 'Moyen'), ('Bas', 'Bas')])
+    class Capacite(models.TextChoices):
+        TOP = 'Top', 'Top'
+        MOYEN = 'Moyen', 'Moyen'
+        BAS = 'Bas', 'Bas'
+
+    capacite_physique = models.CharField(max_length=20, choices=Capacite.choices)
     capacite_physique_score = models.CharField(max_length=10, blank=True, null=True)
 
-    capacite_psychologique = models.CharField(max_length=20,
-                                              choices=[('Top', 'Top'), ('Moyen', 'Moyen'), ('Bas', 'Bas')])
+    capacite_psychologique = models.CharField(max_length=20, choices=Capacite.choices)
     capacite_psychologique_score = models.CharField(max_length=10, blank=True, null=True)
 
-    febrile = models.CharField(max_length=10, choices=[('Oui', 'Oui'), ('Non', 'Non')])
-    coloration_bulbaire = models.CharField(max_length=20, choices=[('Normale', 'Normale'), ('Anormale', 'Anormale')])
-    coloration_palpebrale = models.CharField(max_length=20, choices=[('Normale', 'Normale'), ('Anormale', 'Anormale')])
-    tegument = models.CharField(max_length=20, choices=[('Normal', 'Normal'), ('Anormal', 'Anormal')])
+    class OuiNon(models.TextChoices):
+        OUI = 'Oui', 'Oui'
+        NON = 'Non', 'Non'
+
+    febrile = models.CharField(max_length=10, choices=OuiNon.choices)
+    class Coloration(models.TextChoices):
+        NORMALE = 'Normale', 'Normale'
+        ANORMALE = 'Anormale', 'Anormale'
+
+    coloration_bulbaire = models.CharField(max_length=20, choices=Coloration.choices)
+    coloration_palpebrale = models.CharField(max_length=20, choices=Coloration.choices)
+
+    class Tegument(models.TextChoices):
+        NORMAL = 'Normal', 'Normal'
+        ANORMAL = 'Anormal', 'Anormal'
+
+    tegument = models.CharField(max_length=20, choices=Tegument.choices)
 
     # Régions examinées
     tete = models.TextField(blank=True, null=True)
@@ -242,16 +254,15 @@ class Conversation(models.Model):
         verbose_name_plural = 'Conversations'
 
 class MessageIA(models.Model):
-    ROLE_CHOICES = [
-        ('user', 'Utilisateur'),
-        ('gpt4', 'GPT-4'),
-        ('claude', 'Claude 3'),
-        ('gemini', 'Gemini Pro'),
-        ('synthese', 'Synthèse Finale'),
-    ]
+    class Role(models.TextChoices):
+        USER = 'user', 'Utilisateur'
+        GPT4 = 'gpt4', 'GPT-4'
+        CLAUDE = 'claude', 'Claude 3'
+        GEMINI = 'gemini', 'Gemini Pro'
+        SYNTHESE = 'synthese', 'Synthèse Finale'
 
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=20, choices=Role.choices)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 

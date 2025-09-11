@@ -30,24 +30,26 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from chat.models import FicheConsultation
 from chat.serializers import FicheConsultationDistanceSerializer
+from drf_spectacular.utils import extend_schema
 
 
 class DeprecatedConsultationsDistanceAPIView(APIView):
-        """Deprecated list-only endpoint kept for backward compatibility.
+    """Deprecated list-only endpoint kept for backward compatibility.
 
-        NOTE: Will be removed in a future release. Use
-            /api/v1/fiche-consultation/?is_patient_distance=true
-        instead. A deprecation header is added to responses.
-        """
-        permission_classes = [IsAuthenticated]
+    NOTE: Will be removed in a future release. Use
+        /api/v1/fiche-consultation/?is_patient_distance=true
+    instead. A deprecation header is added to responses.
+    """
+    permission_classes = [IsAuthenticated]
 
-        def get(self, request):  # list only
-                qs = FicheConsultation.objects.filter(is_patient_distance=True).order_by('-created_at')
-                serializer = FicheConsultationDistanceSerializer(qs, many=True)
-                return Response(serializer.data, headers={
-                        'X-Deprecated': 'true',
-                        'Link': '</api/v1/fiche-consultation/?is_patient_distance=true>; rel="successor-version"'
-                })
+    @extend_schema(responses={200: FicheConsultationDistanceSerializer(many=True)})
+    def get(self, request):  # list only
+        qs = FicheConsultation.objects.filter(is_patient_distance=True).order_by('-created_at')
+        serializer = FicheConsultationDistanceSerializer(qs, many=True)
+        return Response(serializer.data, headers={
+            'X-Deprecated': 'true',
+            'Link': '</api/v1/fiche-consultation/?is_patient_distance=true>; rel="successor-version"'
+        })
 
 urlpatterns = [
     # Legacy HTML (progressive migration). Keep only one include.

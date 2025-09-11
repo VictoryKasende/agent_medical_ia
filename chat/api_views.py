@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db import transaction
 import hashlib
 from django.core.cache import cache
-from rest_framework import viewsets, status, permissions, mixins
+from rest_framework import viewsets, status, permissions, mixins, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -26,6 +26,10 @@ from .constants import (
     STATUS_REJETE_MEDECIN,
 )
 from authentication.models import CustomUser
+
+
+class RejectRequestSerializer(serializers.Serializer):
+    commentaire = serializers.CharField()
 
 
 @extend_schema_view(
@@ -129,7 +133,7 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         tags=['Consultations'], summary='Rejeter la consultation',
-        request={'application/json': OpenApiResponse(description='{"commentaire": "motif"}')},
+        request=RejectRequestSerializer,
         responses={200: FicheConsultationSerializer}
     )
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsMedecinOrAdmin], url_path='reject')

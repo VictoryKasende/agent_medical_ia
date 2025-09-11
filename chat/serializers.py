@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from authentication.models import CustomUser
 from .models import FicheConsultation, Conversation, MessageIA
+from drf_spectacular.utils import extend_schema_field
 
 
 class FicheConsultationSerializer(serializers.ModelSerializer):
@@ -21,6 +22,7 @@ class FicheConsultationSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'diagnostic_ia', 'medecin_validateur', 'date_validation', 'signature_medecin'
         ]
 
+    @extend_schema_field(serializers.CharField())
     def get_status_display(self, obj):  # pragma: no cover - simple mapping
         return obj.get_status_display()
 
@@ -47,9 +49,11 @@ class FicheConsultationDistanceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(serializers.CharField())
     def get_status_display(self, obj):  # pragma: no cover simple mapping
         return obj.get_status_display()
 
+    @extend_schema_field(serializers.BooleanField())
     def get_febrile_bool(self, obj):  # pragma: no cover simple mapping
         return True if getattr(obj, 'febrile', None) == 'Oui' else False
 
@@ -75,6 +79,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     # Utiliser SerializerMethodField car source 'messageia_set.count' ne déclenche pas la fonction d'agrégation souhaitée.
     messages_count = serializers.SerializerMethodField()
     first_message = serializers.SerializerMethodField()
+    titre = serializers.CharField(read_only=True)
     fiche_numero = serializers.CharField(source='fiche.numero_dossier', read_only=True)
 
     class Meta:
@@ -87,10 +92,12 @@ class ConversationSerializer(serializers.ModelSerializer):
             'id', 'titre', 'user', 'created_at', 'updated_at', 'messages_count', 'first_message', 'fiche_numero'
         ]
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_first_message(self, obj):  # pragma: no cover - simple mapping
         msg = obj.messageia_set.order_by('timestamp').first()
         return msg.content if msg else None
 
+    @extend_schema_field(serializers.IntegerField())
     def get_messages_count(self, obj):  # pragma: no cover - simple mapping
         return obj.messageia_set.count()
 
