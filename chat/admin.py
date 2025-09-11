@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from .models import Conversation, MessageIA, FicheConsultation, Appointment
+from .models import Conversation, MessageIA, FicheConsultation, Appointment, FicheMessage
 
 
 @admin.register(Conversation)
@@ -44,6 +44,18 @@ class AppointmentAdmin(admin.ModelAdmin):
     search_fields = ('patient__username', 'medecin__username')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
+
+
+@admin.register(FicheMessage)
+class FicheMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'fiche', 'author', 'short_content', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('fiche__numero_dossier', 'author__username', 'content')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+
+    def short_content(self, obj):
+        return (obj.content[:60] + '...') if len(obj.content) > 60 else obj.content
 
 
 

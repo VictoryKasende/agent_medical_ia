@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from authentication.models import CustomUser
-from .models import FicheConsultation, Conversation, MessageIA, Appointment
+from .models import FicheConsultation, Conversation, MessageIA, Appointment, FicheMessage
 from drf_spectacular.utils import extend_schema_field
 
 
@@ -114,6 +114,15 @@ class ConversationDetailSerializer(ConversationSerializer):
     class Meta(ConversationSerializer.Meta):
         fields = ConversationSerializer.Meta.fields + ['messages']
         read_only_fields = ConversationSerializer.Meta.read_only_fields + ['messages']
+
+
+class FicheMessageSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+
+    class Meta:
+        model = FicheMessage
+        fields = ['id', 'fiche', 'author', 'author_username', 'content', 'created_at']
+        read_only_fields = ['id', 'author', 'author_username', 'created_at']
 
 
 class AppointmentSerializer(serializers.ModelSerializer):

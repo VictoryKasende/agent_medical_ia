@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from .serializers import CustomUserSerializer, UserRegisterSerializer
 from rest_framework.permissions import IsAdminUser
 from .permissions import IsOwnerOrAdmin
+from .permissions import IsPatient
 
 User = get_user_model()
 
@@ -70,3 +71,13 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(CustomUserSerializer(user).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MedecinViewSet(viewsets.ReadOnlyModelViewSet):
+    """Liste/lecture des médecins. Accès réservé aux patients authentifiés."""
+
+    serializer_class = CustomUserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsPatient]
+
+    def get_queryset(self):  # pragma: no cover - simple filter
+        return User.objects.filter(role='medecin').order_by('username')

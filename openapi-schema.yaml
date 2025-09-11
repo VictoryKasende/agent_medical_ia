@@ -453,6 +453,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/CustomUser'
           description: ''
+  /api/v1/auth/medecins/:
+    get:
+      operationId: v1_auth_medecins_list
+      description: Liste/lecture des médecins. Accès réservé aux patients authentifiés.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomUserList'
+          description: ''
+  /api/v1/auth/medecins/{id}/:
+    get:
+      operationId: v1_auth_medecins_retrieve
+      description: Liste/lecture des médecins. Accès réservé aux patients authentifiés.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
   /api/v1/auth/refresh/:
     post:
       operationId: v1_auth_refresh_create
@@ -1081,6 +1127,12 @@ paths:
       summary: Lister les fiches de consultation
       parameters:
       - in: query
+        name: assigned_only
+        schema:
+          type: boolean
+        description: 'Pour les médecins: true pour ne voir que les fiches qui leur
+          sont assignées'
+      - in: query
         name: is_patient_distance
         schema:
           type: boolean
@@ -1274,6 +1326,143 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/fiche-consultation/{id}/assign-medecin/:
+    post:
+      operationId: v1_fiche_consultation_assign_medecin_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Assigner un médecin à la fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+  /api/v1/fiche-consultation/{id}/messages/:
+    get:
+      operationId: v1_fiche_consultation_messages_list
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Lister/Ajouter des messages de fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Consultations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFicheMessageList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheMessage'
+          description: ''
+    post:
+      operationId: v1_fiche_consultation_messages_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Lister/Ajouter des messages de fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFicheMessageList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheMessage'
+          description: ''
   /api/v1/fiche-consultation/{id}/reject/:
     post:
       operationId: v1_fiche_consultation_reject_create
@@ -2440,10 +2629,17 @@ components:
           readOnly: true
           nullable: true
           description: Signature du médecin pour valider la consultation
+        user:
+          type: integer
+          nullable: true
         medecin_validateur:
           type: integer
           readOnly: true
           nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
       required:
       - age
       - avenue
@@ -3028,6 +3224,13 @@ components:
         recommandations:
           type: string
           nullable: true
+        user:
+          type: integer
+          nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
       required:
       - age
       - avenue
@@ -3049,6 +3252,44 @@ components:
       - quartier
       - tegument
       - telephone
+    FicheMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        fiche:
+          type: integer
+        author:
+          type: integer
+          readOnly: true
+        author_username:
+          type: string
+          readOnly: true
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_username
+      - content
+      - created_at
+      - fiche
+      - id
+    FicheMessageRequest:
+      type: object
+      properties:
+        fiche:
+          type: integer
+        content:
+          type: string
+          minLength: 1
+      required:
+      - content
+      - fiche
     MessageIA:
       type: object
       properties:
@@ -3201,6 +3442,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FicheConsultation'
+    PaginatedFicheMessageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FicheMessage'
     PaginatedMessageIAList:
       type: object
       required:
@@ -3789,6 +4053,13 @@ components:
         recommandations:
           type: string
           nullable: true
+        user:
+          type: integer
+          nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
     RejectRequestRequest:
       type: object
       properties:

@@ -44,6 +44,8 @@ class FicheConsultation(models.Model):
     heure_debut = models.TimeField(blank=True, null=True)
     heure_fin = models.TimeField(blank=True, null=True)
     numero_dossier = models.CharField(max_length=50, unique=True, blank=True)
+    # Lien patient (créateur propriétaire)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='fiches', null=True, blank=True)
 
     # Signes vitaux
     temperature = models.FloatField(help_text="Température en °C", null=True, blank=True)
@@ -199,6 +201,14 @@ class FicheConsultation(models.Model):
         blank=True,
         related_name='consultations_validees'
     )
+    assigned_medecin = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='consultations_assignees',
+        help_text='Médecin assigné pour le suivi de la consultation'
+    )
     date_validation = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     diagnostic_ia = models.TextField(blank=True, null=True)
@@ -318,6 +328,19 @@ class Appointment(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Rendez-vous'
         verbose_name_plural = 'Rendez-vous'
+
+
+class FicheMessage(models.Model):
+    """Messages courts entre patient et médecin autour d'une fiche donnée."""
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name='messages')
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='fiche_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Message Fiche'
+        verbose_name_plural = 'Messages Fiche'
 
 
 
