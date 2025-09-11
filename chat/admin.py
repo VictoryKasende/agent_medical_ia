@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from .models import Conversation, MessageIA, FicheConsultation
+from .models import Conversation, MessageIA, FicheConsultation, Appointment
 
 
 @admin.register(Conversation)
@@ -35,6 +35,15 @@ class FicheConsultationAdmin(admin.ModelAdmin):
     def conversations_count(self, obj):
         return obj.conversations.count()
     conversations_count.short_description = "Nb conversations"
+
+
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'patient', 'medecin', 'status', 'requested_start', 'confirmed_start', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('patient__username', 'medecin__username')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
 
 
 

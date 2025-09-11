@@ -195,26 +195,27 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Consultations', 'description': 'CRUD & actions sur les fiches de consultation.'},
         {'name': 'Conversations', 'description': 'Discussions IA et messages.'},
         {'name': 'Auth', 'description': 'Authentification & JWT.'},
+        {'name': 'Rendez-vous', 'description': 'Prise et gestion des rendez-vous.'},
     ],
     'COMPONENT_SPLIT_REQUEST': True,
-    # Solution définitive pour garder /api/schema et /api/docs propres
-    # sans polluer les logs avec des warnings non bloquants.
-    'DISABLE_ERRORS_AND_WARNINGS': True,
     # Évite les collisions de noms d'enum et fournit des noms stables/explicites
     'ENUM_NAME_OVERRIDES': {
-        # Utiliser le format module.Model.field (chemin importable)
+        # Format attendu: module_path.Model.field (chemin importable réel)
         'authentication.models.CustomUser.role': 'UserRoleEnum',
         'chat.models.MessageIA.role': 'MessageRoleEnum',
-        # Fréquences style (mêmes choices partagés par tabac/alcool/activite_physique)
+        # Fréquences partagées (tabac/alcool/activite_physique)
         'chat.models.FicheConsultation.alcool': 'LifestyleFrequencyEnum',
         'chat.models.FicheConsultation.tabac': 'LifestyleFrequencyEnum',
         'chat.models.FicheConsultation.activite_physique': 'LifestyleFrequencyEnum',
-        # Capacités / colorations
-        'chat.models.FicheConsultation.capacite_psychologique': 'PsychologicalCapacityEnum',
+        # Capacités (mêmes choices pour physique/psychologique)
+        'chat.models.FicheConsultation.capacite_physique': 'CapacityEnum',
+        'chat.models.FicheConsultation.capacite_psychologique': 'CapacityEnum',
         # Colorations (mêmes choices Normale/Anormale)
         'chat.models.FicheConsultation.coloration_palpebrale': 'ColorationEnum',
         'chat.models.FicheConsultation.coloration_bulbaire': 'ColorationEnum',
-        # Statut consultation
+        # Statuts distincts
         'chat.models.FicheConsultation.status': 'ConsultationStatusEnum',
+        'chat.models.Appointment.status': 'AppointmentStatusEnum',
     },
+    'POSTPROCESSING_HOOKS': ['chat.schema_hooks.unify_enum_names'],
 }

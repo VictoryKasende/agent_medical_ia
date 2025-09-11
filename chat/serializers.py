@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from authentication.models import CustomUser
-from .models import FicheConsultation, Conversation, MessageIA
+from .models import FicheConsultation, Conversation, MessageIA, Appointment
 from drf_spectacular.utils import extend_schema_field
 
 
@@ -114,3 +114,30 @@ class ConversationDetailSerializer(ConversationSerializer):
     class Meta(ConversationSerializer.Meta):
         fields = ConversationSerializer.Meta.fields + ['messages']
         read_only_fields = ConversationSerializer.Meta.read_only_fields + ['messages']
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    status_display = serializers.SerializerMethodField(read_only=True)
+    patient_username = serializers.CharField(source='patient.username', read_only=True)
+    medecin_username = serializers.CharField(source='medecin.username', read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            'id', 'patient', 'patient_username', 'medecin', 'medecin_username', 'fiche',
+            'requested_start', 'requested_end', 'confirmed_start', 'confirmed_end',
+            'status', 'status_display', 'message_patient', 'message_medecin',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'status_display', 'created_at', 'updated_at', 'confirmed_start', 'confirmed_end']
+
+    @extend_schema_field(serializers.CharField())
+    def get_status_display(self, obj):
+        return obj.get_status_display()
+
+    def validate(self, attrs):
+        req_start = attrs.get('requested_start')
+        req_end = attrs.get('requested_end')
+        if req_start and req_end and req_end <= req_start:
+            raise serializers.ValidationError({'requested_end': "Doit être postérieur à requested_start."})
+        return attrs

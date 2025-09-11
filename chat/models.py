@@ -275,4 +275,49 @@ class MessageIA(models.Model):
         verbose_name_plural = 'Messages IA'
 
 
+class Appointment(models.Model):
+    """Rendez-vous patient <-> médecin.
+
+    Flux attendu:
+    - Un patient crée une demande de rendez-vous (requested_start/end ou slot unique).
+    - Un médecin assigne/valide un créneau et confirme; ou décline avec un motif.
+    - Statuts sous forme d'enum stables pour le schéma OpenAPI.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'En attente'
+        CONFIRMED = 'confirmed', 'Confirmé'
+        DECLINED = 'declined', 'Refusé'
+        CANCELLED = 'cancelled', 'Annulé'
+
+    patient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='appointments_as_patient')
+    medecin = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments_as_medecin')
+    fiche = models.ForeignKey('FicheConsultation', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+
+    # Créneau demandé par le patient
+    requested_start = models.DateTimeField()
+    requested_end = models.DateTimeField()
+
+    # Créneau confirmé par le médecin (peut être identique ou ajusté)
+    confirmed_start = models.DateTimeField(null=True, blank=True)
+    confirmed_end = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    message_patient = models.TextField(blank=True, null=True)
+    message_medecin = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        who = f"{self.patient.username}"
+        if self.medecin:
+            who += f" ↔ Dr {self.medecin.username}"
+        return f"RDV {self.id} [{self.get_status_display()}] {who}"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Rendez-vous'
+        verbose_name_plural = 'Rendez-vous'
+
+
 

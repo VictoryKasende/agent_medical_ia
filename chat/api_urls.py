@@ -16,6 +16,7 @@ from .api_views import (
     ConversationViewSet,
     MessageIAViewSet,
     UserViewSet,
+    AppointmentViewSet,
 )
 
 app_name = 'chat_api'
@@ -25,5 +26,6 @@ router.register(r'fiche-consultation', FicheConsultationViewSet, basename='fiche
 router.register(r'conversations', ConversationViewSet, basename='conversation')
 router.register(r'messages', MessageIAViewSet, basename='messageia')
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'appointments', AppointmentViewSet, basename='appointment')
 
 urlpatterns = router.urls

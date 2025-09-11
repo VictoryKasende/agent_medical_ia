@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import FicheConsultation, Conversation, MessageIA
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
 from .serializers import (
     FicheConsultationSerializer,
     FicheConsultationDistanceSerializer,
@@ -16,6 +17,7 @@ from .serializers import (
     ConversationDetailSerializer,
     MessageIASerializer,
     UserSerializer,
+    AppointmentSerializer,
 )
 from .tasks import analyse_symptomes_task
 from authentication.permissions import IsMedecinOrAdmin, IsOwnerOrAdmin, IsMedecin, IsPatient
@@ -26,10 +28,30 @@ from .constants import (
     STATUS_REJETE_MEDECIN,
 )
 from authentication.models import CustomUser
+from .models import Appointment
 
 
 class RejectRequestSerializer(serializers.Serializer):
     commentaire = serializers.CharField()
+
+
+# ---- Appointments action serializers ----
+class AssignRequestSerializer(serializers.Serializer):
+    medecin_id = serializers.IntegerField()
+
+
+class ConfirmRequestSerializer(serializers.Serializer):
+    confirmed_start = serializers.DateTimeField()
+    confirmed_end = serializers.DateTimeField()
+    message_medecin = serializers.CharField(required=False, allow_blank=True)
+
+
+class DeclineRequestSerializer(serializers.Serializer):
+    message_medecin = serializers.CharField(required=False, allow_blank=True)
+
+
+class CancelRequestSerializer(serializers.Serializer):
+    message = serializers.CharField(required=False, allow_blank=True)
 
 
 @extend_schema_view(
@@ -38,8 +60,8 @@ class RejectRequestSerializer(serializers.Serializer):
         summary="Lister les fiches de consultation",
         description="Ajoute filtre ?status=a,b et ?is_patient_distance=true pour la vue distance.",
         parameters=[
-            OpenApiParameter(name='status', description='Filtrer par un ou plusieurs statuts séparés par des virgules', required=False, type=str),
-            OpenApiParameter(name='is_patient_distance', description='Si true, limite aux consultations distance (serializer léger)', required=False, type=bool),
+            OpenApiParameter(name='status', description='Filtrer par un ou plusieurs statuts séparés par des virgules', required=False, type=OpenApiTypes.STR),
+            OpenApiParameter(name='is_patient_distance', description='Si true, limite aux consultations distance (serializer léger)', required=False, type=OpenApiTypes.BOOL),
         ],
     ),
     retrieve=extend_schema(tags=['Consultations']),
@@ -241,3 +263,96 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 FicheConsultationViewSet.validate.throttle_scope = 'validate-consultation'
 FicheConsultationViewSet.relancer_analyse.throttle_scope = 'relancer-analyse'
 ConversationViewSet.messages.throttle_scope = 'conversation-messages'
+
+
+@extend_schema_view(
+    list=extend_schema(tags=['Rendez-vous'], summary='Lister les rendez-vous'),
+    retrieve=extend_schema(tags=['Rendez-vous'], summary='Récupérer un rendez-vous'),
+    create=extend_schema(tags=['Rendez-vous'], summary='Créer une demande de rendez-vous (patient)'),
+    update=extend_schema(tags=['Rendez-vous']),
+    partial_update=extend_schema(tags=['Rendez-vous']),
+    destroy=extend_schema(tags=['Rendez-vous'])
+)
+class AppointmentViewSet(viewsets.ModelViewSet):
+    queryset = Appointment.objects.select_related('patient', 'medecin', 'fiche').all()
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):  # pragma: no cover - simple filtering
+        qs = super().get_queryset()
+        u = self.request.user
+        if u.is_staff or getattr(u, 'role', None) == 'medecin':
+            return qs
+        # patient: ne voit que ses RDV
+        return qs.filter(patient=u)
+
+    def perform_create(self, serializer):  # pragma: no cover - simple default
+        # Patient crée une demande, on force le champ patient
+        request = self.request
+        if request and request.user.is_authenticated:
+            serializer.save(patient=request.user)
+        else:
+            serializer.save()
+
+    @extend_schema(tags=['Rendez-vous'], summary='Assigner un médecin (staff ou médecin)', request=AssignRequestSerializer, responses={200: AppointmentSerializer})
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsMedecinOrAdmin])
+    def assign(self, request, pk=None):
+        appt = self.get_object()
+        medecin_id = request.data.get('medecin_id')
+        if not medecin_id:
+            return Response({'detail': 'medecin_id requis'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            med = CustomUser.objects.get(id=medecin_id)
+        except CustomUser.DoesNotExist:
+            return Response({'detail': 'Médecin introuvable'}, status=status.HTTP_404_NOT_FOUND)
+        appt.medecin = med
+        appt.save()
+        return Response(self.get_serializer(appt).data)
+
+    @extend_schema(tags=['Rendez-vous'], summary='Confirmer un créneau (médecin)', request=ConfirmRequestSerializer, responses={200: AppointmentSerializer})
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsMedecin])
+    def confirm(self, request, pk=None):
+        appt = self.get_object()
+        start = request.data.get('confirmed_start')
+        end = request.data.get('confirmed_end')
+        if not (start and end):
+            return Response({'detail': 'confirmed_start et confirmed_end requis (ISO 8601)'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # DRF parse datetime automatiquement si format correct via serializer; ici parse naive
+            from django.utils.dateparse import parse_datetime
+            sdt = parse_datetime(start)
+            edt = parse_datetime(end)
+            if not sdt or not edt:
+                raise ValueError
+        except Exception:
+            return Response({'detail': 'Format datetime invalide'}, status=status.HTTP_400_BAD_REQUEST)
+        appt.confirmed_start = sdt
+        appt.confirmed_end = edt
+        appt.status = Appointment.Status.CONFIRMED
+        appt.message_medecin = request.data.get('message_medecin', '')
+        appt.save()
+        return Response(self.get_serializer(appt).data)
+
+    @extend_schema(tags=['Rendez-vous'], summary='Refuser un rendez-vous (médecin)', request=DeclineRequestSerializer, responses={200: AppointmentSerializer})
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsMedecin])
+    def decline(self, request, pk=None):
+        appt = self.get_object()
+        appt.status = Appointment.Status.DECLINED
+        appt.message_medecin = request.data.get('message_medecin', '')
+        appt.save()
+        return Response(self.get_serializer(appt).data)
+
+    @extend_schema(tags=['Rendez-vous'], summary='Annuler un rendez-vous (patient ou médecin)', request=CancelRequestSerializer, responses={200: AppointmentSerializer})
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def cancel(self, request, pk=None):
+        appt = self.get_object()
+        u = request.user
+        # Autoriser patient propriétaire ou médecin assigné ou staff
+        if not (u.is_staff or appt.patient_id == u.id or appt.medecin_id == u.id):
+            return Response({'detail': "Non autorisé"}, status=status.HTTP_403_FORBIDDEN)
+        appt.status = Appointment.Status.CANCELLED
+        msg_field = 'message_medecin' if getattr(u, 'role', None) == 'medecin' else 'message_patient'
+        setattr(appt, msg_field, request.data.get('message', ''))
+        appt.save()
+        return Response(self.get_serializer(appt).data)
+
