@@ -1,283 +1,132 @@
 <<<<<<< HEAD
 # MEDIAI - Système Intelligent de Consultation Médicale Assistée par IA
 
-MEDIAI est une plateforme de gestion des consultations médicales intégrant l’intelligence artificielle générative (LLMs tels que GPT, Gemini, Claude) pour assister le personnel soignant dans la collecte, l’analyse, la synthèse et la validation des données médicales. Le système facilite aussi la communication avec les patients via WhatsApp.
+MEDIAI est une plateforme de gestion des consultations médicales intégrant l’IA générative (LLMs : GPT, Gemini, Claude) pour assister le personnel soignant dans la collecte, l’analyse, la synthèse et la validation des données. La plateforme facilite aussi la communication avec les patients (WhatsApp) et expose une API REST documentée.
 
-## 1) Présentation générale
+## 1) Présentation rapide
 
-- **Objectifs**
-  - Automatiser et assister le processus de consultation médicale à l’aide de LLMs
-  - Améliorer la qualité et la rapidité des diagnostics
-  - Faciliter la communication patient ↔ personnel médical
-  - Offrir une solution accessible à distance pour les consultations.
+- Automatiser et assister le processus de consultation à l’aide de LLMs
+- Améliorer la qualité et la rapidité des diagnostics
+- Communication patient ↔ personnel médical
+- Consultations sur place et à distance
 
-## 2) Architecture & Organisation du projet
+## 2) Architecture
 
 - Django project: `agent_medical_ia/`
-- Applications:
-  - `authentication/` — Authentification, inscription, rôles, redirections
-  - `chat/` — Fiches de consultation, intégration LLM, conversations, dashboards, WhatsApp
+- Apps:
+  - `authentication/` — Authentification, inscription, rôles, API JWT et annuaire médecins
+  - `chat/` — Fiches de consultation, IA, conversations, rendez-vous, messagerie
 - Routage principal:
-  - `''` → `chat.urls`
+  - `''` → `chat.urls` (HTML)
   - `admin/` → Django Admin
-  - `auth/` → `authentication.urls`
+  - `auth/` → `authentication.urls` (HTML)
+  - API v1: `api/v1/` (chat) et `api/v1/auth/` (auth)
 
-## 3) Fonctionnalités
+## 3) API v1 — Endpoints clés
 
-### 3.1 Authentification & Rôles
+Tous les endpoints sont paginés (PageNumberPagination) si applicable. Authentification: JWT Bearer.
 
-- Connexion/Déconnexion/Inscription: `auth/login/`, `auth/logout/`, `auth/register/`
-- Rôles et accès: patient, médecin (groupe `medecin`), superuser (admin)
-- Redirections par rôle après login
+### 3.1 Auth & Utilisateurs (`/api/v1/auth/`)
 
-### 3.2 Gestion des utilisateurs
+- POST `token/` — Obtenir un access/refresh token
+- POST `refresh/` — Rafraîchir le token
+- POST `verify/` — Vérifier un token
+- POST `logout/` — Invalider le refresh (si blacklist activée)
+- GET `me/` — Profil courant (héritage)
+- POST `users/register/` — Inscription publique (optionnel)
+- ViewSet `users/` — CRUD (list/destroy admin seulement, retrieve/update par le propriétaire)
+- ViewSet `users/me/` — GET/PATCH du profil courant
 
-- Création de comptes patients (self-service)
-- Création/gestion du personnel via `admin/`
-- Redirections post-inscription selon rôle
+Annuaire médecins (accès patient uniquement):
+- GET `medecins/` — Lister les médecins
+  - Filtres: `?available=true|false`, `?specialty=<texte>`
+- GET `medecins/available/` — Lister uniquement les médecins disponibles
 
-### 3.3 Fiche de consultation
+Convenience non-versionné (optionnel) :
+- POST `/api/auth/jwt/token/`, POST `/api/auth/jwt/refresh/`
 
-- Création d’une fiche: `consultation/`
-- Présentiel: liste/édition/détail/impression
-  - `consultation/patient/`
-  - `consultation/patient/<id>/modifier/`
-  - `consultation/patient/<id>/modifier/statut`
-  - `consultation/patient/<id>/details/`
-  - `consultation/<pk>/print/`
-- Distant: liste/édition
-  - `consultation/patient-distant/`
-  - `consultation/patient-distant/<id>/modifier/`
-- Signature médecin (base64) lors de la validation
+### 3.2 Consultations (`/api/v1/fiche-consultation/`)
 
-### 3.4 Intégration LLM & IA
+- CRUD des fiches de consultation
+- Filtres:
+  - `?status=a,b` — un ou plusieurs statuts
+  - `?is_patient_distance=true` — vue « distance » (serializer léger)
+  - `?assigned_only=true` — pour un médecin, ne voir que ses fiches
+- Actions sur une fiche:
+  - POST `{id}/validate/` — valider la fiche (médecin/staff)
+  - POST `{id}/reject/` — rejeter (payload `{ "commentaire": "..." }`)
+  - POST `{id}/relancer/` — relancer l’analyse IA
+  - POST `{id}/send-whatsapp/` — envoi d’un template (placeholder)
+  - POST `{id}/assign-medecin/` — assigner un médecin (médecin/staff)
+  - GET/POST `{id}/messages/` — fil de messages médecin/patient lié à la fiche
 
-- Transformation de la fiche → texte structuré riche
-- Déclenchement d’analyse IA (Celery) à la création/relance
-- Polling des résultats: `diagnostic-result/`
-- Relance analyse: `relancer-analyse/<fiche_id>/`
+Consultations à distance — alias déprécié (lecture seule) :
+- GET `/api/v1/consultations-distance/` → utiliser `GET /api/v1/fiche-consultation/?is_patient_distance=true`
 
-### 3.5 Conversations & Historique
+### 3.3 Rendez-vous (`/api/v1/appointments/`)
 
-- CRUD minimal de conversation:
-  - Créer: `conversation/` (POST)
-  - Lire/Supprimer/Renommer: `conversation/<id>/` (GET/DELETE/PUT)
-- Historique UI partiel (AJAX): `chat-history-partial/`
+- CRUD des rendez-vous (patient crée; médecins/staff voient tout)
+- Actions:
+  - POST `{id}/assign/` — assigner un médecin (médecin/staff)
+  - POST `{id}/confirm/` — confirmer un créneau (médecin)
+  - POST `{id}/decline/` — refuser (médecin)
+  - POST `{id}/cancel/` — annuler (patient/medecin/staff)
 
-### 3.6 Diagnostic & Validation médicale
+### 3.4 Conversations & Messages (`/api/v1/conversations/`, `/api/v1/messages/`)
 
-- Lecture des synthèses IA
-- Édition médecin: diagnostic, traitement, examens, recommandations
-- Validation (statut → `analyse_terminee`)
-- Impression de la conclusion (`consultation/<pk>/print/`)
+- Conversations: CRUD + `{id}/messages/` (GET/POST)
+- Messages IA: lecture seule (`/messages/`)
 
-### 3.7 Communication Patient (WhatsApp)
+### 3.5 IA asynchrone (`/api/ia/`)
 
-- Envoi de template WhatsApp à la validation et à la demande:
-  - Envoi auto après mise à jour fiche
-  - Manuel: `send-whatsapp/<consultation_id>/` (POST)
-- Templates avec variables (identité, date, diagnostic, traitement, recommandations, validateur)
+- POST `analyse/` — démarrer une analyse (202 + cache_key)
+- GET `status/{task_id}/` — statut de tâche
+- GET `result/` — récupérer un résultat via `cache_key`
 
-### 3.8 Dashboards
+### 3.6 Documentation OpenAPI
 
-  - Présentiel: `consultation/patient/`
-  - Distant: `consultation/patient-distant/` (listing HTML conservé pour usage interne). L'ancien couple `consultations-distance/` + `api/consultations-distance/` a été supprimé (fusion via API DRF).
+- Schéma: `GET /api/schema/` (JSON)
+- Swagger UI: `GET /api/docs/`
+- Redoc: `GET /api/redoc/`
 
+## 4) Fonctionnalités principales
 
-### Nettoyage final API (Étape 8)
+- Fiches de consultation avec pipeline IA (asynchrone via Celery)
+- Validation médicale et messagerie liée à la fiche
+- Annuaire médecins avec disponibilité (`medecin_profile.is_available`) et spécialité
+- Rendez-vous patient ↔ médecin (assignation, confirmation, annulation)
 
-Les routes HTML et alias legacy liés à `consultations-distance` ont été retirés.
-La source unique pour les consultations à distance côté API est:
-`GET /api/v1/fiche-consultation/?is_patient_distance=true`
-
-Actions disponibles sur une fiche (récap):
-- `POST /api/v1/fiche-consultation/{id}/validate/`
-- `POST /api/v1/fiche-consultation/{id}/reject/` (payload: `{ "commentaire": "..." }`)
-- `POST /api/v1/fiche-consultation/{id}/relancer/`
-- `POST /api/v1/fiche-consultation/{id}/send-whatsapp/`
-
-Statuts (`chat/constants.py`): `en_analyse`, `analyse_terminee`, `valide_medecin`, `rejete_medecin`.
-
-Pagination: standard DRF (PageNumberPagination), paramètres `page` & `page_size`.
-### 3.9 Asynchrone, Cache & Utilitaires
-
-- Tâches Celery: `analyse_symptomes_task` (+ relance)
-- Cache résultat IA (clé md5 → `diagnostic_<hash>`)
-- Suivi des tâches: `check-task-status/<task_id>/`
-- `transaction.on_commit` pour lancer l’analyse après persistance
-
-### 3.10 Sécurité & Contrôles d’accès
-
-- `LoginRequiredMixin`, `user_passes_test(is_medecin|is_patient)`
-- Filtrage des vues sensibles par rôle/groupe
-
-## 4) Scénarios d’utilisation
-
-### Cas 1 : Consultation sur place
-
-1. Saisie de la fiche par le soignant
-2. Envoi vers LLM (tâche asynchrone), réception + synthèse IA
-3. Analyse/édition/validation par le médecin
-4. Impression de la conclusion
-5. Envoi du message au patient via WhatsApp
-
-### Cas 2 : Consultation à distance
-
-1. Saisie de la fiche par le patient en ligne
-2. Pipeline identique (LLM → synthèse → validation)
-3. Retour au patient via la plateforme et/ou WhatsApp
-
-## 5) Endpoints principaux (rappel)
-
-- Racine analyse (médecin): `''`
-- Auth: `auth/login/`, `auth/logout/`, `auth/register/`
-- Fiches: `consultation/`, `consultation/patient/`, `consultation/patient-distant/`, `consultation/<pk>/print/`
-- Conversations: `conversation/`, `conversation/<id>/`
-- Dashboards: `dashboard/`, `dashboard/patient/`, `dashboard/medecin/`, `dashboard/proche/`
-- IA/Async: `diagnostic-result/`, `check-task-status/<task_id>/`, `relancer-analyse/<fiche_id>/`
-- Distant: `consultations-distance/`, `api/consultations-distance/`
-- WhatsApp: `send-whatsapp/<consultation_id>/`
-
-## 6) Roadmap — 25% restants
-
-### Rôles & ACL
-- Ajouter le rôle « Personnel soignant » distinct (groupes/permissions) et écrans associés
-- Paramétrer des ACL fines sur vues et actions (édition, validation, impression)
-
-### Multi-LLM & Config
-- Activer la sélection dynamique du fournisseur LLM (GPT, Gemini, Claude) par contexte
-- Exposer la configuration dans `llm_config.py` et via variables d’environnement
-- Journaliser les appels et latences pour observabilité
-
-### Pièces jointes & Résultats complémentaires
-- Support d’upload (PDF, images, comptes rendus) rattachés à une fiche
-- Affichage et persistance dans l’historique du dossier
-
-### WhatsApp bidirectionnel & Consentement
-- Webhooks inbound (réponses patient) et rattachement au dossier/conversation
-- Paramètres de consentement patient + mentions légales
-- Journalisation/audit des messages
-
-### Portail patient & UX
-- Espace patient pour consulter l’historique, téléchargements, messages
-- Améliorer les vues distancielles (fils d’événements, statuts en temps réel)
-
-### Sécurité & Conformité
-- Politique de rétention des données, RGPD/HIPAA selon contexte
-- Traçabilité (audit log) des actions clés (création, modification, validation, envoi)
-
-## 7) Démarrage rapide (extrait)
+## 5) Démarrage rapide
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Pour l’envoi WhatsApp (Twilio), définir dans l’environnement:
+Variables d’environnement (ex. WhatsApp/Twilio) si activées :
 
 ```bash
+# Linux/macOS
 export TWILIO_ACCOUNT_SID=...
 export TWILIO_AUTH_TOKEN=...
 export TWILIO_WHATSAPP_NUMBER=whatsapp:+1xxxxxxxxxx
+# PowerShell
+$env:TWILIO_ACCOUNT_SID="..."
+$env:TWILIO_AUTH_TOKEN="..."
+$env:TWILIO_WHATSAPP_NUMBER="whatsapp:+1xxxxxxxxxx"
 ```
 
-## 8) État d’avancement
+## 6) Notes et statuts
 
-- Estimation: ~75% livré
-- Cible: finalisation des items de la Roadmap sur la semaine du 19 juin 2025
+- Statuts (`chat/constants.py`): `en_analyse`, `analyse_terminee`, `valide_medecin`, `rejete_medecin`
+- Pagination: paramètres `page`, `page_size`
+- L’alias `/api/v1/consultations-distance/` est déprécié et sera retiré ultérieurement
 
-
-## 9) Transformation en API REST (plan documenté)
-
-Cette section décrit comment migrer progressivement MEDIAI vers une API REST standardisée, sans inclure de code, avec des étapes claires et actionnables.
-
-### Étape 0 — Pré-requis et dépendances
-
-- Ajouter les dépendances: Django REST Framework, SimpleJWT, drf-spectacular
-- Activer DRF, JWT et la génération du schéma OpenAPI dans `settings.py`
-- Définir la pagination, les permissions par défaut et la classe de schéma
-- Exposer la documentation: routes pour le schéma OpenAPI et l’UI (Swagger)
-
-### Étape 1 — Cadrage et design des endpoints (v1)
-
-- Définir le périmètre v1 et la version de l’API sous `/api/v1/`
-- Lister les ressources et opérations requises:
-  - Authentification: obtenir/rafraîchir tokens JWT
-  - Utilisateurs: inscription et profil « moi »
-  - Conversations: créer, lire, renommer, supprimer; lecture des messages
-  - Fiches de consultation: CRUD nécessaire, validation, changement de statut
-  - IA: déclenchement d’analyse asynchrone et récupération des résultats (polling)
-  - Consultations à distance: listing API
-  - WhatsApp: envoi de templates; (optionnel) webhook entrant
-- Définir les contrats (payloads, codes d’erreur, pagination, filtres)
-
-### Étape 2 — Sérialisation des modèles
-
-- Créer des serializers pour `Conversation`, `MessageIA`, `FicheConsultation`, `CustomUser`
-- Définir les champs en lecture seule (ex: dates, validateurs, ids générés)
-- Normaliser les formats de dates/horodatages
-- Documenter les validations et invariants (ex: transitions de statut autorisées)
-
-### Étape 3 — Permissions et politiques d’accès
-
-- Concevoir des permissions par rôle: `patient`, `medecin`, `admin`
-- Restreindre l’accès aux ressources (ex: un patient ne voit que ses fiches)
-- Exiger `medecin` pour actions sensibles (validation, envoi WhatsApp)
-- Ajouter throttling (anti-abus) pour endpoints critiques
-
-### Étape 4 — ViewSets / APIViews
-
-- Implémenter les endpoints via ViewSets (CRUD) et actions personnalisées
-- Ajouter actions spécifiques: ex `validate` pour une fiche, `messages` pour une conversation
-- Gérer les réponses standardisées (201/202/400/403/404) et messages d’erreur clairs
-
-### Étape 5 — Routage et versionnement
-
-- Créer des routers dédiés à l’API et les inclure sous `/api/v1/`
-- Séparer les URLs HTML existantes des URLs API
-- Prévoir la compatibilité ascendante pour `/api/v2` futur
-
-### Étape 6 — IA asynchrone et cache
-
-- Exposer l’endpoint pour déclencher l’analyse (retour 202 + `cache_key`)
-- Exposer l’endpoint pour récupérer le résultat via `cache_key`
-- Garantir l’exécution asynchrone après transaction (`on_commit`)
-
-### Étape 7 — Authentification & Sécurité
-
-- Basculer l’authentification API sur JWT (access/refresh)
-- Isoler et auditer les actions sensibles (validation, envoi messages)
-- Activer CORS si front séparé et configurer les origines autorisées
-
-### Étape 8 — Documentation & Contrats
-
-- Publier le schéma OpenAPI et l’UI de doc
-- Décrire les exemples de requêtes/réponses et les erreurs attendues
-- Documenter l’authentification (Authorization: Bearer <token>)
-
-### Étape 9 — Migration progressive (cohabitation)
-
-- Phase 1: conserver les vues HTML, introduire l’API REST en parallèle
-- Phase 2: faire consommer l’API par le front; déprécier les routes HTML obsolètes
-- Phase 3: retirer le code legacy UI une fois l’usage de l’API stabilisé
-
-### Étape 10 — Tests, CI et livraison
-
-- Couvrir les endpoints avec des tests d’API (cas succès/erreur/permissions)
-- Valider le schéma OpenAPI en CI et publier la doc sur chaque build
-- Vérifier les quotas/throttling et les parcours asynchrones (file d’attente)
-- Checklist de sortie:
-  - JWT opérationnel (login/refresh) et expirations
-  - Routers v1 exposés et documentés
-  - Sérializers et permissions validés pour `patient`/`medecin`
-  - Endpoints IA (analyse/result) stables
-  - Webhook WhatsApp (si activé) sécurisé et journalisé
-  - Documentation publique `/api/docs/`
-  - Plan de rollback et monitoring en production
 
 
 =======

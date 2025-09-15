@@ -6,6 +6,7 @@ from .serializers import CustomUserSerializer, UserRegisterSerializer
 from rest_framework.permissions import IsAdminUser
 from .permissions import IsOwnerOrAdmin
 from .permissions import IsPatient
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 User = get_user_model()
 
@@ -79,5 +80,35 @@ class MedecinViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CustomUserSerializer
     permission_classes = [permissions.IsAuthenticated, IsPatient]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='available', description='Filtrer les médecins disponibles (true/false)', required=False, type=str),
+            OpenApiParameter(name='specialty', description='Filtrer par spécialité', required=False, type=str),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):  # pragma: no cover - simple filter
-        return User.objects.filter(role='medecin').order_by('username')
+        qs = User.objects.filter(role='medecin').select_related('medecin_profile').order_by('username')
+        params = getattr(self.request, 'query_params', {})
+        available = params.get('available')
+        specialty = params.get('specialty')
+        if available in ('true', 'True', '1'):
+            qs = qs.filter(medecin_profile__is_available=True)
+        if available in ('false', 'False', '0'):
+            qs = qs.filter(medecin_profile__is_available=False)
+        if specialty:
+            qs = qs.filter(medecin_profile__specialty__icontains=specialty)
+        return qs
+
+    @extend_schema(summary='Lister uniquement les médecins disponibles')
+    @action(detail=False, methods=['get'], url_path='available')
+    def available(self, request):
+        qs = self.get_queryset().filter(medecin_profile__is_available=True)
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            ser = self.get_serializer(page, many=True)
+            return self.get_paginated_response(ser.data)
+        ser = self.get_serializer(qs, many=True)
+        return Response(ser.data)

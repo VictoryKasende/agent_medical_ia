@@ -77,6 +77,7 @@ class UserProfileMedecin(models.Model):
     specialty = models.CharField(max_length=100, null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
+    is_available = models.BooleanField(default=True, help_text="Le médecin est-il disponible pour de nouveaux patients ?")
 
     def __str__(self):
         return f"Profile of Dr. {self.user.username}"
