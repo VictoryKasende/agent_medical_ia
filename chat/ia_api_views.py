@@ -17,6 +17,7 @@ from .ia_serializers import (
     AnalyseResultSerializer,
     TaskStatusSerializer,
 )
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 
 class StartAnalyseAPIView(APIView):
@@ -27,6 +28,12 @@ class StartAnalyseAPIView(APIView):
     request_serializer = AnalyseSymptomesRequestSerializer
     response_serializer = AnalyseResultSerializer  # réponse initiale (pending)
 
+    @extend_schema(
+        tags=["IA"],
+        summary="Démarrer l'analyse IA",
+        request=AnalyseSymptomesRequestSerializer,
+        responses={202: AnalyseResultSerializer},
+    )
     def post(self, request):
         serializer = AnalyseSymptomesRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -70,6 +77,14 @@ class TaskStatusAPIView(APIView):
     throttle_classes = [ScopedRateThrottle]
     response_serializer = TaskStatusSerializer
 
+    @extend_schema(
+        tags=["IA"],
+        summary="Statut d'une tâche d'analyse",
+        parameters=[
+            OpenApiParameter(name="task_id", location=OpenApiParameter.PATH, required=True, type=str),
+        ],
+        responses={200: TaskStatusSerializer},
+    )
     def get(self, request, task_id):
         result = AsyncResult(task_id)
         payload = {
@@ -89,6 +104,14 @@ class AnalyseResultAPIView(APIView):
     throttle_classes = [ScopedRateThrottle]
     response_serializer = AnalyseResultSerializer
 
+    @extend_schema(
+        tags=["IA"],
+        summary="Récupérer le résultat (cache)",
+        parameters=[
+            OpenApiParameter(name="cache_key", location=OpenApiParameter.QUERY, required=True, type=str),
+        ],
+        responses={200: AnalyseResultSerializer},
+    )
     def get(self, request):
         cache_key = request.query_params.get('cache_key')
         if not cache_key:
