@@ -30,10 +30,11 @@ class UserProfileMedecinSerializer(serializers.ModelSerializer):
             "specialty",
             "phone_number",
             "address",
+            "is_available",
         ]
         read_only_fields = ["id"]
 
-        fields = ["specialty", "phone_number", "address"]
+        fields = ["specialty", "phone_number", "address", "is_available"]
         read_only_fields = fields
 
 class CustomUserSerializer(serializers.ModelSerializer):
