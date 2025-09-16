@@ -1,0 +1,4347 @@
+openapi: 3.0.3
+info:
+  title: Agent Medical IA API
+  version: 1.0.0
+  description: API REST (consultations, conversations IA, authentification, actions
+    médicales).
+paths:
+  /api/auth/jwt/refresh/:
+    post:
+      operationId: auth_jwt_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/auth/jwt/token/:
+    post:
+      operationId: auth_jwt_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/ia/analyse/:
+    post:
+      operationId: ia_analyse_create
+      summary: Démarrer l'analyse IA
+      tags:
+      - IA
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyseSymptomesRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnalyseSymptomesRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnalyseSymptomesRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyseResult'
+          description: ''
+  /api/ia/result/:
+    get:
+      operationId: ia_result_retrieve
+      summary: Récupérer le résultat (cache)
+      parameters:
+      - in: query
+        name: cache_key
+        schema:
+          type: string
+        required: true
+      tags:
+      - IA
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyseResult'
+          description: ''
+  /api/ia/status/{task_id}/:
+    get:
+      operationId: ia_status_retrieve
+      summary: Statut d'une tâche d'analyse
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - IA
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatus'
+          description: ''
+  /api/v1/appointments/:
+    get:
+      operationId: v1_appointments_list
+      summary: Lister les rendez-vous
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Rendez-vous
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAppointmentList'
+          description: ''
+    post:
+      operationId: v1_appointments_create
+      summary: Créer une demande de rendez-vous (patient)
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+  /api/v1/appointments/{id}/:
+    get:
+      operationId: v1_appointments_retrieve
+      summary: Récupérer un rendez-vous
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+    put:
+      operationId: v1_appointments_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+    patch:
+      operationId: v1_appointments_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAppointmentRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+    delete:
+      operationId: v1_appointments_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/appointments/{id}/assign/:
+    post:
+      operationId: v1_appointments_assign_create
+      summary: Assigner un médecin (staff ou médecin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+  /api/v1/appointments/{id}/cancel/:
+    post:
+      operationId: v1_appointments_cancel_create
+      summary: Annuler un rendez-vous (patient ou médecin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CancelRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CancelRequestRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+  /api/v1/appointments/{id}/confirm/:
+    post:
+      operationId: v1_appointments_confirm_create
+      summary: Confirmer un créneau (médecin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+  /api/v1/appointments/{id}/decline/:
+    post:
+      operationId: v1_appointments_decline_create
+      summary: Refuser un rendez-vous (médecin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Rendez-vous.
+        required: true
+      tags:
+      - Rendez-vous
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclineRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeclineRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeclineRequestRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: v1_auth_logout_create
+      summary: Déconnexion (blacklist refresh)
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '205':
+          description: Token invalidé
+  /api/v1/auth/me/:
+    get:
+      operationId: v1_auth_me_retrieve
+      description: Retourne le profil de l'utilisateur courant.
+      summary: Profil utilisateur courant
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+  /api/v1/auth/medecins/:
+    get:
+      operationId: v1_auth_medecins_list
+      description: Liste/lecture des médecins. Accès réservé aux patients authentifiés.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomUserList'
+          description: ''
+  /api/v1/auth/medecins/{id}/:
+    get:
+      operationId: v1_auth_medecins_retrieve
+      description: Liste/lecture des médecins. Accès réservé aux patients authentifiés.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+  /api/v1/auth/refresh/:
+    post:
+      operationId: v1_auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/token/:
+    post:
+      operationId: v1_auth_token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/users/:
+    get:
+      operationId: v1_auth_users_list
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomUserList'
+          description: ''
+    post:
+      operationId: v1_auth_users_create
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+  /api/v1/auth/users/{id}/:
+    get:
+      operationId: v1_auth_users_retrieve
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+    put:
+      operationId: v1_auth_users_update
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomUserRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+    patch:
+      operationId: v1_auth_users_partial_update
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+    delete:
+      operationId: v1_auth_users_destroy
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/users/me/:
+    get:
+      operationId: v1_auth_users_me_retrieve
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+    patch:
+      operationId: v1_auth_users_me_partial_update
+      description: |-
+        CRUD Users.
+
+        Règles:
+        - list/destroy : admin only (IsAdminUser)
+        - retrieve/update/partial_update : owner ou admin
+        - me (GET/PATCH) : utilisateur courant (géré directement)
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomUserRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+  /api/v1/auth/users/register/:
+    post:
+      operationId: v1_auth_users_register_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegister'
+          description: ''
+  /api/v1/auth/verify/:
+    post:
+      operationId: v1_auth_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/consultations-distance/:
+    get:
+      operationId: v1_consultations_distance_list
+      description: |-
+        Deprecated list-only endpoint kept for backward compatibility.
+
+        NOTE: Will be removed in a future release. Use
+            /api/v1/fiche-consultation/?is_patient_distance=true
+        instead. A deprecation header is added to responses.
+      tags:
+      - v1
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FicheConsultationDistance'
+          description: ''
+  /api/v1/conversations/:
+    get:
+      operationId: v1_conversations_list
+      summary: Lister les conversations IA
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConversationList'
+          description: ''
+    post:
+      operationId: v1_conversations_create
+      summary: Créer une nouvelle conversation
+      tags:
+      - Conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+  /api/v1/conversations/{id}/:
+    get:
+      operationId: v1_conversations_retrieve
+      summary: Récupérer une conversation (avec messages si serializer détail)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetail'
+          description: ''
+    put:
+      operationId: v1_conversations_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      tags:
+      - Conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversationRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+    patch:
+      operationId: v1_conversations_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      tags:
+      - Conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConversationRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+          description: ''
+    delete:
+      operationId: v1_conversations_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/conversations/{id}/messages/:
+    get:
+      operationId: v1_conversations_messages_list
+      description: 'GET: liste des messages (ordre chronologique). POST: ajoute un
+        message utilisateur.'
+      summary: Lister ou ajouter des messages à la conversation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessageIAList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageIA'
+          description: ''
+    post:
+      operationId: v1_conversations_messages_create
+      description: 'GET: liste des messages (ordre chronologique). POST: ajoute un
+        message utilisateur.'
+      summary: Lister ou ajouter des messages à la conversation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Conversation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Conversations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageIARequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageIARequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageIARequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessageIAList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageIA'
+          description: ''
+  /api/v1/fiche-consultation/:
+    get:
+      operationId: v1_fiche_consultation_list
+      description: Ajoute filtre ?status=a,b et ?is_patient_distance=true pour la
+        vue distance.
+      summary: Lister les fiches de consultation
+      parameters:
+      - in: query
+        name: assigned_only
+        schema:
+          type: boolean
+        description: 'Pour les médecins: true pour ne voir que les fiches qui leur
+          sont assignées'
+      - in: query
+        name: is_patient_distance
+        schema:
+          type: boolean
+        description: Si true, limite aux consultations distance (serializer léger)
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filtrer par un ou plusieurs statuts séparés par des virgules
+      tags:
+      - Consultations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFicheConsultationList'
+          description: ''
+    post:
+      operationId: v1_fiche_consultation_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Créer une fiche de consultation
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+  /api/v1/fiche-consultation/{id}/:
+    get:
+      operationId: v1_fiche_consultation_retrieve
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+    put:
+      operationId: v1_fiche_consultation_update
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+    patch:
+      operationId: v1_fiche_consultation_partial_update
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFicheConsultationRequest'
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+    delete:
+      operationId: v1_fiche_consultation_destroy
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/fiche-consultation/{id}/assign-medecin/:
+    post:
+      operationId: v1_fiche_consultation_assign_medecin_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Assigner un médecin à la fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+  /api/v1/fiche-consultation/{id}/messages/:
+    get:
+      operationId: v1_fiche_consultation_messages_list
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Lister/Ajouter des messages de fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Consultations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFicheMessageList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheMessage'
+          description: ''
+    post:
+      operationId: v1_fiche_consultation_messages_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Lister/Ajouter des messages de fiche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheMessageRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFicheMessageList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheMessage'
+          description: ''
+  /api/v1/fiche-consultation/{id}/reject/:
+    post:
+      operationId: v1_fiche_consultation_reject_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Rejeter la consultation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RejectRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RejectRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+  /api/v1/fiche-consultation/{id}/relancer/:
+    post:
+      operationId: v1_fiche_consultation_relancer_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Relancer analyse IA
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '202':
+          description: Analyse relancée
+  /api/v1/fiche-consultation/{id}/send-whatsapp/:
+    post:
+      operationId: v1_fiche_consultation_send_whatsapp_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Envoyer template WhatsApp (placeholder)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Template envoyé (simulation)
+  /api/v1/fiche-consultation/{id}/validate/:
+    post:
+      operationId: v1_fiche_consultation_validate_create
+      description: |-
+        CRUD + actions d'analyse/validation pour les fiches de consultation.
+
+        Fusion (Option B) : inclut aussi la vue "distance" via le paramètre
+        `is_patient_distance=true` qui:
+          - applique un filtre queryset (is_patient_distance=True)
+          - utilise un serializer léger (`FicheConsultationDistanceSerializer`).
+      summary: Valider la consultation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Fiche de Consultation.
+        required: true
+      tags:
+      - Consultations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FicheConsultationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FicheConsultation'
+          description: ''
+  /api/v1/messages/:
+    get:
+      operationId: v1_messages_list
+      summary: Lister tous les messages IA (portée selon rôle)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessageIAList'
+          description: ''
+  /api/v1/messages/{id}/:
+    get:
+      operationId: v1_messages_retrieve
+      summary: Récupérer un message IA
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Message IA.
+        required: true
+      tags:
+      - Conversations
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageIA'
+          description: ''
+  /api/v1/users/:
+    get:
+      operationId: v1_users_list
+      summary: Lister les utilisateurs (restreint staff/médecin)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: v1_users_retrieve
+      summary: Récupérer un utilisateur
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Utilisateur.
+        required: true
+      tags:
+      - Auth
+      security:
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+components:
+  schemas:
+    AnalyseResult:
+      type: object
+      properties:
+        status:
+          enum:
+          - pending
+          - done
+          type: string
+          x-spec-enum-id: 8209020c9fdfb71a
+          description: |-
+            État de l'analyse
+
+            * `pending` - pending
+            * `done` - done
+        response:
+          type: string
+          description: Résultat de l'analyse IA
+        cache_key:
+          type: string
+          description: Clé de cache utilisée pour récupérer le résultat
+      required:
+      - cache_key
+      - status
+    AnalyseSymptomesRequestRequest:
+      type: object
+      properties:
+        symptomes:
+          type: string
+          minLength: 1
+          description: Description libre des symptômes du patient.
+        conversation_id:
+          type: integer
+          description: ID conversation existante, sinon création.
+      required:
+      - symptomes
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        patient:
+          type: integer
+        patient_username:
+          type: string
+          readOnly: true
+        medecin:
+          type: integer
+          nullable: true
+        medecin_username:
+          type: string
+          readOnly: true
+        fiche:
+          type: integer
+          nullable: true
+        requested_start:
+          type: string
+          format: date-time
+        requested_end:
+          type: string
+          format: date-time
+        confirmed_start:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        confirmed_end:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        status:
+          enum:
+          - pending
+          - confirmed
+          - declined
+          - cancelled
+          type: string
+          description: |-
+            * `pending` - En attente
+            * `confirmed` - Confirmé
+            * `declined` - Refusé
+            * `cancelled` - Annulé
+          x-spec-enum-id: 6a3a82cc0e8c080b
+        status_display:
+          type: string
+          readOnly: true
+        message_patient:
+          type: string
+          nullable: true
+        message_medecin:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - confirmed_end
+      - confirmed_start
+      - created_at
+      - id
+      - medecin_username
+      - patient
+      - patient_username
+      - requested_end
+      - requested_start
+      - status_display
+      - updated_at
+    AppointmentRequest:
+      type: object
+      properties:
+        patient:
+          type: integer
+        medecin:
+          type: integer
+          nullable: true
+        fiche:
+          type: integer
+          nullable: true
+        requested_start:
+          type: string
+          format: date-time
+        requested_end:
+          type: string
+          format: date-time
+        status:
+          enum:
+          - pending
+          - confirmed
+          - declined
+          - cancelled
+          type: string
+          description: |-
+            * `pending` - En attente
+            * `confirmed` - Confirmé
+            * `declined` - Refusé
+            * `cancelled` - Annulé
+          x-spec-enum-id: 6a3a82cc0e8c080b
+        message_patient:
+          type: string
+          nullable: true
+        message_medecin:
+          type: string
+          nullable: true
+      required:
+      - patient
+      - requested_end
+      - requested_start
+    AssignRequestRequest:
+      type: object
+      properties:
+        medecin_id:
+          type: integer
+      required:
+      - medecin_id
+    CancelRequestRequest:
+      type: object
+      properties:
+        message:
+          type: string
+    ConfirmRequestRequest:
+      type: object
+      properties:
+        confirmed_start:
+          type: string
+          format: date-time
+        confirmed_end:
+          type: string
+          format: date-time
+        message_medecin:
+          type: string
+      required:
+      - confirmed_end
+      - confirmed_start
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          nullable: true
+          maxLength: 100
+        titre:
+          type: string
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        fiche:
+          type: integer
+          nullable: true
+        fiche_numero:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        messages_count:
+          type: integer
+          readOnly: true
+        first_message:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - created_at
+      - fiche_numero
+      - first_message
+      - id
+      - messages_count
+      - titre
+      - updated_at
+      - user
+    ConversationDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          nullable: true
+          maxLength: 100
+        titre:
+          type: string
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        fiche:
+          type: integer
+          nullable: true
+        fiche_numero:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        messages_count:
+          type: integer
+          readOnly: true
+        first_message:
+          type: string
+          nullable: true
+          readOnly: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageIA'
+          readOnly: true
+      required:
+      - created_at
+      - fiche_numero
+      - first_message
+      - id
+      - messages
+      - messages_count
+      - titre
+      - updated_at
+      - user
+    ConversationRequest:
+      type: object
+      properties:
+        nom:
+          type: string
+          nullable: true
+          maxLength: 100
+        fiche:
+          type: integer
+          nullable: true
+    CustomUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        is_active:
+          type: boolean
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
+        is_staff:
+          type: boolean
+          title: Statut équipe
+          description: Précise si l’utilisateur peut se connecter à ce site d'administration.
+        is_superuser:
+          type: boolean
+          title: Statut super-utilisateur
+          description: Précise que l’utilisateur possède toutes les permissions sans
+            les assigner explicitement.
+        date_joined:
+          type: string
+          format: date-time
+          title: Date d’inscription
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+          title: Dernière connexion
+        patient_profile:
+          allOf:
+          - $ref: '#/components/schemas/UserProfilePatient'
+          readOnly: true
+        medecin_profile:
+          allOf:
+          - $ref: '#/components/schemas/UserProfileMedecin'
+          readOnly: true
+      required:
+      - id
+      - medecin_profile
+      - patient_profile
+      - username
+    CustomUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        is_active:
+          type: boolean
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
+        is_staff:
+          type: boolean
+          title: Statut équipe
+          description: Précise si l’utilisateur peut se connecter à ce site d'administration.
+        is_superuser:
+          type: boolean
+          title: Statut super-utilisateur
+          description: Précise que l’utilisateur possède toutes les permissions sans
+            les assigner explicitement.
+        date_joined:
+          type: string
+          format: date-time
+          title: Date d’inscription
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+          title: Dernière connexion
+      required:
+      - username
+    DeclineRequestRequest:
+      type: object
+      properties:
+        message_medecin:
+          type: string
+    FicheConsultation:
+      type: object
+      description: |-
+        Serializer principal unifié pour FicheConsultation (version API refonte).
+
+        - Expose tous les champs (create/update) sauf ceux générés serveur.
+        - `status` est en lecture seule; transitions via actions custom du ViewSet.
+        - Ajoute `status_display` pour éviter logique côté client.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        nom:
+          type: string
+          maxLength: 100
+        postnom:
+          type: string
+          maxLength: 100
+        prenom:
+          type: string
+          maxLength: 100
+        date_naissance:
+          type: string
+          format: date
+        age:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sexe:
+          enum:
+          - M
+          - F
+          - null
+          type: string
+          description: |-
+            * `M` - Masculin
+            * `F` - Féminin
+          x-spec-enum-id: ad23be183ab3f2e4
+          nullable: true
+        telephone:
+          type: string
+          maxLength: 30
+        etat_civil:
+          enum:
+          - Célibataire
+          - Marié(e)
+          - Divorcé(e)
+          - Veuf(ve)
+          type: string
+          description: |-
+            * `Célibataire` - Célibataire
+            * `Marié(e)` - Marié(e)
+            * `Divorcé(e)` - Divorcé(e)
+            * `Veuf(ve)` - Veuf(ve)
+          x-spec-enum-id: 5b7db981e20aee1c
+        occupation:
+          type: string
+          maxLength: 100
+        avenue:
+          type: string
+          maxLength: 100
+        quartier:
+          type: string
+          maxLength: 100
+        commune:
+          type: string
+          maxLength: 100
+        contact_nom:
+          type: string
+          maxLength: 100
+        contact_telephone:
+          type: string
+          maxLength: 30
+        contact_adresse:
+          type: string
+          maxLength: 255
+        date_consultation:
+          type: string
+          format: date
+          readOnly: true
+        heure_debut:
+          type: string
+          format: time
+          readOnly: true
+          nullable: true
+        heure_fin:
+          type: string
+          format: time
+          readOnly: true
+          nullable: true
+        numero_dossier:
+          type: string
+          readOnly: true
+        temperature:
+          type: number
+          format: double
+          nullable: true
+          description: Température en °C
+        spo2:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Saturation en oxygène (%)
+        poids:
+          type: number
+          format: double
+          nullable: true
+          description: Poids en kg
+        tension_arterielle:
+          type: string
+          nullable: true
+          description: 'Ex: 120/80'
+          maxLength: 20
+        pouls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Pouls (battements/minute)
+        frequence_respiratoire:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: FR (mouvements/minute)
+        patient:
+          type: boolean
+          description: Le patient est-il présent ?
+        proche:
+          type: boolean
+          description: Un proche est-il présent ?
+        soignant:
+          type: boolean
+          description: Un soignant est-il présent ?
+        medecin:
+          type: boolean
+          description: Un médecin est-il présent ?
+        autre:
+          type: boolean
+          description: Un autre intervenant est-il présent ?
+        proche_lien:
+          type: string
+          nullable: true
+          maxLength: 100
+        soignant_role:
+          type: string
+          nullable: true
+          maxLength: 100
+        autre_precisions:
+          type: string
+          nullable: true
+          maxLength: 100
+        motif_consultation:
+          type: string
+          nullable: true
+        histoire_maladie:
+          type: string
+          nullable: true
+        maison_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la maison ?
+        pharmacie_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la pharmacie ?
+        centre_sante_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris au centre de santé ?
+        hopital_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à l'hôpital ?
+        medicaments_non_pris:
+          type: boolean
+          description: Des médicaments n'ont-ils pas été pris ?
+        details_medicaments:
+          type: string
+          nullable: true
+        cephalees:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des céphalées ?
+        vertiges:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des vertiges ?
+        palpitations:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des palpitations ?
+        troubles_visuels:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des troubles visuels ?
+        nycturie:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des nycturies ?
+        hypertendu:
+          type: boolean
+        diabetique:
+          type: boolean
+        epileptique:
+          type: boolean
+        trouble_comportement:
+          type: boolean
+        gastritique:
+          type: boolean
+        tabac:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        alcool:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique_detail:
+          type: string
+          nullable: true
+        alimentation_habituelle:
+          type: string
+          nullable: true
+        allergie_medicamenteuse:
+          type: boolean
+        medicament_allergique:
+          type: string
+          nullable: true
+          maxLength: 255
+        familial_drepanocytaire:
+          type: boolean
+        familial_diabetique:
+          type: boolean
+        familial_obese:
+          type: boolean
+        familial_hypertendu:
+          type: boolean
+        familial_trouble_comportement:
+          type: boolean
+        lien_pere:
+          type: boolean
+        lien_mere:
+          type: boolean
+        lien_frere:
+          type: boolean
+        lien_soeur:
+          type: boolean
+        evenement_traumatique:
+          enum:
+          - oui
+          - non
+          - inconnu
+          type: string
+          description: |-
+            * `oui` - Oui
+            * `non` - Non
+            * `inconnu` - Je ne sais pas
+          x-spec-enum-id: 6a700f41b097ba92
+        trauma_divorce:
+          type: boolean
+        trauma_perte_parent:
+          type: boolean
+        trauma_deces_epoux:
+          type: boolean
+        trauma_deces_enfant:
+          type: boolean
+        etat_general:
+          type: string
+          nullable: true
+          maxLength: 255
+        autres_antecedents:
+          type: string
+          nullable: true
+          maxLength: 255
+        etat:
+          enum:
+          - Conservé
+          - Altéré
+          type: string
+          description: |-
+            * `Conservé` - Conservé
+            * `Altéré` - Altéré
+          x-spec-enum-id: 13206b23ded3fead
+        par_quoi:
+          type: string
+          nullable: true
+          maxLength: 255
+        capacite_physique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_physique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        capacite_psychologique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_psychologique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        febrile:
+          enum:
+          - Oui
+          - Non
+          type: string
+          description: |-
+            * `Oui` - Oui
+            * `Non` - Non
+          x-spec-enum-id: 52bddbb68da5a215
+        coloration_bulbaire:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        coloration_palpebrale:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        tegument:
+          enum:
+          - Normal
+          - Anormal
+          type: string
+          description: |-
+            * `Normal` - Normal
+            * `Anormal` - Anormal
+          x-spec-enum-id: 4f25468a7d22c7c8
+        tete:
+          type: string
+          nullable: true
+        cou:
+          type: string
+          nullable: true
+        paroi_thoracique:
+          type: string
+          nullable: true
+        poumons:
+          type: string
+          nullable: true
+        coeur:
+          type: string
+          nullable: true
+        epigastre_hypochondres:
+          type: string
+          nullable: true
+        peri_ombilical_flancs:
+          type: string
+          nullable: true
+        hypogastre_fosses_iliaques:
+          type: string
+          nullable: true
+        membres:
+          type: string
+          nullable: true
+        colonne_bassin:
+          type: string
+          nullable: true
+        examen_gynecologique:
+          type: string
+          nullable: true
+        preoccupations:
+          type: string
+          nullable: true
+        comprehension:
+          type: string
+          nullable: true
+        attentes:
+          type: string
+          nullable: true
+        engagement:
+          type: string
+          nullable: true
+        is_patient_distance:
+          type: boolean
+        status:
+          enum:
+          - en_analyse
+          - analyse_terminee
+          - valide_medecin
+          - rejete_medecin
+          type: string
+          description: |-
+            * `en_analyse` - En cours d'analyse
+            * `analyse_terminee` - Analyse terminée
+            * `valide_medecin` - Validé par médecin
+            * `rejete_medecin` - Rejeté par médecin
+          x-spec-enum-id: 407e256d3d8d83f4
+          readOnly: true
+        commentaire_rejet:
+          type: string
+          nullable: true
+          description: Motif détaillé en cas de rejet
+        diagnostic:
+          type: string
+          nullable: true
+        traitement:
+          type: string
+          nullable: true
+        examen_complementaire:
+          type: string
+          nullable: true
+        recommandations:
+          type: string
+          nullable: true
+        date_validation:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        diagnostic_ia:
+          type: string
+          readOnly: true
+          nullable: true
+        signature_medecin:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+          description: Signature du médecin pour valider la consultation
+        user:
+          type: integer
+          nullable: true
+        medecin_validateur:
+          type: integer
+          readOnly: true
+          nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
+      required:
+      - age
+      - avenue
+      - capacite_physique
+      - capacite_psychologique
+      - coloration_bulbaire
+      - coloration_palpebrale
+      - commune
+      - contact_adresse
+      - contact_nom
+      - contact_telephone
+      - created_at
+      - date_consultation
+      - date_naissance
+      - date_validation
+      - diagnostic_ia
+      - etat
+      - febrile
+      - heure_debut
+      - heure_fin
+      - id
+      - medecin_validateur
+      - nom
+      - numero_dossier
+      - occupation
+      - postnom
+      - prenom
+      - quartier
+      - signature_medecin
+      - status
+      - status_display
+      - tegument
+      - telephone
+    FicheConsultationDistance:
+      type: object
+      description: |-
+        Serializer léger pour les consultations distance (liste/lecture).
+
+        Utilisé quand le paramètre de requête `is_patient_distance=true` est fourni
+        sur l'endpoint principal `fiche-consultation`. Fournit un sous-ensemble
+        des champs pertinents pour la vue remote + un bool dérivé.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nom:
+          type: string
+          readOnly: true
+        prenom:
+          type: string
+          readOnly: true
+        age:
+          type: integer
+          readOnly: true
+        telephone:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          enum:
+          - en_analyse
+          - analyse_terminee
+          - valide_medecin
+          - rejete_medecin
+          type: string
+          description: |-
+            * `en_analyse` - En cours d'analyse
+            * `analyse_terminee` - Analyse terminée
+            * `valide_medecin` - Validé par médecin
+            * `rejete_medecin` - Rejeté par médecin
+          x-spec-enum-id: 407e256d3d8d83f4
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        motif_consultation:
+          type: string
+          readOnly: true
+          nullable: true
+        histoire_maladie:
+          type: string
+          readOnly: true
+          nullable: true
+        cephalees:
+          type: boolean
+          readOnly: true
+          nullable: true
+          description: Le patient a-t-il des céphalées ?
+        febrile:
+          enum:
+          - Oui
+          - Non
+          type: string
+          description: |-
+            * `Oui` - Oui
+            * `Non` - Non
+          x-spec-enum-id: 52bddbb68da5a215
+          readOnly: true
+        febrile_bool:
+          type: boolean
+          readOnly: true
+        temperature:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Température en °C
+        tension_arterielle:
+          type: string
+          readOnly: true
+          nullable: true
+          description: 'Ex: 120/80'
+        pouls:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Pouls (battements/minute)
+        spo2:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Saturation en oxygène (%)
+        diagnostic_ia:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - age
+      - cephalees
+      - created_at
+      - diagnostic_ia
+      - febrile
+      - febrile_bool
+      - histoire_maladie
+      - id
+      - motif_consultation
+      - nom
+      - pouls
+      - prenom
+      - spo2
+      - status
+      - status_display
+      - telephone
+      - temperature
+      - tension_arterielle
+    FicheConsultationRequest:
+      type: object
+      description: |-
+        Serializer principal unifié pour FicheConsultation (version API refonte).
+
+        - Expose tous les champs (create/update) sauf ceux générés serveur.
+        - `status` est en lecture seule; transitions via actions custom du ViewSet.
+        - Ajoute `status_display` pour éviter logique côté client.
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postnom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        prenom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        date_naissance:
+          type: string
+          format: date
+        age:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sexe:
+          enum:
+          - M
+          - F
+          - null
+          type: string
+          description: |-
+            * `M` - Masculin
+            * `F` - Féminin
+          x-spec-enum-id: ad23be183ab3f2e4
+          nullable: true
+        telephone:
+          type: string
+          minLength: 1
+          maxLength: 30
+        etat_civil:
+          enum:
+          - Célibataire
+          - Marié(e)
+          - Divorcé(e)
+          - Veuf(ve)
+          type: string
+          description: |-
+            * `Célibataire` - Célibataire
+            * `Marié(e)` - Marié(e)
+            * `Divorcé(e)` - Divorcé(e)
+            * `Veuf(ve)` - Veuf(ve)
+          x-spec-enum-id: 5b7db981e20aee1c
+        occupation:
+          type: string
+          minLength: 1
+          maxLength: 100
+        avenue:
+          type: string
+          minLength: 1
+          maxLength: 100
+        quartier:
+          type: string
+          minLength: 1
+          maxLength: 100
+        commune:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_telephone:
+          type: string
+          minLength: 1
+          maxLength: 30
+        contact_adresse:
+          type: string
+          minLength: 1
+          maxLength: 255
+        temperature:
+          type: number
+          format: double
+          nullable: true
+          description: Température en °C
+        spo2:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Saturation en oxygène (%)
+        poids:
+          type: number
+          format: double
+          nullable: true
+          description: Poids en kg
+        tension_arterielle:
+          type: string
+          nullable: true
+          description: 'Ex: 120/80'
+          maxLength: 20
+        pouls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Pouls (battements/minute)
+        frequence_respiratoire:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: FR (mouvements/minute)
+        patient:
+          type: boolean
+          description: Le patient est-il présent ?
+        proche:
+          type: boolean
+          description: Un proche est-il présent ?
+        soignant:
+          type: boolean
+          description: Un soignant est-il présent ?
+        medecin:
+          type: boolean
+          description: Un médecin est-il présent ?
+        autre:
+          type: boolean
+          description: Un autre intervenant est-il présent ?
+        proche_lien:
+          type: string
+          nullable: true
+          maxLength: 100
+        soignant_role:
+          type: string
+          nullable: true
+          maxLength: 100
+        autre_precisions:
+          type: string
+          nullable: true
+          maxLength: 100
+        motif_consultation:
+          type: string
+          nullable: true
+        histoire_maladie:
+          type: string
+          nullable: true
+        maison_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la maison ?
+        pharmacie_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la pharmacie ?
+        centre_sante_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris au centre de santé ?
+        hopital_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à l'hôpital ?
+        medicaments_non_pris:
+          type: boolean
+          description: Des médicaments n'ont-ils pas été pris ?
+        details_medicaments:
+          type: string
+          nullable: true
+        cephalees:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des céphalées ?
+        vertiges:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des vertiges ?
+        palpitations:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des palpitations ?
+        troubles_visuels:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des troubles visuels ?
+        nycturie:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des nycturies ?
+        hypertendu:
+          type: boolean
+        diabetique:
+          type: boolean
+        epileptique:
+          type: boolean
+        trouble_comportement:
+          type: boolean
+        gastritique:
+          type: boolean
+        tabac:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        alcool:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique_detail:
+          type: string
+          nullable: true
+        alimentation_habituelle:
+          type: string
+          nullable: true
+        allergie_medicamenteuse:
+          type: boolean
+        medicament_allergique:
+          type: string
+          nullable: true
+          maxLength: 255
+        familial_drepanocytaire:
+          type: boolean
+        familial_diabetique:
+          type: boolean
+        familial_obese:
+          type: boolean
+        familial_hypertendu:
+          type: boolean
+        familial_trouble_comportement:
+          type: boolean
+        lien_pere:
+          type: boolean
+        lien_mere:
+          type: boolean
+        lien_frere:
+          type: boolean
+        lien_soeur:
+          type: boolean
+        evenement_traumatique:
+          enum:
+          - oui
+          - non
+          - inconnu
+          type: string
+          description: |-
+            * `oui` - Oui
+            * `non` - Non
+            * `inconnu` - Je ne sais pas
+          x-spec-enum-id: 6a700f41b097ba92
+        trauma_divorce:
+          type: boolean
+        trauma_perte_parent:
+          type: boolean
+        trauma_deces_epoux:
+          type: boolean
+        trauma_deces_enfant:
+          type: boolean
+        etat_general:
+          type: string
+          nullable: true
+          maxLength: 255
+        autres_antecedents:
+          type: string
+          nullable: true
+          maxLength: 255
+        etat:
+          enum:
+          - Conservé
+          - Altéré
+          type: string
+          description: |-
+            * `Conservé` - Conservé
+            * `Altéré` - Altéré
+          x-spec-enum-id: 13206b23ded3fead
+        par_quoi:
+          type: string
+          nullable: true
+          maxLength: 255
+        capacite_physique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_physique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        capacite_psychologique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_psychologique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        febrile:
+          enum:
+          - Oui
+          - Non
+          type: string
+          description: |-
+            * `Oui` - Oui
+            * `Non` - Non
+          x-spec-enum-id: 52bddbb68da5a215
+        coloration_bulbaire:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        coloration_palpebrale:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        tegument:
+          enum:
+          - Normal
+          - Anormal
+          type: string
+          description: |-
+            * `Normal` - Normal
+            * `Anormal` - Anormal
+          x-spec-enum-id: 4f25468a7d22c7c8
+        tete:
+          type: string
+          nullable: true
+        cou:
+          type: string
+          nullable: true
+        paroi_thoracique:
+          type: string
+          nullable: true
+        poumons:
+          type: string
+          nullable: true
+        coeur:
+          type: string
+          nullable: true
+        epigastre_hypochondres:
+          type: string
+          nullable: true
+        peri_ombilical_flancs:
+          type: string
+          nullable: true
+        hypogastre_fosses_iliaques:
+          type: string
+          nullable: true
+        membres:
+          type: string
+          nullable: true
+        colonne_bassin:
+          type: string
+          nullable: true
+        examen_gynecologique:
+          type: string
+          nullable: true
+        preoccupations:
+          type: string
+          nullable: true
+        comprehension:
+          type: string
+          nullable: true
+        attentes:
+          type: string
+          nullable: true
+        engagement:
+          type: string
+          nullable: true
+        is_patient_distance:
+          type: boolean
+        commentaire_rejet:
+          type: string
+          nullable: true
+          description: Motif détaillé en cas de rejet
+        diagnostic:
+          type: string
+          nullable: true
+        traitement:
+          type: string
+          nullable: true
+        examen_complementaire:
+          type: string
+          nullable: true
+        recommandations:
+          type: string
+          nullable: true
+        user:
+          type: integer
+          nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
+      required:
+      - age
+      - avenue
+      - capacite_physique
+      - capacite_psychologique
+      - coloration_bulbaire
+      - coloration_palpebrale
+      - commune
+      - contact_adresse
+      - contact_nom
+      - contact_telephone
+      - date_naissance
+      - etat
+      - febrile
+      - nom
+      - occupation
+      - postnom
+      - prenom
+      - quartier
+      - tegument
+      - telephone
+    FicheMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        fiche:
+          type: integer
+        author:
+          type: integer
+          readOnly: true
+        author_username:
+          type: string
+          readOnly: true
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_username
+      - content
+      - created_at
+      - fiche
+      - id
+    FicheMessageRequest:
+      type: object
+      properties:
+        fiche:
+          type: integer
+        content:
+          type: string
+          minLength: 1
+      required:
+      - content
+      - fiche
+    MessageIA:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        conversation:
+          type: integer
+          readOnly: true
+        role:
+          enum:
+          - user
+          - gpt4
+          - claude
+          - gemini
+          - synthese
+          type: string
+          description: |-
+            * `user` - Utilisateur
+            * `gpt4` - GPT-4
+            * `claude` - Claude 3
+            * `gemini` - Gemini Pro
+            * `synthese` - Synthèse Finale
+          x-spec-enum-id: 11d4a80d0e9efa61
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content
+      - conversation
+      - id
+      - role
+      - timestamp
+    MessageIARequest:
+      type: object
+      properties:
+        role:
+          enum:
+          - user
+          - gpt4
+          - claude
+          - gemini
+          - synthese
+          type: string
+          description: |-
+            * `user` - Utilisateur
+            * `gpt4` - GPT-4
+            * `claude` - Claude 3
+            * `gemini` - Gemini Pro
+            * `synthese` - Synthèse Finale
+          x-spec-enum-id: 11d4a80d0e9efa61
+        content:
+          type: string
+          minLength: 1
+      required:
+      - content
+      - role
+    PaginatedAppointmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Appointment'
+    PaginatedConversationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conversation'
+    PaginatedCustomUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomUser'
+    PaginatedFicheConsultationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FicheConsultation'
+    PaginatedFicheMessageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FicheMessage'
+    PaginatedMessageIAList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageIA'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PatchedAppointmentRequest:
+      type: object
+      properties:
+        patient:
+          type: integer
+        medecin:
+          type: integer
+          nullable: true
+        fiche:
+          type: integer
+          nullable: true
+        requested_start:
+          type: string
+          format: date-time
+        requested_end:
+          type: string
+          format: date-time
+        status:
+          enum:
+          - pending
+          - confirmed
+          - declined
+          - cancelled
+          type: string
+          description: |-
+            * `pending` - En attente
+            * `confirmed` - Confirmé
+            * `declined` - Refusé
+            * `cancelled` - Annulé
+          x-spec-enum-id: 6a3a82cc0e8c080b
+        message_patient:
+          type: string
+          nullable: true
+        message_medecin:
+          type: string
+          nullable: true
+    PatchedConversationRequest:
+      type: object
+      properties:
+        nom:
+          type: string
+          nullable: true
+          maxLength: 100
+        fiche:
+          type: integer
+          nullable: true
+    PatchedCustomUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        is_active:
+          type: boolean
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
+        is_staff:
+          type: boolean
+          title: Statut équipe
+          description: Précise si l’utilisateur peut se connecter à ce site d'administration.
+        is_superuser:
+          type: boolean
+          title: Statut super-utilisateur
+          description: Précise que l’utilisateur possède toutes les permissions sans
+            les assigner explicitement.
+        date_joined:
+          type: string
+          format: date-time
+          title: Date d’inscription
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+          title: Dernière connexion
+    PatchedFicheConsultationRequest:
+      type: object
+      description: |-
+        Serializer principal unifié pour FicheConsultation (version API refonte).
+
+        - Expose tous les champs (create/update) sauf ceux générés serveur.
+        - `status` est en lecture seule; transitions via actions custom du ViewSet.
+        - Ajoute `status_display` pour éviter logique côté client.
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postnom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        prenom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        date_naissance:
+          type: string
+          format: date
+        age:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sexe:
+          enum:
+          - M
+          - F
+          - null
+          type: string
+          description: |-
+            * `M` - Masculin
+            * `F` - Féminin
+          x-spec-enum-id: ad23be183ab3f2e4
+          nullable: true
+        telephone:
+          type: string
+          minLength: 1
+          maxLength: 30
+        etat_civil:
+          enum:
+          - Célibataire
+          - Marié(e)
+          - Divorcé(e)
+          - Veuf(ve)
+          type: string
+          description: |-
+            * `Célibataire` - Célibataire
+            * `Marié(e)` - Marié(e)
+            * `Divorcé(e)` - Divorcé(e)
+            * `Veuf(ve)` - Veuf(ve)
+          x-spec-enum-id: 5b7db981e20aee1c
+        occupation:
+          type: string
+          minLength: 1
+          maxLength: 100
+        avenue:
+          type: string
+          minLength: 1
+          maxLength: 100
+        quartier:
+          type: string
+          minLength: 1
+          maxLength: 100
+        commune:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contact_telephone:
+          type: string
+          minLength: 1
+          maxLength: 30
+        contact_adresse:
+          type: string
+          minLength: 1
+          maxLength: 255
+        temperature:
+          type: number
+          format: double
+          nullable: true
+          description: Température en °C
+        spo2:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Saturation en oxygène (%)
+        poids:
+          type: number
+          format: double
+          nullable: true
+          description: Poids en kg
+        tension_arterielle:
+          type: string
+          nullable: true
+          description: 'Ex: 120/80'
+          maxLength: 20
+        pouls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Pouls (battements/minute)
+        frequence_respiratoire:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: FR (mouvements/minute)
+        patient:
+          type: boolean
+          description: Le patient est-il présent ?
+        proche:
+          type: boolean
+          description: Un proche est-il présent ?
+        soignant:
+          type: boolean
+          description: Un soignant est-il présent ?
+        medecin:
+          type: boolean
+          description: Un médecin est-il présent ?
+        autre:
+          type: boolean
+          description: Un autre intervenant est-il présent ?
+        proche_lien:
+          type: string
+          nullable: true
+          maxLength: 100
+        soignant_role:
+          type: string
+          nullable: true
+          maxLength: 100
+        autre_precisions:
+          type: string
+          nullable: true
+          maxLength: 100
+        motif_consultation:
+          type: string
+          nullable: true
+        histoire_maladie:
+          type: string
+          nullable: true
+        maison_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la maison ?
+        pharmacie_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à la pharmacie ?
+        centre_sante_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris au centre de santé ?
+        hopital_medicaments:
+          type: boolean
+          description: Des médicaments sont-ils pris à l'hôpital ?
+        medicaments_non_pris:
+          type: boolean
+          description: Des médicaments n'ont-ils pas été pris ?
+        details_medicaments:
+          type: string
+          nullable: true
+        cephalees:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des céphalées ?
+        vertiges:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des vertiges ?
+        palpitations:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des palpitations ?
+        troubles_visuels:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des troubles visuels ?
+        nycturie:
+          type: boolean
+          nullable: true
+          description: Le patient a-t-il des nycturies ?
+        hypertendu:
+          type: boolean
+        diabetique:
+          type: boolean
+        epileptique:
+          type: boolean
+        trouble_comportement:
+          type: boolean
+        gastritique:
+          type: boolean
+        tabac:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        alcool:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique:
+          enum:
+          - non
+          - rarement
+          - souvent
+          - tres_souvent
+          type: string
+          description: |-
+            * `non` - Non
+            * `rarement` - Rarement
+            * `souvent` - Souvent
+            * `tres_souvent` - Très souvent
+          x-spec-enum-id: bc9232cfbdf0f59c
+        activite_physique_detail:
+          type: string
+          nullable: true
+        alimentation_habituelle:
+          type: string
+          nullable: true
+        allergie_medicamenteuse:
+          type: boolean
+        medicament_allergique:
+          type: string
+          nullable: true
+          maxLength: 255
+        familial_drepanocytaire:
+          type: boolean
+        familial_diabetique:
+          type: boolean
+        familial_obese:
+          type: boolean
+        familial_hypertendu:
+          type: boolean
+        familial_trouble_comportement:
+          type: boolean
+        lien_pere:
+          type: boolean
+        lien_mere:
+          type: boolean
+        lien_frere:
+          type: boolean
+        lien_soeur:
+          type: boolean
+        evenement_traumatique:
+          enum:
+          - oui
+          - non
+          - inconnu
+          type: string
+          description: |-
+            * `oui` - Oui
+            * `non` - Non
+            * `inconnu` - Je ne sais pas
+          x-spec-enum-id: 6a700f41b097ba92
+        trauma_divorce:
+          type: boolean
+        trauma_perte_parent:
+          type: boolean
+        trauma_deces_epoux:
+          type: boolean
+        trauma_deces_enfant:
+          type: boolean
+        etat_general:
+          type: string
+          nullable: true
+          maxLength: 255
+        autres_antecedents:
+          type: string
+          nullable: true
+          maxLength: 255
+        etat:
+          enum:
+          - Conservé
+          - Altéré
+          type: string
+          description: |-
+            * `Conservé` - Conservé
+            * `Altéré` - Altéré
+          x-spec-enum-id: 13206b23ded3fead
+        par_quoi:
+          type: string
+          nullable: true
+          maxLength: 255
+        capacite_physique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_physique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        capacite_psychologique:
+          enum:
+          - Top
+          - Moyen
+          - Bas
+          type: string
+          description: |-
+            * `Top` - Top
+            * `Moyen` - Moyen
+            * `Bas` - Bas
+          x-spec-enum-id: c6ffec3a84669bed
+        capacite_psychologique_score:
+          type: string
+          nullable: true
+          maxLength: 10
+        febrile:
+          enum:
+          - Oui
+          - Non
+          type: string
+          description: |-
+            * `Oui` - Oui
+            * `Non` - Non
+          x-spec-enum-id: 52bddbb68da5a215
+        coloration_bulbaire:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        coloration_palpebrale:
+          enum:
+          - Normale
+          - Anormale
+          type: string
+          description: |-
+            * `Normale` - Normale
+            * `Anormale` - Anormale
+          x-spec-enum-id: 76022e26b979a96a
+        tegument:
+          enum:
+          - Normal
+          - Anormal
+          type: string
+          description: |-
+            * `Normal` - Normal
+            * `Anormal` - Anormal
+          x-spec-enum-id: 4f25468a7d22c7c8
+        tete:
+          type: string
+          nullable: true
+        cou:
+          type: string
+          nullable: true
+        paroi_thoracique:
+          type: string
+          nullable: true
+        poumons:
+          type: string
+          nullable: true
+        coeur:
+          type: string
+          nullable: true
+        epigastre_hypochondres:
+          type: string
+          nullable: true
+        peri_ombilical_flancs:
+          type: string
+          nullable: true
+        hypogastre_fosses_iliaques:
+          type: string
+          nullable: true
+        membres:
+          type: string
+          nullable: true
+        colonne_bassin:
+          type: string
+          nullable: true
+        examen_gynecologique:
+          type: string
+          nullable: true
+        preoccupations:
+          type: string
+          nullable: true
+        comprehension:
+          type: string
+          nullable: true
+        attentes:
+          type: string
+          nullable: true
+        engagement:
+          type: string
+          nullable: true
+        is_patient_distance:
+          type: boolean
+        commentaire_rejet:
+          type: string
+          nullable: true
+          description: Motif détaillé en cas de rejet
+        diagnostic:
+          type: string
+          nullable: true
+        traitement:
+          type: string
+          nullable: true
+        examen_complementaire:
+          type: string
+          nullable: true
+        recommandations:
+          type: string
+          nullable: true
+        user:
+          type: integer
+          nullable: true
+        assigned_medecin:
+          type: integer
+          nullable: true
+          description: Médecin assigné pour le suivi de la consultation
+    RejectRequestRequest:
+      type: object
+      properties:
+        commentaire:
+          type: string
+          minLength: 1
+      required:
+      - commentaire
+    TaskStatus:
+      type: object
+      properties:
+        task_id:
+          type: string
+          description: ID de la tâche Celery
+        state:
+          type: string
+          description: État de la tâche
+        info:
+          type: string
+          description: Information ou erreur de la tâche
+      required:
+      - state
+      - task_id
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Statut équipe
+          description: Précise si l’utilisateur peut se connecter à ce site d'administration.
+      required:
+      - id
+      - is_staff
+      - username
+    UserProfileMedecin:
+      type: object
+      properties:
+        specialty:
+          type: string
+          readOnly: true
+          nullable: true
+        phone_number:
+          type: string
+          readOnly: true
+          nullable: true
+        address:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - address
+      - phone_number
+      - specialty
+    UserProfilePatient:
+      type: object
+      properties:
+        date_of_birth:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        phone_number:
+          type: string
+          readOnly: true
+          nullable: true
+        address:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - address
+      - date_of_birth
+      - phone_number
+    UserRegister:
+      type: object
+      properties:
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+      required:
+      - username
+    UserRegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+          minLength: 4
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+      required:
+      - password
+      - username
+    UserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        role:
+          enum:
+          - patient
+          - medecin
+          type: string
+          description: |-
+            * `patient` - Patient
+            * `medecin` - Médecin
+          x-spec-enum-id: 73dfe27d3c9c7fbb
+      required:
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Consultations
+  description: CRUD & actions sur les fiches de consultation.
+- name: Conversations
+  description: Discussions IA et messages.
+- name: Auth
+  description: Authentification & JWT.
+- name: Rendez-vous
+  description: Prise et gestion des rendez-vous.

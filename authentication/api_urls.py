@@ -19,12 +19,13 @@ from .jwt_views import (
 )
 
 from .views_api import LogoutView, MeView  # legacy style views (logout, me) if still used
-from .api_views import UserRegisterAPIView, UserViewSet
+from .api_views import UserRegisterAPIView, UserViewSet, MedecinViewSet
 
 app_name = 'auth_api'
 
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
+router.register('medecins', MedecinViewSet, basename='medecin')
 
 urlpatterns = [
     # JWT core

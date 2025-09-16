@@ -2,20 +2,19 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.db.models.signals import post_save, pre_delete
 
+class UserRole(models.TextChoices):
+    PATIENT = 'patient', 'Patient'
+    MEDECIN = 'medecin', 'Médecin'
+
+
 class CustomUser(AbstractUser):
-    """
-    Custom User model extending Django's AbstractUser.
-    """
+    """Custom User model extending Django's AbstractUser."""
 
-    PATIENT_ROLE = 'patient'
-    MEDECIN_ROLE = 'medecin'
+    # Backward-compatible constants for existing code paths
+    PATIENT_ROLE = UserRole.PATIENT
+    MEDECIN_ROLE = UserRole.MEDECIN
 
-    ROLE_CHOICES = [
-        (PATIENT_ROLE, 'Patient'),
-        (MEDECIN_ROLE, 'Médecin'),
-    ]
-
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
+    role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.PATIENT)
     phone = models.CharField(max_length=20, blank=True, null=True)
 
     email = models.EmailField(blank=True, null=True)
@@ -78,6 +77,7 @@ class UserProfileMedecin(models.Model):
     specialty = models.CharField(max_length=100, null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
+    is_available = models.BooleanField(default=True, help_text="Le médecin est-il disponible pour de nouveaux patients ?")
 
     def __str__(self):
         return f"Profile of Dr. {self.user.username}"
