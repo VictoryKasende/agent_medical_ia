@@ -229,7 +229,10 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': ['chat.schema_hooks.unify_enum_names'],
 }
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()  # Filtrer les chaînes vides
+]
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Autorise toutes les origines en mode DEBUG

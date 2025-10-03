@@ -23,6 +23,13 @@ if 'GITHUB_ACTIONS' in os.environ:
         }
     }
     
+    # Configuration CORS pour tests (fix erreur corsheaders.E013)
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    CORS_ALLOW_ALL_ORIGINS = True  # Pour les tests seulement
+    
     # Logs simplifiés
     LOGGING = {
         'version': 1,
