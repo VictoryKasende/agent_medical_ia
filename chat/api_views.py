@@ -13,6 +13,7 @@ from .models import (
     MedecinAvailability, MedecinException, WebhookEvent, DataExportJob
 )
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse
+from drf_spectacular.openapi import OpenApiTypes
 from drf_spectacular.types import OpenApiTypes
 from .serializers import (
     FicheConsultationSerializer,
@@ -483,7 +484,7 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
     @extend_schema(
         tags=['Consultations'], 
         summary='Exporter la fiche en PDF',
-        responses={200: OpenApiResponse(description='PDF généré', media_type='application/pdf')}
+        responses={200: OpenApiResponse(description='PDF généré')}
     )
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated], url_path='export/pdf')
     def export_pdf(self, request, pk=None):
