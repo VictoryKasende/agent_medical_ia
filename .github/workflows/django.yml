@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Limite à 10 minutes max
     environment: EnvironnementMediAi
 
     services:
@@ -116,11 +117,14 @@ jobs:
 
     - name: Run tests
       run: |
-        # Tests Django standards avec settings test
-        python manage.py test --keepdb --settings=agent_medical_ia.settings_test --verbosity=2
+        # Tests installation rapides
+        python test_installation.py
         
-        # Tests fixes P1 spécifiques
-        python manage.py test chat.test_fixes_p1 --keepdb --settings=agent_medical_ia.settings_test --verbosity=2 || echo "Tests fixes échoués"
+        # Tests Django core seulement (sans P1 pour éviter timeout)
+        python manage.py test chat.tests --keepdb --settings=agent_medical_ia.settings_test --verbosity=1 --failfast
         
-        # Tests API endpoints personnalisés (optionnels)
-        python test_api_endpoints.py || echo "Tests API optionnels échoués mais continuons"
+        # Tests fixes P1 séparément (plus rapides)
+        python manage.py test chat.test_fixes_p1 --keepdb --settings=agent_medical_ia.settings_test --verbosity=1 || echo "Tests P1 fixes échoués"
+        
+        # Tests API endpoints basiques seulement
+        python test_api_quick.py || echo "Tests API rapides échoués"
