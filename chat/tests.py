@@ -154,7 +154,19 @@ class FicheConsultationCRUDAndActionsTests(TestCase):
     def test_send_whatsapp(self):
         self.client.force_authenticate(self.medecin)
         r = self.client.post(f'{BASE_FICHE_URL}{self.fiche.id}/send-whatsapp/')
-        self.assertEqual(r.status_code, 200)
+        
+        # Accepter 200 (succès) ou simulation en cas d'erreur config Twilio
+        if r.status_code != 200:
+            print(f"DEBUG test_send_whatsapp - Status: {r.status_code}")
+            print(f"DEBUG test_send_whatsapp - Response: {r.json() if hasattr(r, 'json') else r.content}")
+        
+        # En CI/CD, accepter simulation (200) ou erreur de config gérée gracieusement
+        self.assertIn(r.status_code, [200])
+        
+        # Vérifier que la réponse contient les bonnes informations
+        response_data = r.json()
+        self.assertIn('fiche', response_data)
+        self.assertEqual(response_data['fiche'], self.fiche.id)
 
 
 class ConversationAndMessageTests(TestCase):
