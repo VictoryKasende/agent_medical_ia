@@ -16,7 +16,11 @@ def create_fiche(**overrides):
         sexe='M', telephone='+111', occupation='Occ', avenue='Av', quartier='Q', commune='C',
         contact_nom='CN', contact_telephone='123', contact_adresse='Adr',
         etat='Conservé', capacite_physique='Top', capacite_psychologique='Top', febrile='Non',
-        coloration_bulbaire='Normale', coloration_palpebrale='Normale', tegument='Normal',
+        coloration_bulbaire='normale', coloration_palpebrale='normale', tegument='Normal',
+        # Nouveaux champs P0
+        motif_consultation='Consultation test',
+        hypothese_patient_medecin='Test hypothèse',
+        analyses_proposees='Test analyses'
     )
     base.update(overrides)
     return FicheConsultation.objects.create(**base)
@@ -81,7 +85,11 @@ class FicheConsultationCRUDAndActionsTests(TestCase):
             'sexe': 'M', 'telephone': '+222', 'occupation': 'X', 'avenue': 'Av', 'quartier': 'Q', 'commune': 'C',
             'contact_nom': 'CN', 'contact_telephone': '123', 'contact_adresse': 'Adr',
             'etat': 'Conservé', 'capacite_physique': 'Top', 'capacite_psychologique': 'Top', 'febrile': 'Non',
-            'coloration_bulbaire': 'Normale', 'coloration_palpebrale': 'Normale', 'tegument': 'Normal'
+            'coloration_bulbaire': 'normale', 'coloration_palpebrale': 'normale', 'tegument': 'Normal',
+            # Nouveaux champs P0 requis
+            'motif_consultation': 'Test consultation motif',
+            'hypothese_patient_medecin': 'Hypothèse de test',
+            'analyses_proposees': 'Analyses de test'
         }
 
     def test_create_requires_auth(self):
@@ -90,7 +98,15 @@ class FicheConsultationCRUDAndActionsTests(TestCase):
 
     def test_create_ok(self):
         self.client.force_authenticate(self.patient)
-        r = self.client.post(BASE_FICHE_URL, data=self._create_payload(), format='json')
+        payload = self._create_payload()
+        r = self.client.post(BASE_FICHE_URL, data=payload, format='json')
+        
+        # Debug si échec
+        if r.status_code != 201:
+            print(f"DEBUG test_create_ok - Status: {r.status_code}")
+            print(f"DEBUG test_create_ok - Response: {r.json() if hasattr(r, 'json') else r.content}")
+            print(f"DEBUG test_create_ok - Payload: {payload}")
+        
         self.assertEqual(r.status_code, 201)
         self.assertIn('id', r.json())
 
