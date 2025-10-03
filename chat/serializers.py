@@ -341,7 +341,7 @@ class DataExportJobSerializer(serializers.ModelSerializer):
             'records_count', 'error_message', 'duration', 'started_at', 'completed_at', 'created_at'
         ]
         read_only_fields = [
-            'id', 'status', 'file_path', 'file_size', 'records_count', 'error_message',
+            'id', 'created_by', 'status', 'file_path', 'file_size', 'records_count', 'error_message',
             'started_at', 'completed_at', 'created_at', 'duration', 'file_size_formatted',
             'created_by_name', 'status_display', 'export_format_display'
         ]

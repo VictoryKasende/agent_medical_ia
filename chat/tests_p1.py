@@ -544,7 +544,8 @@ class PermissionsTests(APITestCase):
         for endpoint in endpoints:
             url = reverse(endpoint)
             
-            # Test sans authentification
+            # Test sans authentification - utiliser AnonymousUser
+            self.client.logout()
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
             

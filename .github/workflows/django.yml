@@ -117,7 +117,10 @@ jobs:
     - name: Run tests
       run: |
         # Tests Django standards avec settings test
-        python manage.py test --keepdb --settings=agent_medical_ia.settings_test
+        python manage.py test --keepdb --settings=agent_medical_ia.settings_test --verbosity=2
+        
+        # Tests fixes P1 spécifiques
+        python manage.py test chat.test_fixes_p1 --keepdb --settings=agent_medical_ia.settings_test --verbosity=2 || echo "Tests fixes échoués"
         
         # Tests API endpoints personnalisés (optionnels)
         python test_api_endpoints.py || echo "Tests API optionnels échoués mais continuons"
