@@ -224,6 +224,11 @@ class AvailabilityAPITests(APITestCase):
         url = reverse('chat_api:availability-list')
         response = self.client.post(url, data)
         
+        # Debug si échec
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"DEBUG - Erreur création availability: {response.status_code}")
+            print(f"DEBUG - Réponse: {response.data}")
+        
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['medecin'], self.medecin.id)
         self.assertEqual(response.data['day_of_week'], 3)
@@ -544,7 +549,7 @@ class PermissionsTests(APITestCase):
         for endpoint in endpoints:
             url = reverse(endpoint)
             
-            # Test sans authentification - utiliser AnonymousUser
+            # Test sans authentification - utiliser client.logout() pour être sûr
             self.client.logout()
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
