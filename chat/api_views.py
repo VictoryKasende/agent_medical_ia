@@ -536,10 +536,84 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
                 return response
                 
         except ImportError:
-            # Fallback si WeasyPrint n'est pas installé
-            return Response({
-                'detail': 'Export PDF non disponible. Installer WeasyPrint: pip install weasyprint'
-            }, status=status.HTTP_501_NOT_IMPLEMENTED)
+            # Fallback avec ReportLab si WeasyPrint n'est pas installé
+            try:
+                from reportlab.lib.pagesizes import A4
+                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                from reportlab.lib.units import inch
+                from reportlab.lib import colors
+                from io import BytesIO
+                
+                buffer = BytesIO()
+                doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+                
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30)
+                heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=14, spaceAfter=12)
+                
+                story = []
+                
+                # En-tête
+                story.append(Paragraph("🏥 CONSULTATION MÉDICALE", title_style))
+                story.append(Spacer(1, 12))
+                
+                # Informations patient
+                story.append(Paragraph("INFORMATIONS PATIENT", heading_style))
+                patient_data = [
+                    ['Nom:', fiche.user.get_full_name()],
+                    ['Date de consultation:', fiche.date_consultation.strftime('%d/%m/%Y')],
+                    ['Statut:', fiche.get_status_display()],
+                    ['Motif:', fiche.motif_consultation],
+                ]
+                patient_table = Table(patient_data, colWidths=[2*inch, 4*inch])
+                patient_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (0,-1), colors.lightgrey),
+                    ('TEXTCOLOR', (0,0), (-1,-1), colors.black),
+                    ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                    ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+                    ('FONTSIZE', (0,0), (-1,-1), 10),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+                    ('BACKGROUND', (1,0), (1,-1), colors.beige),
+                    ('GRID', (0,0), (-1,-1), 1, colors.black)
+                ]))
+                story.append(patient_table)
+                story.append(Spacer(1, 20))
+                
+                # Diagnostic
+                if fiche.diagnostic:
+                    story.append(Paragraph("DIAGNOSTIC", heading_style))
+                    story.append(Paragraph(fiche.diagnostic, styles['Normal']))
+                    story.append(Spacer(1, 15))
+                
+                # Traitement
+                if fiche.traitement:
+                    story.append(Paragraph("TRAITEMENT", heading_style))
+                    story.append(Paragraph(fiche.traitement, styles['Normal']))
+                    story.append(Spacer(1, 15))
+                
+                # Résultats laboratoire
+                lab_results = fiche.lab_results.all()
+                if lab_results:
+                    story.append(Paragraph("RÉSULTATS DE LABORATOIRE", heading_style))
+                    for lab in lab_results:
+                        lab_text = f"• {lab.type_analyse}: {lab.valeur} {lab.unite} (Normal: {lab.valeurs_normales})"
+                        story.append(Paragraph(lab_text, styles['Normal']))
+                    story.append(Spacer(1, 15))
+                
+                # Génération du PDF
+                doc.build(story)
+                pdf = buffer.getvalue()
+                buffer.close()
+                
+                response = HttpResponse(pdf, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="fiche_{fiche.numero_dossier}.pdf"'
+                return response
+                
+            except ImportError:
+                return Response({
+                    'detail': 'Export PDF non disponible. Installer WeasyPrint ou ReportLab'
+                }, status=status.HTTP_501_NOT_IMPLEMENTED)
         except Exception as e:
             return Response({
                 'detail': f'Erreur lors de la génération du PDF: {str(e)}'
