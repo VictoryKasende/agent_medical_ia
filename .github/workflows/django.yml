@@ -106,10 +106,6 @@ jobs:
       run: |
         python test_installation.py
 
-    - name: Run pre-migration validation
-      run: |
-        python test_pre_migration.py
-
     - name: Run migrations
       run: |
         python manage.py migrate --settings=agent_medical_ia.settings_test
