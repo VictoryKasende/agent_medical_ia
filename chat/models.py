@@ -151,13 +151,18 @@ class FicheConsultation(models.Model):
         OUI = 'Oui', 'Oui'
         NON = 'Non', 'Non'
 
-    febrile = models.CharField(max_length=10, choices=OuiNon.choices)
-    class Coloration(models.TextChoices):
-        NORMALE = 'Normale', 'Normale'
-        ANORMALE = 'Anormale', 'Anormale'
+    class ColorationBulbaire(models.TextChoices):
+        NORMALE = 'normale', 'Normale'
+        JAUNATRE = 'jaunatre', 'Jaunâtre'
+        ROUGEATRE = 'rougeatre', 'Rougeâtre'
 
-    coloration_bulbaire = models.CharField(max_length=20, choices=Coloration.choices)
-    coloration_palpebrale = models.CharField(max_length=20, choices=Coloration.choices)
+    class ColorationPalpebrale(models.TextChoices):
+        NORMALE = 'normale', 'Normale'
+        PALE = 'pale', 'Pâle'
+
+    febrile = models.CharField(max_length=10, choices=OuiNon.choices)
+    coloration_bulbaire = models.CharField(max_length=20, choices=ColorationBulbaire.choices, default=ColorationBulbaire.NORMALE)
+    coloration_palpebrale = models.CharField(max_length=20, choices=ColorationPalpebrale.choices, default=ColorationPalpebrale.NORMALE)
 
     class Tegument(models.TextChoices):
         NORMAL = 'Normal', 'Normal'
@@ -183,6 +188,16 @@ class FicheConsultation(models.Model):
     comprehension = models.TextField(blank=True, null=True)
     attentes = models.TextField(blank=True, null=True)
     engagement = models.TextField(blank=True, null=True)
+
+    # Nouveaux champs pour améliorer l'analyse IA
+    hypothese_patient_medecin = models.TextField(
+        blank=True, null=True,
+        help_text="À quoi pensez-vous ? Hypothèse diagnostique du patient ou médecin"
+    )
+    analyses_proposees = models.TextField(
+        blank=True, null=True,
+        help_text="Analyses paracliniques que vous proposez"
+    )
 
     # Nouveaux champs pour la consultation à distance
     is_patient_distance = models.BooleanField(default=False)
@@ -300,6 +315,10 @@ class Appointment(models.Model):
         DECLINED = 'declined', 'Refusé'
         CANCELLED = 'cancelled', 'Annulé'
 
+    class ConsultationMode(models.TextChoices):
+        PRESENTIEL = 'presentiel', 'Présentiel'
+        DISTANCIEL = 'distanciel', 'Distanciel/Téléconsultation'
+
     patient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='appointments_as_patient')
     medecin = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments_as_medecin')
     fiche = models.ForeignKey('FicheConsultation', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
@@ -312,6 +331,19 @@ class Appointment(models.Model):
     confirmed_start = models.DateTimeField(null=True, blank=True)
     confirmed_end = models.DateTimeField(null=True, blank=True)
 
+    # Nouveau: mode et localisation
+    consultation_mode = models.CharField(
+        max_length=20, 
+        choices=ConsultationMode.choices, 
+        default=ConsultationMode.DISTANCIEL,
+        help_text="Mode de consultation"
+    )
+    location_note = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Adresse ou informations de connexion selon le mode"
+    )
+
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     message_patient = models.TextField(blank=True, null=True)
     message_medecin = models.TextField(blank=True, null=True)
@@ -322,7 +354,7 @@ class Appointment(models.Model):
         who = f"{self.patient.username}"
         if self.medecin:
             who += f" ↔ Dr {self.medecin.username}"
-        return f"RDV {self.id} [{self.get_status_display()}] {who}"
+        return f"RDV {self.id} [{self.get_status_display()}] {who} ({self.get_consultation_mode_display()})"
 
     class Meta:
         ordering = ['-created_at']
@@ -341,6 +373,458 @@ class FicheMessage(models.Model):
         ordering = ['created_at']
         verbose_name = 'Message Fiche'
         verbose_name_plural = 'Messages Fiche'
+
+
+class FicheReference(models.Model):
+    """Références bibliographiques associées à une fiche de consultation."""
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name='references')
+    title = models.CharField(max_length=255, help_text="Titre de la référence")
+    url = models.URLField(blank=True, null=True, help_text="URL de la référence")
+    source = models.CharField(
+        max_length=50, 
+        choices=[
+            ('pubmed', 'PubMed'),
+            ('cinahl', 'CINAHL'),
+            ('has', 'HAS (Haute Autorité de Santé)'),
+            ('cochrane', 'Cochrane'),
+            ('other', 'Autre')
+        ],
+        default='other',
+        help_text="Source de la référence"
+    )
+    authors = models.CharField(max_length=500, blank=True, null=True, help_text="Auteurs")
+    year = models.IntegerField(blank=True, null=True, help_text="Année de publication")
+    journal = models.CharField(max_length=255, blank=True, null=True, help_text="Journal/Revue")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.get_source_display()})"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Référence Fiche'
+        verbose_name_plural = 'Références Fiche'
+
+
+class LabResult(models.Model):
+    """Résultats de laboratoire associés à une fiche de consultation."""
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name='lab_results')
+    type_analyse = models.CharField(
+        max_length=100,
+        help_text="Type d'analyse (ex: Glycémie, Hémoglobine, Créatinine, etc.)"
+    )
+    valeur = models.CharField(max_length=50, help_text="Valeur du résultat")
+    unite = models.CharField(max_length=20, blank=True, null=True, help_text="Unité de mesure")
+    valeurs_normales = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        help_text="Plage de valeurs normales"
+    )
+    date_prelevement = models.DateField(help_text="Date du prélèvement")
+    laboratoire = models.CharField(max_length=255, blank=True, null=True, help_text="Nom du laboratoire")
+    fichier = models.FileField(
+        upload_to='lab_results/', 
+        blank=True, 
+        null=True, 
+        help_text="Fichier PDF/image du résultat"
+    )
+    commentaire = models.TextField(blank=True, null=True, help_text="Commentaire du laboratoire")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.type_analyse}: {self.valeur} {self.unite or ''} (Fiche {self.fiche.numero_dossier})"
+
+    class Meta:
+        ordering = ['-date_prelevement', '-created_at']
+        verbose_name = 'Résultat de Laboratoire'
+        verbose_name_plural = 'Résultats de Laboratoire'
+
+
+class FicheAttachment(models.Model):
+    """Fichiers et pièces jointes associés à une fiche de consultation."""
+    
+    class AttachmentKind(models.TextChoices):
+        IMAGE = 'image', 'Image/Photo'
+        DOCUMENT = 'document', 'Document'
+        XRAY = 'xray', 'Radiographie'
+        SCAN = 'scan', 'Scanner/IRM'
+        PRESCRIPTION = 'prescription', 'Ordonnance'
+        OTHER = 'other', 'Autre'
+
+    fiche = models.ForeignKey(FicheConsultation, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='attachments/%Y/%m/', help_text="Fichier joint")
+    kind = models.CharField(
+        max_length=20, 
+        choices=AttachmentKind.choices, 
+        default=AttachmentKind.OTHER,
+        help_text="Type de pièce jointe"
+    )
+    note = models.TextField(blank=True, null=True, help_text="Description/note sur le fichier")
+    uploaded_by = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='uploaded_attachments'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_kind_display()} - {self.file.name} (Fiche {self.fiche.numero_dossier})"
+
+    @property
+    def file_size(self):
+        """Taille du fichier en bytes."""
+        try:
+            return self.file.size
+        except:
+            return 0
+
+    @property
+    def file_extension(self):
+        """Extension du fichier."""
+        import os
+        return os.path.splitext(self.file.name)[1].lower()
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Pièce Jointe'
+        verbose_name_plural = 'Pièces Jointes'
+
+
+class MedecinAvailability(models.Model):
+    """Créneaux de disponibilité des médecins pour les consultations."""
+    
+    class DayOfWeek(models.IntegerChoices):
+        LUNDI = 0, 'Lundi'
+        MARDI = 1, 'Mardi'
+        MERCREDI = 2, 'Mercredi'
+        JEUDI = 3, 'Jeudi'
+        VENDREDI = 4, 'Vendredi'
+        SAMEDI = 5, 'Samedi'
+        DIMANCHE = 6, 'Dimanche'
+    
+    class ConsultationType(models.TextChoices):
+        PRESENTIEL = 'presentiel', 'Présentiel'
+        DISTANCIEL = 'distanciel', 'Distanciel'
+        BOTH = 'both', 'Les deux'
+    
+    medecin = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='availabilities',
+        limit_choices_to={'role': 'medecin'}
+    )
+    day_of_week = models.IntegerField(
+        choices=DayOfWeek.choices,
+        help_text="Jour de la semaine (0=Lundi, 6=Dimanche)"
+    )
+    start_time = models.TimeField(help_text="Heure de début du créneau")
+    end_time = models.TimeField(help_text="Heure de fin du créneau")
+    consultation_type = models.CharField(
+        max_length=20,
+        choices=ConsultationType.choices,
+        default=ConsultationType.BOTH,
+        help_text="Type de consultation accepté"
+    )
+    duration_minutes = models.IntegerField(
+        default=30,
+        help_text="Durée d'une consultation en minutes"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Créneau actif"
+    )
+    max_consultations = models.IntegerField(
+        default=1,
+        help_text="Nombre maximum de consultations sur ce créneau"
+    )
+    location = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Lieu pour consultations présentielles"
+    )
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Notes privées du médecin sur ce créneau"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Dr {self.medecin.username} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
+
+    @property
+    def duration_formatted(self):
+        """Durée formatée en heures/minutes."""
+        hours = self.duration_minutes // 60
+        minutes = self.duration_minutes % 60
+        if hours > 0:
+            return f"{hours}h{minutes:02d}" if minutes > 0 else f"{hours}h"
+        return f"{minutes}min"
+
+    def is_available_on_date(self, date, consultation_type=None):
+        """Vérifie si le médecin est disponible à cette date et heure."""
+        if not self.is_active:
+            return False
+        
+        if date.weekday() != self.day_of_week:
+            return False
+            
+        if consultation_type and self.consultation_type not in [consultation_type, 'both']:
+            return False
+            
+        # Vérifier les créneaux déjà pris
+        existing_appointments = Appointment.objects.filter(
+            medecin=self.medecin,
+            confirmed_start__date=date.date(),
+            status__in=['confirmed', 'pending']
+        ).count()
+        
+        return existing_appointments < self.max_consultations
+
+    class Meta:
+        ordering = ['day_of_week', 'start_time']
+        verbose_name = 'Disponibilité Médecin'
+        verbose_name_plural = 'Disponibilités Médecin'
+        unique_together = ['medecin', 'day_of_week', 'start_time', 'end_time']
+
+
+class MedecinException(models.Model):
+    """Exceptions aux disponibilités (congés, formations, etc.)."""
+    
+    class ExceptionType(models.TextChoices):
+        UNAVAILABLE = 'unavailable', 'Indisponible'
+        BUSY = 'busy', 'Occupé'
+        VACATION = 'vacation', 'Congé'
+        FORMATION = 'formation', 'Formation'
+        EMERGENCY = 'emergency', 'Urgence'
+    
+    medecin = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='exceptions',
+        limit_choices_to={'role': 'medecin'}
+    )
+    start_datetime = models.DateTimeField(help_text="Début de l'exception")
+    end_datetime = models.DateTimeField(help_text="Fin de l'exception")
+    exception_type = models.CharField(
+        max_length=20,
+        choices=ExceptionType.choices,
+        default=ExceptionType.UNAVAILABLE
+    )
+    reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Raison de l'indisponibilité"
+    )
+    is_recurring = models.BooleanField(
+        default=False,
+        help_text="Exception récurrente (chaque semaine)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Dr {self.medecin.username} - {self.get_exception_type_display()} du {self.start_datetime} au {self.end_datetime}"
+
+    def is_active_on(self, datetime_obj):
+        """Vérifie si l'exception est active à cette date/heure."""
+        return self.start_datetime <= datetime_obj <= self.end_datetime
+
+    class Meta:
+        ordering = ['-start_datetime']
+        verbose_name = 'Exception Médecin'
+        verbose_name_plural = 'Exceptions Médecin'
+
+
+class WebhookEvent(models.Model):
+    """Log des webhooks entrants (WhatsApp, SMS, etc.)."""
+    
+    class EventType(models.TextChoices):
+        WHATSAPP_INCOMING = 'whatsapp_incoming', 'WhatsApp Entrant'
+        SMS_INCOMING = 'sms_incoming', 'SMS Entrant'
+        WHATSAPP_STATUS = 'whatsapp_status', 'Statut WhatsApp'
+        SMS_STATUS = 'sms_status', 'Statut SMS'
+    
+    class ProcessingStatus(models.TextChoices):
+        PENDING = 'pending', 'En attente'
+        PROCESSED = 'processed', 'Traité'
+        FAILED = 'failed', 'Échec'
+        IGNORED = 'ignored', 'Ignoré'
+    
+    event_type = models.CharField(max_length=30, choices=EventType.choices)
+    external_id = models.CharField(
+        max_length=255,
+        help_text="ID externe du message (Twilio SID, etc.)"
+    )
+    sender_phone = models.CharField(
+        max_length=30,
+        help_text="Numéro de téléphone expéditeur"
+    )
+    recipient_phone = models.CharField(
+        max_length=30,
+        help_text="Numéro de téléphone destinataire"
+    )
+    content = models.TextField(help_text="Contenu du message")
+    raw_payload = models.JSONField(
+        help_text="Payload brut du webhook"
+    )
+    processing_status = models.CharField(
+        max_length=20,
+        choices=ProcessingStatus.choices,
+        default=ProcessingStatus.PENDING
+    )
+    processing_error = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Erreur de traitement"
+    )
+    related_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Utilisateur associé (si trouvé)"
+    )
+    related_fiche = models.ForeignKey(
+        FicheConsultation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Fiche associée (si trouvée)"
+    )
+    created_message = models.ForeignKey(
+        'FicheMessage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Message créé suite au webhook"
+    )
+    received_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} - {self.sender_phone} ({self.get_processing_status_display()})"
+
+    def mark_processed(self, message=None):
+        """Marque le webhook comme traité."""
+        self.processing_status = self.ProcessingStatus.PROCESSED
+        self.processed_at = timezone.now()
+        if message:
+            self.created_message = message
+        self.save()
+
+    def mark_failed(self, error):
+        """Marque le webhook comme échoué."""
+        self.processing_status = self.ProcessingStatus.FAILED
+        self.processing_error = str(error)
+        self.processed_at = timezone.now()
+        self.save()
+
+    class Meta:
+        ordering = ['-received_at']
+        verbose_name = 'Événement Webhook'
+        verbose_name_plural = 'Événements Webhook'
+        indexes = [
+            models.Index(fields=['sender_phone']),
+            models.Index(fields=['external_id']),
+            models.Index(fields=['processing_status']),
+        ]
+
+
+class DataExportJob(models.Model):
+    """Jobs d'export de données pour biostatistiques."""
+    
+    class ExportFormat(models.TextChoices):
+        CSV = 'csv', 'CSV'
+        PARQUET = 'parquet', 'Parquet'
+        JSON = 'json', 'JSON'
+        EXCEL = 'excel', 'Excel'
+    
+    class ExportStatus(models.TextChoices):
+        PENDING = 'pending', 'En attente'
+        RUNNING = 'running', 'En cours'
+        COMPLETED = 'completed', 'Terminé'
+        FAILED = 'failed', 'Échec'
+    
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='export_jobs'
+    )
+    export_format = models.CharField(
+        max_length=20,
+        choices=ExportFormat.choices,
+        default=ExportFormat.CSV
+    )
+    date_start = models.DateField(help_text="Date de début pour l'export")
+    date_end = models.DateField(help_text="Date de fin pour l'export")
+    include_personal_data = models.BooleanField(
+        default=False,
+        help_text="Inclure les données personnelles (nom, téléphone, etc.)"
+    )
+    filters = models.JSONField(
+        default=dict,
+        help_text="Filtres appliqués (status, age_range, etc.)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=ExportStatus.choices,
+        default=ExportStatus.PENDING
+    )
+    file_path = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Chemin du fichier généré"
+    )
+    file_size = models.BigIntegerField(
+        null=True,
+        blank=True,
+        help_text="Taille du fichier en bytes"
+    )
+    records_count = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Nombre d'enregistrements exportés"
+    )
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Message d'erreur si échec"
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Export {self.export_format.upper()} - {self.date_start} à {self.date_end} ({self.get_status_display()})"
+
+    @property
+    def duration(self):
+        """Durée de l'export."""
+        if self.started_at and self.completed_at:
+            return self.completed_at - self.started_at
+        return None
+
+    @property
+    def file_size_formatted(self):
+        """Taille formatée du fichier."""
+        if not self.file_size:
+            return "N/A"
+        
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if self.file_size < 1024.0:
+                return f"{self.file_size:.1f} {unit}"
+            self.file_size /= 1024.0
+        return f"{self.file_size:.1f} TB"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Job Export Données'
+        verbose_name_plural = 'Jobs Export Données'
 
 
 

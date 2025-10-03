@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche de Consultation - {{ fiche.numero_dossier }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .patient-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .section-title {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 12px;
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .field {
+            margin-bottom: 8px;
+        }
+        .field-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .field-value {
+            margin-left: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        .status.en_analyse { background-color: #f39c12; color: white; }
+        .status.analyse_terminee { background-color: #3498db; color: white; }
+        .status.valide_medecin { background-color: #27ae60; color: white; }
+        .status.rejete_medecin { background-color: #e74c3c; color: white; }
+        
+        .diagnostic-ia {
+            background-color: #e8f5e8;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            text-align: right;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        
+        @page {
+            margin: 2cm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 Agent Médical IA</h1>
+        <h2>Fiche de Consultation</h2>
+        <p><strong>N° Dossier:</strong> {{ fiche.numero_dossier }}</p>
+        <p><strong>Date:</strong> {{ fiche.date_consultation|date:"d/m/Y" }}</p>
+        <span class="status {{ fiche.status }}">{{ fiche.get_status_display }}</span>
+    </div>
+
+    <!-- Informations Patient -->
+    <div class="section">
+        <h3 class="section-title">👤 Informations Patient</h3>
+        <div class="patient-info">
+            <div class="grid">
+                <div>
+                    <div class="field">
+                        <span class="field-label">Nom:</span>
+                        <span class="field-value">{{ fiche.nom }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Postnom:</span>
+                        <span class="field-value">{{ fiche.postnom }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Prénom:</span>
+                        <span class="field-value">{{ fiche.prenom }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Âge:</span>
+                        <span class="field-value">{{ fiche.age }} ans</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="field">
+                        <span class="field-label">Sexe:</span>
+                        <span class="field-value">{{ fiche.get_sexe_display }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Téléphone:</span>
+                        <span class="field-value">{{ fiche.telephone }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">État civil:</span>
+                        <span class="field-value">{{ fiche.get_etat_civil_display }}</span>
+                    </div>
+                    <div class="field">
+                        <span class="field-label">Occupation:</span>
+                        <span class="field-value">{{ fiche.occupation }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Motif et Histoire -->
+    <div class="section">
+        <h3 class="section-title">📋 Motif de Consultation</h3>
+        <p><strong>Motif:</strong> {{ fiche.motif_consultation|default:"Non renseigné" }}</p>
+        <p><strong>Histoire de la maladie:</strong> {{ fiche.histoire_maladie|default:"Non renseigné" }}</p>
+        {% if fiche.hypothese_patient_medecin %}
+        <p><strong>Hypothèse patient/médecin:</strong> {{ fiche.hypothese_patient_medecin }}</p>
+        {% endif %}
+        {% if fiche.analyses_proposees %}
+        <p><strong>Analyses proposées:</strong> {{ fiche.analyses_proposees }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Signes Vitaux -->
+    <div class="section">
+        <h3 class="section-title">🌡️ Signes Vitaux</h3>
+        <div class="grid">
+            <div>
+                <div class="field">
+                    <span class="field-label">Température:</span>
+                    <span class="field-value">{{ fiche.temperature|default:"Non renseigné" }}°C</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">SpO2:</span>
+                    <span class="field-value">{{ fiche.spo2|default:"Non renseigné" }}%</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Poids:</span>
+                    <span class="field-value">{{ fiche.poids|default:"Non renseigné" }} kg</span>
+                </div>
+            </div>
+            <div>
+                <div class="field">
+                    <span class="field-label">Tension artérielle:</span>
+                    <span class="field-value">{{ fiche.tension_arterielle|default:"Non renseigné" }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Pouls:</span>
+                    <span class="field-value">{{ fiche.pouls|default:"Non renseigné" }} bpm</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Fréquence respiratoire:</span>
+                    <span class="field-value">{{ fiche.frequence_respiratoire|default:"Non renseigné" }}/min</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Examen Clinique -->
+    <div class="section">
+        <h3 class="section-title">🔍 Examen Clinique</h3>
+        <div class="grid">
+            <div>
+                <div class="field">
+                    <span class="field-label">État général:</span>
+                    <span class="field-value">{{ fiche.get_etat_display }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Fébrile:</span>
+                    <span class="field-value">{{ fiche.get_febrile_display }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="field">
+                    <span class="field-label">Coloration bulbaire:</span>
+                    <span class="field-value">{{ fiche.get_coloration_bulbaire_display }}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Coloration palpébrale:</span>
+                    <span class="field-value">{{ fiche.get_coloration_palpebrale_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagnostic IA -->
+    {% if fiche.diagnostic_ia %}
+    <div class="section">
+        <h3 class="section-title">🤖 Diagnostic IA</h3>
+        <div class="diagnostic-ia">
+            {{ fiche.diagnostic_ia|linebreaks }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommandations Médecin -->
+    {% if fiche.diagnostic or fiche.traitement or fiche.recommandations %}
+    <div class="section">
+        <h3 class="section-title">👨‍⚕️ Recommandations Médecin</h3>
+        {% if fiche.diagnostic %}
+        <p><strong>Diagnostic:</strong> {{ fiche.diagnostic }}</p>
+        {% endif %}
+        {% if fiche.traitement %}
+        <p><strong>Traitement:</strong> {{ fiche.traitement }}</p>
+        {% endif %}
+        {% if fiche.examen_complementaire %}
+        <p><strong>Examens complémentaires:</strong> {{ fiche.examen_complementaire }}</p>
+        {% endif %}
+        {% if fiche.recommandations %}
+        <p><strong>Recommandations:</strong> {{ fiche.recommandations }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Résultats de Laboratoire -->
+    {% if lab_results %}
+    <div class="section">
+        <h3 class="section-title">🧪 Résultats de Laboratoire</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type d'analyse</th>
+                    <th>Valeur</th>
+                    <th>Unité</th>
+                    <th>Date prélèvement</th>
+                    <th>Laboratoire</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in lab_results %}
+                <tr>
+                    <td>{{ result.type_analyse }}</td>
+                    <td>{{ result.valeur }}</td>
+                    <td>{{ result.unite|default:"-" }}</td>
+                    <td>{{ result.date_prelevement|date:"d/m/Y" }}</td>
+                    <td>{{ result.laboratoire|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- References Bibliographiques -->
+    {% if references %}
+    <div class="section">
+        <h3 class="section-title">📚 Références Bibliographiques</h3>
+        <ol>
+            {% for ref in references %}
+            <li>
+                <strong>{{ ref.title }}</strong>
+                {% if ref.authors %} - {{ ref.authors }}{% endif %}
+                {% if ref.year %} ({{ ref.year }}){% endif %}
+                {% if ref.journal %} - <em>{{ ref.journal }}</em>{% endif %}
+                {% if ref.url %}<br><small>{{ ref.url }}</small>{% endif %}
+                <small>({{ ref.get_source_display }})</small>
+            </li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="section">
+        <h3 class="section-title">💬 Messages</h3>
+        {% for message in messages %}
+        <div style="border-left: 3px solid #3498db; padding-left: 10px; margin-bottom: 10px;">
+            <strong>{{ message.author.username }}</strong> 
+            <small>({{ message.created_at|date:"d/m/Y H:i" }})</small>
+            <p>{{ message.content }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Signature -->
+    {% if fiche.medecin_validateur %}
+    <div class="signature-section">
+        <p><strong>Médecin validateur:</strong> Dr {{ fiche.medecin_validateur.get_full_name|default:fiche.medecin_validateur.username }}</p>
+        {% if fiche.date_validation %}
+        <p><strong>Date de validation:</strong> {{ fiche.date_validation|date:"d/m/Y à H:i" }}</p>
+        {% endif %}
+        {% if fiche.signature_medecin %}
+        <p><strong>Signature électronique</strong></p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Document généré automatiquement par Agent Médical IA</p>
+        <p>Date d'impression: {% now "d/m/Y à H:i" %}</p>
+    </div>
+</body>
+</html>

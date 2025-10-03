@@ -17,6 +17,13 @@ from .api_views import (
     MessageIAViewSet,
     UserViewSet,
     AppointmentViewSet,
+    FicheReferenceViewSet,
+    LabResultViewSet,
+    FicheAttachmentViewSet,
+    MedecinAvailabilityViewSet,
+    MedecinExceptionViewSet,
+    WebhookEventViewSet,
+    DataExportJobViewSet,
 )
 
 app_name = 'chat_api'
@@ -27,5 +34,14 @@ router.register(r'conversations', ConversationViewSet, basename='conversation')
 router.register(r'messages', MessageIAViewSet, basename='messageia')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'appointments', AppointmentViewSet, basename='appointment')
+router.register(r'references', FicheReferenceViewSet, basename='reference')
+router.register(r'lab-results', LabResultViewSet, basename='lab-result')
+router.register(r'attachments', FicheAttachmentViewSet, basename='attachment')
+
+# Nouvelles routes P1
+router.register(r'availabilities', MedecinAvailabilityViewSet, basename='availability')
+router.register(r'exceptions', MedecinExceptionViewSet, basename='exception')
+router.register(r'webhooks', WebhookEventViewSet, basename='webhook')
+router.register(r'exports', DataExportJobViewSet, basename='export')
 
 urlpatterns = router.urls
