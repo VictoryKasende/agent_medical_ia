@@ -3,3 +3,31 @@
 __pycache__/
 db.sqlite3
 .env
+
+# Fichiers de test et développement temporaires
+test_*.py
+test_*.json
+*test*.json
+login_*.json
+create_medecin*.json
+assign_medecin.json
+reponse_patient.json
+update_phone.json
+
+# Fichiers de configuration et cache
+celerybeat-schedule
+.pytest_cache/
+.vscode/
+
+# Fichiers de documentation générés/temporaires
+migration_manual.sql
+*.md.backup
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+temp_*
+
+# Scripts de développement
+docker-scripts.bat
+prompt
