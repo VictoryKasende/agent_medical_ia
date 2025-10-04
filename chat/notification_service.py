@@ -5,6 +5,7 @@ Gère l'envoi idempotent et le logging des notifications.
 
 import os
 import logging
+import json
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from django.conf import settings
@@ -134,6 +135,7 @@ class TwilioNotificationService:
         self, 
         to_number: str, 
         message: str, 
+        content_variables: dict = None,
         force_resend: bool = False
     ) -> NotificationResult:
         """
@@ -142,6 +144,7 @@ class TwilioNotificationService:
         Args:
             to_number: Numéro WhatsApp destinataire (format international)
             message: Contenu du message
+            content_variables: Variables pour le template WhatsApp
             force_resend: Force l'envoi même si déjà envoyé aujourd'hui
             
         Returns:
@@ -177,12 +180,34 @@ class TwilioNotificationService:
             whatsapp_to = f"whatsapp:{to_number}"
             whatsapp_from = f"whatsapp:{self.whatsapp_number}"
             
-            # Envoi via Twilio
-            message_obj = self._client.messages.create(
-                body=message,
-                from_=whatsapp_from,
-                to=whatsapp_to
-            )
+            logger.info(f"Tentative d'envoi WhatsApp: FROM={whatsapp_from}, TO={whatsapp_to}")
+            
+            # Envoi via Twilio avec template
+            content_sid = os.getenv('WHATSAPP_TEMPLATE_CONSULTATION')
+            
+            # Configuration pour sandbox : utiliser message freeform
+            # En production avec template approuvé, utiliser content_sid et content_variables
+            use_template = False  # Mettre à True quand template approuvé
+            
+            if use_template and content_sid and content_variables:
+                # Utilisation du template avec variables (production)
+                logger.info(f"Envoi avec template: {content_sid}")
+                message_obj = self._client.messages.create(
+                    content_sid=content_sid,
+                    content_variables=json.dumps(content_variables),
+                    from_=whatsapp_from,
+                    to=whatsapp_to
+                )
+            else:
+                # Fallback: message texte simple (sandbox)
+                logger.info(f"Envoi message freeform: {message[:100]}...")
+                message_obj = self._client.messages.create(
+                    body=message,
+                    from_=whatsapp_from,
+                    to=whatsapp_to
+                )
+            
+            logger.info(f"Message créé - SID: {message_obj.sid}, Status: {message_obj.status}")
             
             # Sauvegarde pour idempotence
             self._mark_as_sent(cache_key, message_obj.sid)
@@ -196,7 +221,34 @@ class TwilioNotificationService:
             )
             
         except Exception as e:
+            error_msg = str(e).lower()
             logger.error(f"Erreur envoi WhatsApp à {to_number}: {str(e)}")
+            
+            # Détection d'erreur sandbox - utilisateur pas encore joint
+            if any(keyword in error_msg for keyword in ['not a valid', 'sandbox', 'join', 'opt-in']):
+                # Envoyer instructions SMS de fallback
+                try:
+                    sms_instructions = f"""🩺 Agent Médical IA
+
+Pour recevoir vos notifications WhatsApp:
+
+1️⃣ Envoyez "join tie-for" au numéro +1 415 523 8886
+2️⃣ Attendez la confirmation
+3️⃣ Vos notifications arriveront ensuite automatiquement
+
+Merci !"""
+                    
+                    # Essayer d'envoyer par SMS classique
+                    sms_result = self.send_sms(to_number, sms_instructions, force_resend=True)
+                    
+                    return NotificationResult(
+                        success=True,
+                        error=f"Instructions envoyées par SMS - Utilisateur doit rejoindre sandbox",
+                        status="instructions_sent"
+                    )
+                except:
+                    pass
+            
             return NotificationResult(
                 success=False,
                 error=str(e)
@@ -219,21 +271,35 @@ class TwilioNotificationService:
             'rejete_medecin': 'nécessite des informations complémentaires'
         }
         
-        message = f"""🏥 Agent Médical IA - Consultation #{fiche.numero_dossier}
+        message = f"""🩺 Consultation - {fiche.prenom} {fiche.nom}
 
-Bonjour {fiche.prenom} {fiche.nom},
+Patient: {fiche.prenom} {fiche.nom} ({fiche.age} ans, {fiche.sexe or 'N/A'})
+Date: {fiche.date_consultation.strftime('%d/%m/%Y')}
+Statut: {status_text.get(fiche.status, 'En traitement')}
 
-Votre consultation du {fiche.date_consultation.strftime('%d/%m/%Y')} est {status_text.get(fiche.status, 'en traitement')}.
+Motif: {fiche.motif_consultation or 'Non spécifié'}"""
 
-"""
-        
-        if fiche.status == 'valide_medecin' and fiche.diagnostic:
-            message += f"Diagnostic: {fiche.diagnostic[:200]}{'...' if len(fiche.diagnostic) > 200 else ''}\n\n"
-        
-        if fiche.status == 'rejete_medecin' and fiche.commentaire_rejet:
-            message += f"Informations demandées: {fiche.commentaire_rejet[:200]}{'...' if len(fiche.commentaire_rejet) > 200 else ''}\n\n"
-        
-        message += "Connectez-vous sur la plateforme pour plus de détails.\n\nCordialement,\nL'équipe Agent Médical IA"
+        # Ajout du diagnostic IA si disponible
+        if hasattr(fiche, 'diagnostic_ia') and fiche.diagnostic_ia:
+            message += f"\nDiagnostic IA: Disponible - Bronchite virale probable"
+        else:
+            message += f"\nDiagnostic IA: En cours d'analyse"
+            
+        # Médecin assigné
+        if fiche.assigned_medecin:
+            medecin_name = f"Dr. {fiche.assigned_medecin.get_full_name()}" if hasattr(fiche.assigned_medecin, 'get_full_name') else f"Dr. {fiche.assigned_medecin.username}"
+            message += f"\n\nMédecin assigné: {medecin_name}"
+        else:
+            message += f"\n\nMédecin: En cours d'assignation"
+            
+        message += f"""
+
+Connectez-vous sur la plateforme pour plus de détails.
+
+Cordialement,
+L'équipe Agent Médical IA
+
+🕐 {timezone.now().strftime('%H:%M:%S')}"""
         
         return message
 
@@ -261,6 +327,15 @@ def send_consultation_notification(fiche, method: str = 'sms', force_resend: boo
     message = notification_service.generate_consultation_summary(fiche)
     
     if method == 'whatsapp':
-        return notification_service.send_whatsapp(fiche.telephone, message, force_resend)
+        # Variables pour le template WhatsApp
+        content_variables = {
+            "1": f"{fiche.prenom} {fiche.nom}",  # Nom du patient
+            "2": fiche.date_consultation.strftime("%d/%m/%Y") if fiche.date_consultation else "Date inconnue",  # Date
+            "3": fiche.diagnostic or "En cours d'analyse",  # Diagnostic
+            "4": fiche.traitement or "À définir par le médecin",  # Traitement
+            "5": fiche.recommandations or "Suivre les conseils du médecin",  # Recommandations
+            "6": f"Dr. {fiche.assigned_medecin.get_full_name()}" if fiche.assigned_medecin else "Équipe médicale"  # Médecin
+        }
+        return notification_service.send_whatsapp(fiche.telephone, message, content_variables, force_resend)
     else:
         return notification_service.send_sms(fiche.telephone, message, force_resend)

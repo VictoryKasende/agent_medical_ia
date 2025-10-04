@@ -488,12 +488,14 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
             qs = fiche.messages.order_by('created_at')
             return Response(FicheMessageSerializer(qs, many=True).data)
         # POST
-        serializer = FicheMessageSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        content = request.data.get('content')
+        if not content:
+            return Response({'detail': 'Le contenu du message est requis'}, status=status.HTTP_400_BAD_REQUEST)
+        
         msg = FicheMessage.objects.create(
             fiche=fiche,
             author=u,
-            content=serializer.validated_data['content']
+            content=content
         )
         return Response(FicheMessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
@@ -683,6 +685,146 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="fiche_{fiche.numero_dossier}.json"'
         
         return response
+
+    @extend_schema(
+        tags=['Consultations'],
+        summary='Récupérer les choix disponibles pour les champs de sélection',
+        description='Retourne tous les choix possibles pour les champs select/radio de la fiche de consultation.',
+        responses={200: {
+            'type': 'object',
+            'properties': {
+                'coloration_bulbaire': {'type': 'array', 'items': {'type': 'object'}},
+                'coloration_palpebrale': {'type': 'array', 'items': {'type': 'object'}},
+                'etat_civil': {'type': 'array', 'items': {'type': 'object'}},
+                'frequence': {'type': 'array', 'items': {'type': 'object'}},
+                'sexe': {'type': 'array', 'items': {'type': 'object'}},
+                'etat': {'type': 'array', 'items': {'type': 'object'}},
+                'capacite': {'type': 'array', 'items': {'type': 'object'}},
+                'oui_non': {'type': 'array', 'items': {'type': 'object'}},
+                'oui_non_inconnu': {'type': 'array', 'items': {'type': 'object'}},
+            }
+        }}
+    )
+    @action(detail=False, methods=['get'], url_path='field-choices')
+    def field_choices(self, request):
+        """Retourne les choix disponibles pour tous les champs de sélection."""
+        choices = {
+            'coloration_bulbaire': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.ColorationBulbaire.choices
+            ],
+            'coloration_palpebrale': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.ColorationPalpebrale.choices
+            ],
+            'etat_civil': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.EtatCivil.choices
+            ],
+            'frequence': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.Frequence.choices
+            ],
+            'sexe': [
+                {'value': 'M', 'label': 'Masculin'},
+                {'value': 'F', 'label': 'Féminin'}
+            ],
+            'etat': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.Etat.choices
+            ],
+            'capacite': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.Capacite.choices
+            ],
+            'oui_non': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.OuiNon.choices
+            ],
+            'oui_non_inconnu': [
+                {'value': choice[0], 'label': choice[1]} 
+                for choice in FicheConsultation.OuiNonInconnu.choices
+            ],
+        }
+        return Response(choices)
+
+    @extend_schema(
+        tags=['Consultations'],
+        summary='Envoyer les instructions WhatsApp à un patient',
+        description='Envoie les instructions pour rejoindre le sandbox WhatsApp Twilio.',
+        responses={200: OpenApiResponse(description='Instructions envoyées')}
+    )
+    @action(detail=False, methods=['post'], url_path='whatsapp-onboarding')
+    def whatsapp_onboarding(self, request):
+        """Envoie les instructions WhatsApp à un numéro."""
+        phone_number = request.data.get('phone_number')
+        if not phone_number:
+            return Response({'detail': 'Numéro de téléphone requis'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        instructions = f"""🩺 Bienvenue sur Agent Médical IA !
+
+Pour recevoir vos notifications WhatsApp :
+
+📱 ÉTAPE 1: Envoyez ce message exact :
+"join tie-for"
+
+📞 ÉTAPE 2: Au numéro WhatsApp :
++1 415 523 8886
+
+✅ ÉTAPE 3: Attendez la confirmation
+Vous recevrez un message de validation.
+
+Ensuite, toutes vos notifications médicales arriveront automatiquement sur WhatsApp !
+
+Merci de votre confiance 🙏"""
+
+        try:
+            from .notification_service import notification_service
+            result = notification_service.send_sms(phone_number, instructions, force_resend=True)
+            
+            if result.success:
+                return Response({
+                    'detail': 'Instructions WhatsApp envoyées par SMS',
+                    'phone': phone_number,
+                    'message_sid': result.message_sid
+                })
+            else:
+                return Response({
+                    'detail': f'Erreur envoi instructions: {result.error}',
+                    'phone': phone_number
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            return Response({
+                'detail': f'Erreur service: {str(e)}',
+                'phone': phone_number
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @extend_schema(
+        tags=['Consultations'],
+        summary='Générer QR code pour WhatsApp',
+        description='Génère les informations pour créer un QR code WhatsApp sandbox.',
+        responses={200: OpenApiResponse(description='Informations QR code')}
+    )
+    @action(detail=False, methods=['get'], url_path='whatsapp-qr')
+    def whatsapp_qr(self, request):
+        """Génère les informations pour le QR code WhatsApp."""
+        
+        # URL WhatsApp avec message pré-rempli
+        whatsapp_url = "https://wa.me/14155238886?text=join%20tie-for"
+        
+        return Response({
+            'whatsapp_url': whatsapp_url,
+            'phone_number': '+1 415 523 8886',
+            'message': 'join tie-for',
+            'instructions': {
+                'step1': 'Scannez le QR code avec WhatsApp',
+                'step2': 'Ou envoyez "join tie-for" au +1 415 523 8886',
+                'step3': 'Attendez la confirmation',
+                'step4': 'Vos notifications arriveront automatiquement'
+            },
+            'qr_data': whatsapp_url  # Pour générer le QR code côté frontend
+        })
 
 
 @extend_schema_view(
