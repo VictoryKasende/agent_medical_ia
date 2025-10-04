@@ -2,6 +2,9 @@
 from .settings import *
 import os
 
+# Flag pour indiquer le mode test
+TESTING = True
+
 # Utiliser SQLite pour les tests si PostgreSQL échoue
 if 'GITHUB_ACTIONS' in os.environ:
     # Configuration base de données test

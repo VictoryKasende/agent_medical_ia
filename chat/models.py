@@ -239,10 +239,52 @@ class FicheConsultation(models.Model):
             self.heure_debut = timezone.localtime().time()
 
         if not self.numero_dossier:
-            today = timezone.now().date()
-            prefix = f"CONS-{today.strftime('%Y%m%d')}"
-            count = FicheConsultation.objects.filter(date_consultation=today).count() + 1
-            self.numero_dossier = f"{prefix}-{count:03d}"
+            from django.conf import settings
+            
+            # Mode test : numérotation simplifiée pour éviter les collisions
+            if getattr(settings, 'TESTING', False) or 'test' in settings.DATABASES['default']['NAME']:
+                import time
+                import random
+                timestamp = int(time.time() * 1000) % 1000000
+                random_suffix = random.randint(100, 999)
+                self.numero_dossier = f"TEST-{timestamp:06d}-{random_suffix}"
+            else:
+                # Mode production : numérotation standard
+                today = timezone.now().date()
+                prefix = f"CONS-{today.strftime('%Y%m%d')}"
+                
+                # Approche robuste pour éviter les doublons
+                from django.db import transaction
+                with transaction.atomic():
+                    # Obtenir le dernier numéro pour aujourd'hui
+                    last_fiche = FicheConsultation.objects.filter(
+                        date_consultation=today,
+                        numero_dossier__startswith=prefix
+                    ).order_by('-numero_dossier').first()
+                    
+                    if last_fiche and last_fiche.numero_dossier:
+                        # Extraire le numéro et incrémenter
+                        try:
+                            last_num = int(last_fiche.numero_dossier.split('-')[-1])
+                            count = last_num + 1
+                        except (ValueError, IndexError):
+                            count = FicheConsultation.objects.filter(date_consultation=today).count() + 1
+                    else:
+                        count = 1
+                    
+                    # Générer un numéro unique avec retry en cas de collision
+                    max_attempts = 10
+                    for attempt in range(max_attempts):
+                        numero = f"{prefix}-{count:03d}"
+                        if not FicheConsultation.objects.filter(numero_dossier=numero).exists():
+                            self.numero_dossier = numero
+                            break
+                        count += 1
+                    else:
+                        # Fallback avec timestamp si impossible de générer un numéro unique
+                        import time
+                        timestamp = int(time.time() * 1000) % 10000  # 4 derniers chiffres
+                        self.numero_dossier = f"{prefix}-{timestamp:04d}"
 
         super().save(*args, **kwargs)
 

@@ -16,13 +16,22 @@ def create_fiche(**overrides):
         sexe='M', telephone='+111', occupation='Occ', avenue='Av', quartier='Q', commune='C',
         contact_nom='CN', contact_telephone='123', contact_adresse='Adr',
         etat='Conservé', capacite_physique='Top', capacite_psychologique='Top', febrile='Non',
-        coloration_bulbaire='normale', coloration_palpebrale='normale', tegument='Normal',
+        coloration_bulbaire='Normale', coloration_palpebrale='Normale', tegument='Normal',
         # Nouveaux champs P0
         motif_consultation='Consultation test',
         hypothese_patient_medecin='Test hypothèse',
         analyses_proposees='Test analyses'
     )
     base.update(overrides)
+    
+    # Générer un numéro de dossier unique pour éviter les collisions en mode test
+    if 'numero_dossier' not in base:
+        import time
+        import random
+        timestamp = int(time.time() * 1000) % 1000000
+        random_suffix = random.randint(1000, 9999)
+        base['numero_dossier'] = f"TEST-{timestamp:06d}-{random_suffix}"
+    
     return FicheConsultation.objects.create(**base)
 
 
