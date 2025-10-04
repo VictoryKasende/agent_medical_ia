@@ -16,6 +16,7 @@ from .jwt_views import (
     PublicTokenObtainPairView as TokenObtainPairView,
     PublicTokenRefreshView as TokenRefreshView,
     PublicTokenVerifyView as TokenVerifyView,
+    csrf_token_view,
 )
 
 from .views_api import LogoutView, MeView  # legacy style views (logout, me) if still used
@@ -28,8 +29,11 @@ router.register('users', UserViewSet, basename='user')
 router.register('medecins', MedecinViewSet, basename='medecin')
 
 urlpatterns = [
+    # CSRF token pour les clients JavaScript
+    path('csrf/', csrf_token_view, name='csrf_token'),
     # JWT core
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('jwt/token/', TokenObtainPairView.as_view(), name='token_obtain_pair_alias'),  # Alias pour frontend
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('verify/', TokenVerifyView.as_view(), name='token_verify'),
     # Session-aware / auxiliary
