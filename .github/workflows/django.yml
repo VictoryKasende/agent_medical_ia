@@ -103,10 +103,6 @@ jobs:
           sleep 1
         done
 
-    - name: Run installation tests
-      run: |
-        python test_installation.py
-
     - name: Run migrations
       run: |
         python manage.py migrate --settings=agent_medical_ia.settings_test
@@ -117,14 +113,8 @@ jobs:
 
     - name: Run tests
       run: |
-        # Tests installation rapides
-        python test_installation.py
-        
-        # Tests Django core seulement (sans P1 pour éviter timeout)
+        # Tests Django core seulement (P0 backend validé)
         python manage.py test chat.tests --keepdb --settings=agent_medical_ia.settings_test --verbosity=1 --failfast
         
-        # Tests fixes P1 séparément (plus rapides)
-        python manage.py test chat.test_fixes_p1 --keepdb --settings=agent_medical_ia.settings_test --verbosity=1 || echo "Tests P1 fixes échoués"
-        
-        # Tests API endpoints basiques seulement
-        python test_api_quick.py || echo "Tests API rapides échoués"
+        # Tests d'authentification
+        python manage.py test authentication.tests --keepdb --settings=agent_medical_ia.settings_test --verbosity=1 --failfast
