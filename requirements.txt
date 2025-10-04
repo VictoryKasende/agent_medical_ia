@@ -28,6 +28,7 @@ django-markdown-deux==1.0.6
 django-redis==5.4.0
 django-tailwind==4.0.1
 python-dotenv>=1.0.0
+pytz>=2023.3
 exceptiongroup==1.2.2
 filetype==1.2.0
 frozenlist==1.6.0

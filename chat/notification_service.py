@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 import hashlib
+import pytz
 
 # Configuration du logging
 logger = logging.getLogger(__name__)
@@ -292,6 +293,10 @@ Motif: {fiche.motif_consultation or 'Non spécifié'}"""
         else:
             message += f"\n\nMédecin: En cours d'assignation"
             
+        # Obtenir l'heure locale de Lubumbashi
+        lubumbashi_tz = pytz.timezone('Africa/Lubumbashi')
+        local_time = timezone.now().astimezone(lubumbashi_tz)
+        
         message += f"""
 
 Connectez-vous sur la plateforme pour plus de détails.
@@ -299,7 +304,7 @@ Connectez-vous sur la plateforme pour plus de détails.
 Cordialement,
 L'équipe Agent Médical IA
 
-🕐 {timezone.now().strftime('%H:%M:%S')}"""
+🕐 {local_time.strftime('%H:%M:%S.%f')[:-3]}"""
         
         return message
 

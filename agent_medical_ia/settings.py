@@ -110,7 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'fr-fr'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Lubumbashi'  # Heure locale Congo (Lubumbashi)
 USE_I18N = True
 USE_TZ = True
 
