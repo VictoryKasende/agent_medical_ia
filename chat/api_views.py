@@ -420,7 +420,8 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
         
         try:
             from .notification_service import send_consultation_notification
-            result = send_consultation_notification(fiche, 'whatsapp')
+            # force_resend=True pour permettre de renvoyer depuis l'API
+            result = send_consultation_notification(fiche, 'whatsapp', force_resend=True)
             
             if result.success:
                 return Response({

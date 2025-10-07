@@ -43,109 +43,51 @@ def is_medecin(user):
 
 def send_whatsapp_api(phone_number, message, fiche=None):
     """
-    Envoie un message WhatsApp via l'API Twilio UNIQUEMENT avec des templates.
+    Envoie un message WhatsApp via le service de notification unifié.
     """
-    TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
-    TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
-    TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')
+    print(f"🔍 Envoi WhatsApp via service unifié:")
+    print(f"   Destinataire: {phone_number}")
+    print(f"   Type: {'Consultation' if fiche else 'Message simple'}")
     
-    print(f"🔍 Debug Twilio Config:")
-    print(f"   ACCOUNT_SID: {TWILIO_ACCOUNT_SID[:8]}...{TWILIO_ACCOUNT_SID[-4:] if TWILIO_ACCOUNT_SID else 'None'}")
-    print(f"   AUTH_TOKEN: {'✅ Configuré' if TWILIO_AUTH_TOKEN else '❌ Manquant'}")
-    print(f"   WHATSAPP_NUMBER: {TWILIO_WHATSAPP_NUMBER}")
-    print(f"   PHONE_TO: {phone_number}")
-    
-    # MODE DÉVELOPPEMENT - SIMULATION
-    DEVELOPMENT_MODE = False
-    
-    if DEVELOPMENT_MODE:
-        print('🧪 MODE DÉVELOPPEMENT - Simulation envoi WhatsApp API')
-        print(f'📱 Destinataire: {phone_number}')
-        print(f'💬 Type: {"Template" if fiche else "Hello World"}')
-        return True, "Message simulé envoyé avec succès"
-    
-    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER]):
-        return False, "Configuration Twilio manquante"
-
     try:
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        # Utiliser le nouveau service de notification qui fonctionne
+        from .notification_service import send_consultation_notification, notification_service
         
-        # Format correct pour WhatsApp
-        to_number = f'whatsapp:{phone_number}' if not phone_number.startswith('whatsapp:') else phone_number
-        
-        # ✅ NOUVEAU : FORCER TEMPLATES TOUJOURS
         if fiche:
-            print(f"📤 ENVOI TEMPLATE PERSONNALISÉ:")
-            print(f"   From: {TWILIO_WHATSAPP_NUMBER}")
-            print(f"   To: {to_number}")
-            print(f"   Template: agent_medi_ai")
-            print(f"   Content SID: HX06c3193b55d1c2adb84a86274462cd69")
+            # Envoi de consultation avec template structuré
+            result = send_consultation_notification(
+                fiche=fiche,
+                method='whatsapp',
+                force_resend=True
+            )
             
-            try:
-                # ✅ TEMPLATE PERSONNALISÉ AVEC VARIABLES
-                message_instance = client.messages.create(
-                    from_=TWILIO_WHATSAPP_NUMBER,
-                    to=to_number,
-                    content_sid="HX06c3193b55d1c2adb84a86274462cd69",
-                    content_variables=json.dumps({
-                        "1": f"{fiche.nom} {fiche.prenom}",
-                        "2": fiche.date_consultation.strftime('%d/%m/%Y'),
-                        "3": fiche.diagnostic or 'À définir',
-                        "4": fiche.traitement or 'À définir',
-                        "5": fiche.recommandations or 'Suivre les conseils du médecin',
-                        "6": fiche.medecin_validateur.username if fiche.medecin_validateur else 'Équipe médicale'
-                    })
-                )
-                
-                print(f"📨 Template personnalisé envoyé:")
-                print(f"   Message SID: {message_instance.sid}")
-                print(f"   Status: {message_instance.status}")
-                
-                return True, f"Template consultation envoyé (SID: {message_instance.sid})"
-                
-            except Exception as template_error:
-                print(f"⚠️  Erreur template personnalisé: {template_error}")
-                
-                # Fallback vers template hello_world
-                try:
-                    print(f"🔄 Fallback vers hello_world...")
-                    message_instance = client.messages.create(
-                        from_=TWILIO_WHATSAPP_NUMBER,
-                        to=to_number,
-                        content_sid="HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8"
-                    )
-                    
-                    return True, f"Template hello_world envoyé (SID: {message_instance.sid})"
-                except Exception as hello_error:
-                    print(f"❌ Erreur hello_world: {hello_error}")
-                    return False, f"Erreur templates: {hello_error}"
+            if result.success:
+                print(f"✅ Message consultation envoyé (SID: {result.message_sid})")
+                return True, f"Template consultation envoyé (SID: {result.message_sid})"
+            else:
+                print(f"❌ Erreur envoi consultation: {result.error}")
+                return False, f"Erreur envoi: {result.error}"
         else:
-            # ✅ TEMPLATE HELLO_WORLD PAR DÉFAUT (JAMAIS DE MESSAGE LIBRE)
-            print(f"📤 ENVOI TEMPLATE HELLO_WORLD:")
-            print(f"   From: {TWILIO_WHATSAPP_NUMBER}")
-            print(f"   To: {to_number}")
-            print(f"   Content SID: HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8")
+            # Message simple
+            if not message:
+                message = "Bonjour ! Ceci est un message de test depuis Agent Médical IA. 🩺"
             
-            try:
-                message_instance = client.messages.create(
-                    from_=TWILIO_WHATSAPP_NUMBER,
-                    to=to_number,
-                    content_sid="HXb7e4b62c15b7ae1da5e7f7d1e2b4c4b9c8"
-                )
+            result = notification_service.send_whatsapp(
+                to_number=phone_number,
+                message=message,
+                force_resend=True
+            )
+            
+            if result.success:
+                print(f"✅ Message simple envoyé (SID: {result.message_sid})")
+                return True, f"Message envoyé (SID: {result.message_sid})"
+            else:
+                print(f"❌ Erreur envoi simple: {result.error}")
+                return False, f"Erreur envoi: {result.error}"
                 
-                print(f"📨 Template hello_world envoyé:")
-                print(f"   Message SID: {message_instance.sid}")
-                print(f"   Status: {message_instance.status}")
-                
-                return True, f"Template hello_world envoyé (SID: {message_instance.sid})"
-                
-            except Exception as hello_error:
-                print(f"❌ Erreur hello_world: {hello_error}")
-                return False, f"Erreur hello_world: {hello_error}"
-        
     except Exception as e:
-        print(f"❌ Erreur Twilio SDK: {e}")
-        return False, f"Erreur Twilio: {str(e)}"
+        print(f"❌ Erreur service notification: {e}")
+        return False, f"Erreur service: {str(e)}"
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
