@@ -134,6 +134,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     consultation_mode_display = serializers.SerializerMethodField(read_only=True)
     patient_username = serializers.CharField(source='patient.username', read_only=True)
     medecin_username = serializers.CharField(source='medecin.username', read_only=True)
+    # Le champ patient est optionnel pour la création (sera auto-rempli par perform_create)
+    patient = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Appointment

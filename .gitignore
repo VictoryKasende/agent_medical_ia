@@ -13,6 +13,9 @@ create_medecin*.json
 assign_medecin.json
 reponse_patient.json
 update_phone.json
+check_*.py
+debug_*.py
+clean_*.py
 
 # Fichiers de configuration et cache
 celerybeat-schedule
@@ -22,6 +25,8 @@ celerybeat-schedule
 # Fichiers de documentation générés/temporaires
 migration_manual.sql
 *.md.backup
+FIX_*.md
+APPOINTMENT_*.md
 
 # Logs et fichiers temporaires
 *.log
