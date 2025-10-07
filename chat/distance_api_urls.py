@@ -12,10 +12,11 @@ Action future:
 """
 
 from rest_framework.routers import DefaultRouter  # pragma: no cover - legacy
+
 from .distance_api_views import DistanceConsultationViewSet  # pragma: no cover - legacy
 
 router = DefaultRouter()
-router.register(r'consultations-distance', DistanceConsultationViewSet, basename='consultations-distance')
+router.register(r"consultations-distance", DistanceConsultationViewSet, basename="consultations-distance")
 
 # Expose variable attendue par Django même si non utilisée.
 urlpatterns = router.urls  # pragma: no cover

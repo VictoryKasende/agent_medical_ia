@@ -1,11 +1,13 @@
-from django.test import TestCase, Client
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
-from authentication.models import CustomUser
-from .models import FicheConsultation, Conversation, MessageIA
 from unittest.mock import patch
 
+from django.test import Client, TestCase
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
+
+from authentication.models import CustomUser
+
+from .models import Conversation, FicheConsultation, MessageIA
 
 BASE_FICHE_URL = '/api/v1/fiche-consultation/'
 
@@ -26,8 +28,8 @@ def create_fiche(**overrides):
     
     # Générer un numéro de dossier unique pour éviter les collisions en mode test
     if 'numero_dossier' not in base:
-        import time
         import random
+        import time
         timestamp = int(time.time() * 1000) % 1000000
         random_suffix = random.randint(1000, 9999)
         base['numero_dossier'] = f"TEST-{timestamp:06d}-{random_suffix}"

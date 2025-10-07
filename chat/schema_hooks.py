@@ -8,41 +8,41 @@ def unify_enum_names(result, generator, request, public):
     - Renames common duplicates (Alcool/Tabac/Activite -> LifestyleFrequencyEnum, etc.).
     - Disambiguates 'role' and 'status' by value sets.
     """
-    if not result or 'components' not in result or 'schemas' not in result['components']:
+    if not result or "components" not in result or "schemas" not in result["components"]:
         return result
 
-    schemas = result['components']['schemas']
-    enum_components = {name: schema for name, schema in schemas.items() if isinstance(schema, dict) and 'enum' in schema}
+    schemas = result["components"]["schemas"]
+    enum_components = {
+        name: schema for name, schema in schemas.items() if isinstance(schema, dict) and "enum" in schema
+    }
 
     # Helper to normalize enum values to tuple for hashing
     def enum_key(schema):
-        return tuple(schema.get('enum', []))
+        return tuple(schema.get("enum", []))
 
     # Known sets for precise naming
-    user_role_set = ('patient', 'medecin')
-    message_role_set = ('user', 'gpt4', 'claude', 'gemini', 'synthese')
-    lifestyle_set = ('non', 'rarement', 'souvent', 'tres_souvent')
-    capacity_set = ('Top', 'Moyen', 'Bas')
-    coloration_set = ('Normale', 'Anormale')
-    oui_non_set = ('Oui', 'Non')
-    oui_non_inconnu_set = ('oui', 'non', 'inconnu')
+    user_role_set = ("patient", "medecin")
+    message_role_set = ("user", "gpt4", "claude", "gemini", "synthese")
+    lifestyle_set = ("non", "rarement", "souvent", "tres_souvent")
+    capacity_set = ("Top", "Moyen", "Bas")
+    coloration_set = ("Normale", "Anormale")
+    oui_non_set = ("Oui", "Non")
+    oui_non_inconnu_set = ("oui", "non", "inconnu")
 
     # These two depend on project settings/constants
-    consultation_status_set = (
-        'en_analyse', 'analyse_terminee', 'valide_medecin', 'rejete_medecin'
-    )
-    appointment_status_set = ('pending', 'confirmed', 'declined', 'cancelled')
+    consultation_status_set = ("en_analyse", "analyse_terminee", "valide_medecin", "rejete_medecin")
+    appointment_status_set = ("pending", "confirmed", "declined", "cancelled")
 
     canonical_for_set = {
-        user_role_set: 'UserRoleEnum',
-        message_role_set: 'MessageRoleEnum',
-        lifestyle_set: 'LifestyleFrequencyEnum',
-        capacity_set: 'CapacityEnum',
-        coloration_set: 'ColorationEnum',
-        oui_non_set: 'OuiNonEnum',
-        oui_non_inconnu_set: 'OuiNonInconnuEnum',
-        consultation_status_set: 'ConsultationStatusEnum',
-        appointment_status_set: 'AppointmentStatusEnum',
+        user_role_set: "UserRoleEnum",
+        message_role_set: "MessageRoleEnum",
+        lifestyle_set: "LifestyleFrequencyEnum",
+        capacity_set: "CapacityEnum",
+        coloration_set: "ColorationEnum",
+        oui_non_set: "OuiNonEnum",
+        oui_non_inconnu_set: "OuiNonInconnuEnum",
+        consultation_status_set: "ConsultationStatusEnum",
+        appointment_status_set: "AppointmentStatusEnum",
     }
 
     # Build mapping from existing component names to canonical names
@@ -69,13 +69,13 @@ def unify_enum_names(result, generator, request, public):
     # Apply renames: update all $ref occurrences and move schemas
     def replace_refs(node):
         if isinstance(node, dict):
-            if '$ref' in node and isinstance(node['$ref'], str):
-                ref = node['$ref']
+            if "$ref" in node and isinstance(node["$ref"], str):
+                ref = node["$ref"]
                 for old, new in rename_map.items():
                     old_ref = f"#/components/schemas/{old}"
                     new_ref = f"#/components/schemas/{new}"
                     if ref == old_ref:
-                        node['$ref'] = new_ref
+                        node["$ref"] = new_ref
                         break
             for v in node.values():
                 replace_refs(v)

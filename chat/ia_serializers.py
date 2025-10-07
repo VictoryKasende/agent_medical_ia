@@ -7,7 +7,7 @@ class AnalyseSymptomesRequestSerializer(serializers.Serializer):
 
 
 class AnalyseResultSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=['pending', 'done'], help_text="État de l'analyse")
+    status = serializers.ChoiceField(choices=["pending", "done"], help_text="État de l'analyse")
     response = serializers.CharField(allow_blank=True, required=False, help_text="Résultat de l'analyse IA")
     cache_key = serializers.CharField(help_text="Clé de cache utilisée pour récupérer le résultat")
 

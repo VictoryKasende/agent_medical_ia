@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.template.loader import get_template
+
 from chat.deprecation import DEPRECATED_TEMPLATES
+
 
 class Command(BaseCommand):
     help = "Affiche les templates dépréciés et leurs métadonnées"

@@ -1,11 +1,13 @@
 import os
+
 from dotenv import load_dotenv
 from httpx import stream
 
-# from langchain_community.chat_models import ChatOpenAI
-from langchain_openai import ChatOpenAI
 # from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+# from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 # Charger les variables d'environnement depuis .env
 load_dotenv()
@@ -20,31 +22,14 @@ if not all([openai_key, google_key]):
     raise ValueError("⚠️ Les clés API OpenAI et Google doivent être définies dans le fichier .env")
 
 # Instanciation des modèles LLM
-gpt4 = ChatOpenAI(
-    model="gpt-4.1",  # ou "gpt-4.1" selon ta version
-    temperature=0.3,
-    openai_api_key=openai_key
-)
+gpt4 = ChatOpenAI(model="gpt-4.1", temperature=0.3, openai_api_key=openai_key)  # ou "gpt-4.1" selon ta version
 
-claude = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
-    temperature=0.3,
-    google_api_key=google_key
-)
+claude = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, google_api_key=google_key)
 
-gemini = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
-    temperature=0.3,
-    google_api_key=google_key
-)
+gemini = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, google_api_key=google_key)
 
 # Modèle utilisé pour la synthèse finale
-synthese_llm = ChatOpenAI(
-    model="gpt-4.1",
-    temperature=0.2,
-    openai_api_key=openai_key,
-    model_kwargs={"stream": True}
-)
+synthese_llm = ChatOpenAI(model="gpt-4.1", temperature=0.2, openai_api_key=openai_key, model_kwargs={"stream": True})
 
 
 # import os
@@ -94,4 +79,3 @@ synthese_llm = ChatOpenAI(
 # # Synthèse (on utilise la même API, en attendant la vraie clé OpenAI)
 # def synthese_llm(messages: list[BaseMessage]) -> AIMessage:
 #     return call_rapidapi_llm(messages[-1], "Synthèse GPT-4")
-

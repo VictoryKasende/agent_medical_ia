@@ -2,11 +2,10 @@ from rest_framework import serializers
 
 from .models import (
     CustomUser,
-    UserProfilePatient,
     UserProfileMedecin,
+    UserProfilePatient,
 )
 
-from .models import CustomUser, UserProfilePatient, UserProfileMedecin
 
 class UserProfilePatientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,6 +21,7 @@ class UserProfilePatientSerializer(serializers.ModelSerializer):
         fields = ["date_of_birth", "phone_number", "address"]
         read_only_fields = fields
 
+
 class UserProfileMedecinSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfileMedecin
@@ -36,6 +36,7 @@ class UserProfileMedecinSerializer(serializers.ModelSerializer):
 
         fields = ["specialty", "phone_number", "address", "is_available"]
         read_only_fields = fields
+
 
 class CustomUserSerializer(serializers.ModelSerializer):
     patient_profile = UserProfilePatientSerializer(read_only=True)
@@ -71,8 +72,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         user = CustomUser(**validated_data)
         if password:
             user.set_password(password)
-            "id","is_active","is_staff","is_superuser","date_joined","last_login","patient_profile","medecin_profile"
-        
+            "id", "is_active", "is_staff", "is_superuser", "date_joined", "last_login", "patient_profile", "medecin_profile"
+
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=4)

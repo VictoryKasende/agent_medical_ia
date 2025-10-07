@@ -2,13 +2,16 @@
 from celery import shared_task
 from celery.exceptions import Ignore
 from django.core.cache import cache
-from .models import Conversation, MessageIA, FicheConsultation
+
+from .models import Conversation, FicheConsultation, MessageIA
+
 
 def stream_synthese(synthese_llm, synthese_message):
     """Générateur qui yield les tokens au fur et à mesure via Langchain streaming."""
     for chunk in synthese_llm.stream([synthese_message]):
-        if hasattr(chunk, 'content'):
+        if hasattr(chunk, "content"):
             yield chunk.content
+
 
 @shared_task(bind=True)
 def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key):
@@ -17,9 +20,11 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
     Résultat final mis en cache avec structure améliorée.
     """
     try:
-        from .llm_config import gpt4, claude, gemini, synthese_llm
-        from langchain.schema import HumanMessage
         from concurrent.futures import ThreadPoolExecutor
+
+        from langchain.schema import HumanMessage
+
+        from .llm_config import claude, gemini, gpt4, synthese_llm
 
         # Prompt amélioré et structuré
         prompt_structure = f"""
@@ -79,9 +84,9 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
 
         with ThreadPoolExecutor(max_workers=3) as executor:
             tasks = {
-                'gpt4': executor.submit(gpt4_call),
-                'claude': executor.submit(claude_call),
-                'gemini': executor.submit(gemini_call),
+                "gpt4": executor.submit(gpt4_call),
+                "claude": executor.submit(claude_call),
+                "gemini": executor.submit(gemini_call),
             }
             results = {}
             for name, future in tasks.items():
@@ -95,7 +100,8 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
             MessageIA.objects.create(conversation=conv, role=model, content=content)
 
         # Prompt de synthèse amélioré
-        synthese_message = HumanMessage(content=f"""
+        synthese_message = HumanMessage(
+            content=f"""
         Vous disposez des analyses de trois experts IA médicaux. Votre rôle est de produire une synthèse médicale 
         structurée et consensuelle.
 
@@ -128,28 +134,26 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
         - Rappeler que cette analyse doit être validée par un médecin
 
         Répondez comme un assistant médical expert, rigoureux et bienveillant.
-        """)
-        
+        """
+        )
+
         full_response = ""
         for chunk in stream_synthese(synthese_llm, synthese_message):
             full_response += chunk
-        MessageIA.objects.create(conversation=conv, role='synthese', content=full_response)
+        MessageIA.objects.create(conversation=conv, role="synthese", content=full_response)
         cache.set(cache_key, full_response, timeout=3600)
 
         try:
             if conv.fiche:
                 conv.fiche.diagnostic_ia = full_response
-                conv.fiche.status = 'analyse_terminee'
+                conv.fiche.status = "analyse_terminee"
                 conv.fiche.save()
         except FicheConsultation.DoesNotExist:
-                pass
+            pass
         return full_response
 
     except Exception as exc:
-        self.update_state(
-            state='FAILURE',
-            meta={'error': str(exc), 'status': "Erreur lors de l'analyse"}
-        )
+        self.update_state(state="FAILURE", meta={"error": str(exc), "status": "Erreur lors de l'analyse"})
         raise Ignore()
 
 
@@ -157,104 +161,104 @@ def analyse_symptomes_task(self, symptomes, user_id, conversation_id, cache_key)
 def process_data_export(self, export_job_id):
     """Traite un job d'export de données en arrière-plan."""
     try:
-        from .models import DataExportJob, FicheConsultation
-        import pandas as pd
         import os
-        from django.conf import settings
         from datetime import datetime
-        
+
+        import pandas as pd
+        from django.conf import settings
+
+        from .models import DataExportJob, FicheConsultation
+
         # Récupérer le job
         export_job = DataExportJob.objects.get(id=export_job_id)
         export_job.status = DataExportJob.ExportStatus.RUNNING
         export_job.started_at = timezone.now()
         export_job.save()
-        
+
         # Construire la requête
         fiches_qs = FicheConsultation.objects.filter(
             date_consultation__range=[export_job.date_start, export_job.date_end]
         )
-        
+
         # Appliquer les filtres
         filters = export_job.filters
-        if filters.get('status'):
-            fiches_qs = fiches_qs.filter(status__in=filters['status'])
-        if filters.get('age_min'):
-            fiches_qs = fiches_qs.filter(age__gte=filters['age_min'])
-        if filters.get('age_max'):
-            fiches_qs = fiches_qs.filter(age__lte=filters['age_max'])
-        if filters.get('sexe'):
-            fiches_qs = fiches_qs.filter(sexe=filters['sexe'])
-        
+        if filters.get("status"):
+            fiches_qs = fiches_qs.filter(status__in=filters["status"])
+        if filters.get("age_min"):
+            fiches_qs = fiches_qs.filter(age__gte=filters["age_min"])
+        if filters.get("age_max"):
+            fiches_qs = fiches_qs.filter(age__lte=filters["age_max"])
+        if filters.get("sexe"):
+            fiches_qs = fiches_qs.filter(sexe=filters["sexe"])
+
         # Préparer les données
         data = []
         for fiche in fiches_qs:
             row = {
-                'id': fiche.id,
-                'numero_dossier': fiche.numero_dossier,
-                'date_consultation': fiche.date_consultation,
-                'age': fiche.age,
-                'sexe': fiche.sexe,
-                'status': fiche.status,
-                'motif_consultation': fiche.motif_consultation,
-                'hypertendu': fiche.hypertendu,
-                'diabetique': fiche.diabetique,
-                'temperature': fiche.temperature,
-                'tension_arterielle': fiche.tension_arterielle,
-                'pouls': fiche.pouls,
-                'has_diagnostic_ia': bool(fiche.diagnostic_ia),
-                'has_diagnostic_medecin': bool(fiche.diagnostic),
-                'created_at': fiche.created_at,
+                "id": fiche.id,
+                "numero_dossier": fiche.numero_dossier,
+                "date_consultation": fiche.date_consultation,
+                "age": fiche.age,
+                "sexe": fiche.sexe,
+                "status": fiche.status,
+                "motif_consultation": fiche.motif_consultation,
+                "hypertendu": fiche.hypertendu,
+                "diabetique": fiche.diabetique,
+                "temperature": fiche.temperature,
+                "tension_arterielle": fiche.tension_arterielle,
+                "pouls": fiche.pouls,
+                "has_diagnostic_ia": bool(fiche.diagnostic_ia),
+                "has_diagnostic_medecin": bool(fiche.diagnostic),
+                "created_at": fiche.created_at,
             }
-            
+
             # Ajouter données personnelles si autorisé
             if export_job.include_personal_data:
-                row.update({
-                    'nom': fiche.nom,
-                    'prenom': fiche.prenom,
-                    'telephone': fiche.telephone,
-                    'adresse': f"{fiche.avenue}, {fiche.quartier}, {fiche.commune}",
-                })
-            
+                row.update(
+                    {
+                        "nom": fiche.nom,
+                        "prenom": fiche.prenom,
+                        "telephone": fiche.telephone,
+                        "adresse": f"{fiche.avenue}, {fiche.quartier}, {fiche.commune}",
+                    }
+                )
+
             data.append(row)
-        
+
         # Créer le DataFrame
         df = pd.DataFrame(data)
         export_job.records_count = len(df)
-        
+
         # Créer le répertoire d'export s'il n'existe pas
-        export_dir = os.path.join(settings.MEDIA_ROOT, 'exports')
+        export_dir = os.path.join(settings.MEDIA_ROOT, "exports")
         os.makedirs(export_dir, exist_ok=True)
-        
+
         # Générer le nom de fichier
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"export_consultations_{timestamp}.{export_job.export_format}"
         file_path = os.path.join(export_dir, filename)
-        
+
         # Exporter selon le format
-        if export_job.export_format == 'csv':
-            df.to_csv(file_path, index=False, encoding='utf-8')
-        elif export_job.export_format == 'parquet':
+        if export_job.export_format == "csv":
+            df.to_csv(file_path, index=False, encoding="utf-8")
+        elif export_job.export_format == "parquet":
             df.to_parquet(file_path, index=False)
-        elif export_job.export_format == 'json':
-            df.to_json(file_path, orient='records', date_format='iso')
-        elif export_job.export_format == 'excel':
+        elif export_job.export_format == "json":
+            df.to_json(file_path, orient="records", date_format="iso")
+        elif export_job.export_format == "excel":
             df.to_excel(file_path, index=False)
-        
+
         # Finaliser le job
         export_job.file_path = file_path
         export_job.file_size = os.path.getsize(file_path)
         export_job.status = DataExportJob.ExportStatus.COMPLETED
         export_job.completed_at = timezone.now()
         export_job.save()
-        
-        return {
-            'status': 'completed',
-            'records_count': export_job.records_count,
-            'file_size': export_job.file_size
-        }
-        
+
+        return {"status": "completed", "records_count": export_job.records_count, "file_size": export_job.file_size}
+
     except DataExportJob.DoesNotExist:
-        return {'status': 'error', 'message': 'Job not found'}
+        return {"status": "error", "message": "Job not found"}
     except Exception as exc:
         # Marquer le job comme échoué
         try:
@@ -265,9 +269,6 @@ def process_data_export(self, export_job_id):
             export_job.save()
         except:
             pass
-            
-        self.update_state(
-            state='FAILURE',
-            meta={'error': str(exc), 'status': "Erreur lors de l'export"}
-        )
+
+        self.update_state(state="FAILURE", meta={"error": str(exc), "status": "Erreur lors de l'export"})
         raise Ignore()

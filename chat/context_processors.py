@@ -8,13 +8,13 @@ def deprecation_banner(request):  # pragma: no cover (simple context logic)
     check common attribute set by TemplateResponse (if available) else fall back
     to path heuristics.
     """
-    template_name = getattr(getattr(request, 'resolver_match', None), 'url_name', '')
+    template_name = getattr(getattr(request, "resolver_match", None), "url_name", "")
     # We cannot reliably know final template file here unless views set it, so
     # for our current target we special-case the known path used by the view.
     # Future improvement: custom middleware capturing the actual template render.
     probable_templates = []
-    if request.path.endswith('/consultations-distance/'):
-        probable_templates.append('chat/consultations_distance.html')
+    if request.path.endswith("/consultations-distance/"):
+        probable_templates.append("chat/consultations_distance.html")
 
     info = None
     for name in probable_templates:
@@ -23,6 +23,4 @@ def deprecation_banner(request):  # pragma: no cover (simple context logic)
             info = dep
             break
 
-    return {
-        'deprecation_info': info
-    }
+    return {"deprecation_info": info}
