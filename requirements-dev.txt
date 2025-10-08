@@ -23,7 +23,7 @@ flake8-import-order==0.18.2
 isort==5.13.2
 
 # ===== Type Checking =====
-mypy==1.8.0
+mypy==1.7.1  # Compatible with django-stubs 4.2.7
 django-stubs[compatible-mypy]==4.2.7
 djangorestframework-stubs==3.14.5
 types-requests==2.31.0
