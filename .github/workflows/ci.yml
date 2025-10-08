@@ -264,8 +264,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run Safety (Dependency Security Check)
-        run: safety check --json || true  # Non-blocking for now
+      # Safety check removed due to pydantic version conflicts
+      # Alternative: Use GitHub Dependabot for dependency security
 
       - name: Run Bandit (Security Linter)
         run: bandit -r chat/ authentication/ agent_medical_ia/ -f json -o bandit-report.json || true
