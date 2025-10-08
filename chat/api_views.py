@@ -15,12 +15,7 @@ from rest_framework.response import Response
 from authentication.models import CustomUser
 from authentication.permissions import IsMedecin, IsMedecinOrAdmin, IsOwnerOrAdmin, IsPatient
 
-from .constants import (
-    STATUS_ANALYSE_TERMINEE,
-    STATUS_EN_ANALYSE,
-    STATUS_REJETE_MEDECIN,
-    STATUS_VALIDE_MEDECIN,
-)
+from .constants import STATUS_ANALYSE_TERMINEE, STATUS_EN_ANALYSE, STATUS_REJETE_MEDECIN, STATUS_VALIDE_MEDECIN
 from .models import (
     Appointment,
     Conversation,

@@ -17,9 +17,7 @@ from .api_views import MedecinViewSet, UserRegisterAPIView, UserViewSet
 from .jwt_views import PublicTokenObtainPairView as TokenObtainPairView
 from .jwt_views import PublicTokenRefreshView as TokenRefreshView
 from .jwt_views import PublicTokenVerifyView as TokenVerifyView
-from .jwt_views import (
-    csrf_token_view,
-)
+from .jwt_views import csrf_token_view
 from .views_api import LogoutView, MeView  # legacy style views (logout, me) if still used
 
 app_name = "auth_api"

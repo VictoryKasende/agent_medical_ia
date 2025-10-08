@@ -13,11 +13,7 @@ from rest_framework.views import APIView
 
 from authentication.permissions import IsMedecin
 
-from .ia_serializers import (
-    AnalyseResultSerializer,
-    AnalyseSymptomesRequestSerializer,
-    TaskStatusSerializer,
-)
+from .ia_serializers import AnalyseResultSerializer, AnalyseSymptomesRequestSerializer, TaskStatusSerializer
 from .models import Conversation, MessageIA
 from .tasks import analyse_symptomes_task
 

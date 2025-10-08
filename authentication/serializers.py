@@ -1,10 +1,6 @@
 from rest_framework import serializers
 
-from .models import (
-    CustomUser,
-    UserProfileMedecin,
-    UserProfilePatient,
-)
+from .models import CustomUser, UserProfileMedecin, UserProfilePatient
 
 
 class UserProfilePatientSerializer(serializers.ModelSerializer):
