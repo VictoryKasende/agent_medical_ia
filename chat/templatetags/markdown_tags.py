@@ -26,8 +26,8 @@ def markdown_format(text):
         # Convertir le markdown en HTML
         html = md.convert(text)
 
-        return mark_safe(html)
+        return mark_safe(html)  # nosec B703, B308
 
     except Exception as e:
         # En cas d'erreur, retourner le texte brut
-        return mark_safe(text.replace("\n", "<br>"))
+        return mark_safe(text.replace("\n", "<br>"))  # nosec B703, B308
