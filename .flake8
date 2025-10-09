@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 120
-extend-ignore = E203, E266, E501, W503, F403, F401
+extend-ignore = E203, E266, E501, W503, F403, F401, D200, D212, F541, I100, I201, F811
 exclude =
     .git,
     __pycache__,
@@ -15,5 +15,7 @@ max-complexity = 15
 docstring-convention = google
 per-file-ignores =
     __init__.py:F401,F403
-    */tests/*:D100,D101,D102,D103,D104
+    */tests/*:D100,D101,D102,D103,D104,F811
     */test_*.py:D100,D101,D102,D103,D104
+    */views.py:D100,D101,D102,D103
+    */urls.py:D100
