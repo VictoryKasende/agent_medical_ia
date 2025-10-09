@@ -236,7 +236,7 @@ class FicheConsultationViewSet(viewsets.ModelViewSet):
     def _lancer_analyse_async(self, fiche: FicheConsultation, conversation: Conversation):
         texte = self._formater_fiche_en_texte(fiche)
         MessageIA.objects.create(conversation=conversation, role="user", content=texte)
-        cache_key = f"diagnostic_{hashlib.md5(texte.encode('utf-8')).hexdigest()}"
+        cache_key = f"diagnostic_{hashlib.md5(texte.encode('utf-8')).hexdigest()}"  # nosec B324
 
         def run_task():
             analyse_symptomes_task.delay(texte, conversation.user.id, conversation.id, cache_key)

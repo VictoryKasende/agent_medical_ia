@@ -60,7 +60,7 @@ class TwilioNotificationService:
         # Utiliser un hash du contenu tronqué pour éviter les collisions trop fréquentes
         content_preview = content[:100]  # Premiers 100 caractères seulement
         unique_string = f"{recipient}:{content_preview}:{notification_type}:{timezone.now().date()}"
-        return f"notification_{hashlib.md5(unique_string.encode()).hexdigest()}"
+        return f"notification_{hashlib.md5(unique_string.encode()).hexdigest()}"  # nosec B324
 
     def _is_already_sent(self, cache_key: str) -> bool:
         """Vérifie si la notification a déjà été envoyée aujourd'hui."""

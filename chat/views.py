@@ -121,7 +121,7 @@ class AnalyseSymptomesView(LoginRequiredMixin, View):
         MessageIA.objects.create(conversation=conversation, role="user", content=message_text)
 
         # Clé de cache pour le résultat IA
-        hash_key = hashlib.md5(message_text.encode("utf-8")).hexdigest()
+        hash_key = hashlib.md5(message_text.encode("utf-8")).hexdigest()  # nosec B324
         cache_key = f"diagnostic_{hash_key}"
 
         cached_result = cache.get(cache_key)
@@ -224,7 +224,7 @@ class FicheConsultationCreateView(LoginRequiredMixin, CreateView):
 
         MessageIA.objects.create(conversation=fiche.conversation, role="user", content=texte)
 
-        hash_key = hashlib.md5(texte.encode("utf-8")).hexdigest()
+        hash_key = hashlib.md5(texte.encode("utf-8")).hexdigest()  # nosec B324
         cache_key = f"diagnostic_{hash_key}"
 
         def run_task():

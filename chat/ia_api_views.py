@@ -45,7 +45,7 @@ class StartAnalyseAPIView(APIView):
         # Message utilisateur sauvegardé avant la tâche
         MessageIA.objects.create(conversation=conversation, role="user", content=symptomes)
 
-        hash_key = hashlib.md5(symptomes.encode("utf-8")).hexdigest()
+        hash_key = hashlib.md5(symptomes.encode("utf-8")).hexdigest()  # nosec B324
         cache_key = f"diagnostic_{hash_key}"
         cached = cache.get(cache_key)
         if cached:
