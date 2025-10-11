@@ -11,12 +11,13 @@ Solution:
     purement stateless. Permission AllowAny conservée.
 """
 
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 
 class PublicTokenObtainPairView(TokenObtainPairView):
@@ -32,3 +33,10 @@ class PublicTokenRefreshView(TokenRefreshView):
 class PublicTokenVerifyView(TokenVerifyView):
     authentication_classes: list = []  # type: ignore[assignment]
     permission_classes = [AllowAny]
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf_token_view(request):
+    """Retourne le token CSRF pour les clients JavaScript."""
+    return JsonResponse({"csrfToken": get_token(request)})

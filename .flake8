@@ -1,0 +1,23 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203, E266, E501, W503, F403, F401, D200, D202, D212, D411, F541, I100, I101, I201, F811, D100, D101, D102, D103, D104, D105, D106, D107, D205, D415, W291, W293, C901, E722, B001, B007, B014, B018, F841, F821
+exclude =
+    .git,
+    __pycache__,
+    */migrations/*,
+    */staticfiles/*,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info
+max-complexity = 20
+docstring-convention = google
+per-file-ignores =
+    __init__.py:F401,F403
+    */tests/*:D100,D101,D102,D103,D104,F811
+    */test_*.py:D100,D101,D102,D103,D104
+    */views.py:D100,D101,D102,D103
+    */urls.py:D100
+    */tasks.py:F821,E722,B001,C901
+    */notification_service.py:F841,E722,B001

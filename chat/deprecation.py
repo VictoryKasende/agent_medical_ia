@@ -9,9 +9,12 @@ Each entry documents:
 
 This lightweight module avoids scattering ad‑hoc warnings across views.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 
 @dataclass(frozen=True)
 class TemplateDeprecation:
@@ -30,7 +33,7 @@ DEPRECATED_TEMPLATES: Dict[str, TemplateDeprecation] = {
         removal_target="2025-10-01",
         replacement="/api/v1/consultations-distance/ + composant JS/SPA",
         status="active",
-        notes="Progressive enhancement en place; basculer vers rendu 100% API + composant dynamique."
+        notes="Progressive enhancement en place; basculer vers rendu 100% API + composant dynamique.",
     ),
     # Ajouter ici d'autres templates à mesure que l'on migre
 }
