@@ -234,7 +234,7 @@ class FicheConsultation(models.Model):
     date_validation = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     diagnostic_ia = models.TextField(blank=True, null=True)
-    signature_medecin = models.ImageField(
+    signature_medecin = models.FileField(
         upload_to="signatures/", blank=True, null=True, help_text="Signature du médecin pour valider la consultation"
     )
 
@@ -246,7 +246,8 @@ class FicheConsultation(models.Model):
             from django.conf import settings
 
             # Mode test : numérotation simplifiée pour éviter les collisions
-            if getattr(settings, "TESTING", False) or "test" in settings.DATABASES["default"]["NAME"]:
+            if getattr(settings, "TESTING", False) or "test" in str(settings.DATABASES["default"]["NAME"]):
+
                 import random
                 import time
 
