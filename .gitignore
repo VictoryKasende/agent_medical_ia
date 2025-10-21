@@ -36,3 +36,9 @@ temp_*
 # Scripts de développement
 docker-scripts.bat
 prompt
+
+
+media/
+README_FICHE_MODEL.md
+README_VALEURS_CHAMPS.md
+db.sqlite3

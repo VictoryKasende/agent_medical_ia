@@ -44,7 +44,7 @@ class FicheConsultationSerializer(serializers.ModelSerializer):
             "diagnostic_ia",
             "medecin_validateur",
             "date_validation",
-            "signature_medecin",
+            #"signature_medecin",
         ]
 
     @extend_schema_field(serializers.CharField())
