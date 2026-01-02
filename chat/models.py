@@ -21,6 +21,7 @@ class FicheConsultation(models.Model):
         VEUF = "Veuf(ve)", "Veuf(ve)"
 
     # Informations Patient
+    nom_hopital = models.CharField(max_length=100, blank=True, null=True)
     nom = models.CharField(max_length=100)
     postnom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
