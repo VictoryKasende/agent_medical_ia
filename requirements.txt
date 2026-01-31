@@ -114,6 +114,7 @@ cairocffi>=1.4.0  # Alternative à pycairo
 pandas>=2.0.0     # Pour les exports de données CSV/Parquet
 pyarrow>=10.0.0   # Pour les exports Parquet
 openpyxl>=3.1.0   # Pour les exports Excel
+django-jazzmin>=3.0.0  # Dashboard admin professionnel
 xlsxwriter>=3.1.0 # Alternative Excel writer
 icalendar>=5.0.0  # Pour la génération de calendriers ICS (optionnel)
 python-dateutil>=2.8.0  # Pour la gestion avancée des dates

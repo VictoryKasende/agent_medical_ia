@@ -23,6 +23,7 @@ ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0")
 
 # Apps
 INSTALLED_APPS = [
+    "jazzmin",  # Dashboard admin professionnel (doit être AVANT django.contrib.admin)
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -259,3 +260,136 @@ if not CORS_ALLOWED_ORIGINS:
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+# =============================================================================
+# JAZZMIN - Configuration Dashboard Admin Professionnel
+# =============================================================================
+
+JAZZMIN_SETTINGS = {
+    # Titre du site
+    "site_title": "Agent Médical IA",
+    "site_header": "Agent Médical IA",
+    "site_brand": "Agent Médical IA",
+    "site_logo": None,  # Optionnel: "images/logo.png"
+    "login_logo": None,
+    "login_logo_dark": None,
+    "site_logo_classes": "img-circle",
+    "site_icon": None,
+    
+    # Message de bienvenue
+    "welcome_sign": "Bienvenue sur la plateforme Agent Médical IA",
+    "copyright": "Agent Médical IA © 2026",
+    
+    # Recherche de modèles
+    "search_model": ["auth.User", "chat.FicheConsultation"],
+    
+    # Utilisateur en haut
+    "user_avatar": None,
+    
+    # Liens du menu supérieur
+    "topmenu_links": [
+        {"name": "Accueil", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "API Docs", "url": "/api/v1/docs/", "new_window": True},
+        {"model": "auth.User"},
+        {"app": "chat"},
+    ],
+    
+    # Afficher le menu latéral
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    
+    # Ordre des apps dans le menu
+    "order_with_respect_to": [
+        "auth",
+        "authentication",
+        "chat",
+    ],
+    
+    # Icônes personnalisées pour les apps/modèles
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "authentication": "fas fa-shield-alt",
+        "authentication.customuser": "fas fa-user-md",
+        "authentication.patientprofile": "fas fa-user-injured",
+        "authentication.medecinprofile": "fas fa-stethoscope",
+        "chat": "fas fa-comments-medical",
+        "chat.ficheconsultation": "fas fa-file-medical",
+        "chat.conversation": "fas fa-comments",
+        "chat.messageia": "fas fa-robot",
+        "chat.appointment": "fas fa-calendar-check",
+        "chat.fichemessage": "fas fa-envelope",
+        "chat.fichereference": "fas fa-book-medical",
+        "chat.labresult": "fas fa-flask",
+        "chat.ficheattachment": "fas fa-paperclip",
+        "chat.medecinAvailability": "fas fa-clock",
+        "chat.medecinexception": "fas fa-calendar-times",
+        "chat.webhookevent": "fas fa-satellite-dish",
+        "chat.dataexportjob": "fas fa-file-export",
+    },
+    
+    # Icône par défaut
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    
+    # Liens personnalisés dans le menu
+    "custom_links": {
+        "chat": [{
+            "name": "📊 Statistiques",
+            "url": "admin:index",
+            "icon": "fas fa-chart-bar",
+            "permissions": ["chat.view_ficheconsultation"]
+        }]
+    },
+    
+    # UI Tweaks
+    "related_modal_active": True,
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+    
+    # Changelist formats
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs",
+        "chat.ficheconsultation": "horizontal_tabs",
+    },
+}
+
+# Configuration UI Jazzmin
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": "darkly",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}

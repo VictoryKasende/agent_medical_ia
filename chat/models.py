@@ -15,7 +15,7 @@ from .constants import (
 
 class FicheConsultation(models.Model):
     class EtatCivil(models.TextChoices):
-        CELIBATAIRE = "Célibataire", "Célibataire"
+        CELIBATAIRE = "Célibataire", "Célibataire" 
         MARIE = "Marié(e)", "Marié(e)"
         DIVORCE = "Divorcé(e)", "Divorcé(e)"
         VEUF = "Veuf(ve)", "Veuf(ve)"
